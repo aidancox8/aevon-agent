@@ -1,10 +1,7 @@
 /**
  * sender.js
- * Checks Supabase for leads due to be emailed, sends via Resend,
- * then updates the lead's sequence state.
- *
- * Run on a schedule (GitHub Actions cron, Mon-Fri business hours).
- * Safe to run multiple times - only processes leads where scheduled_send_at <= now.
+ * Sends due emails via Resend (HTML format with open/click tracking),
+ * stores Resend email IDs for webhook correlation, updates lead state.
  */
 
 require('dotenv').config();
@@ -13,17 +10,46 @@ const supabase = require('./lib/supabase');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Switch to hello@aevon.ca once domain is verified in Resend
 const FROM = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'Aidan from Aevon';
-
-// Days to wait before sending follow-up
 const FOLLOWUP_DELAY_DAYS = 5;
+
+function toHtml(text) {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const paragraphs = escaped
+    .split(/\n\n+/)
+    .map(p => `<p style="margin:0 0 16px 0;line-height:1.6">${p.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;padding:40px;max-width:600px">
+        <tr><td style="font-size:15px;color:#1a1a1a">
+          ${paragraphs}
+          <hr style="border:none;border-top:1px solid #e5e5e5;margin:32px 0">
+          <p style="margin:0;font-size:12px;color:#999">
+            Aevon &middot; Lower Mainland, BC &middot;
+            <a href="https://aevon.ca" style="color:#6366F1;text-decoration:none">aevon.ca</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
 
 async function run() {
   const now = new Date().toISOString();
 
-  // Fetch leads due to send (initial email not yet sent)
   const { data: due, error } = await supabase
     .from('leads')
     .select('id, business_name, email, email_subject, email_body, followup_subject, followup_body, sequence_step')
@@ -50,26 +76,24 @@ async function run() {
     const subject = isFollowup ? lead.followup_subject : lead.email_subject;
     const body = isFollowup ? lead.followup_body : lead.email_body;
 
-    if (!subject || !body) {
-      console.log(`  [skip] ${lead.business_name} - missing ${isFollowup ? 'followup' : 'email'} content`);
-      continue;
-    }
+    if (!subject || !body) continue;
 
     process.stdout.write(`  [${isFollowup ? 'followup' : 'email'}] ${lead.business_name} <${lead.email}>... `);
 
     try {
-      const { error: sendError } = await resend.emails.send({
+      const { data: sendData, error: sendError } = await resend.emails.send({
         from: `${FROM_NAME} <${FROM}>`,
         to: lead.email,
         subject,
         text: body,
+        html: toHtml(body),
       });
 
       if (sendError) throw new Error(sendError.message);
 
-      // Update lead state
+      const resendId = sendData?.id;
       const nextStep = lead.sequence_step + 1;
-      const isLastStep = nextStep >= 2; // 2 emails total
+      const isLastStep = nextStep >= 2;
 
       const update = {
         sequence_step: nextStep,
@@ -80,17 +104,34 @@ async function run() {
           : new Date(Date.now() + FOLLOWUP_DELAY_DAYS * 24 * 60 * 60 * 1000).toISOString(),
       };
 
+      if (resendId) {
+        update[isFollowup ? 'resend_followup_id' : 'resend_email_id'] = resendId;
+      }
+
       await supabase.from('leads').update(update).eq('id', lead.id);
 
-      console.log(isLastStep ? 'done (sequence complete)' : `followup scheduled in ${FOLLOWUP_DELAY_DAYS} days`);
-      sent++;
+      // Log the send event
+      if (resendId) {
+        await supabase.from('email_events').insert({
+          lead_id: lead.id,
+          resend_email_id: resendId,
+          event_type: 'sent',
+          metadata: { subject, is_followup: isFollowup },
+        });
+      }
 
-      // Brief delay between sends
+      console.log(isLastStep ? 'done (sequence complete)' : `followup in ${FOLLOWUP_DELAY_DAYS}d`);
+      sent++;
       await new Promise(r => setTimeout(r, 500));
 
     } catch (err) {
       console.log(`FAILED: ${err.message}`);
       await supabase.from('leads').update({ status: 'bounced', notes: err.message }).eq('id', lead.id);
+      await supabase.from('email_events').insert({
+        lead_id: lead.id,
+        event_type: 'bounced',
+        metadata: { error: err.message },
+      });
       failed++;
     }
   }

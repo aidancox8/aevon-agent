@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aevon CRM</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0E0C18;
+      --surface: #13111F;
+      --border: rgba(99,102,241,0.15);
+      --accent: #6366F1;
+      --text: #F8FAFC;
+      --text2: #B4C2D0;
+      --text3: #6B7E94;
+      --green: #22C55E;
+      --yellow: #EAB308;
+      --red: #EF4444;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+
+    /* Layout */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); padding: 24px 0; flex-shrink: 0; }
+    .main { flex: 1; padding: 32px; overflow-x: hidden; }
+
+    /* Sidebar */
+    .logo { padding: 0 20px 24px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .logo-mark { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #6366F1, #7C3AED); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; color: var(--text3); cursor: pointer; transition: all 0.15s; font-size: 13.5px; border-left: 2px solid transparent; }
+    .nav-item:hover { color: var(--text2); background: rgba(99,102,241,0.05); }
+    .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(99,102,241,0.08); }
+    .nav-section { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); padding: 16px 20px 6px; }
+
+    /* Header */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+    .btn { padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #5254cc; }
+    .btn-ghost { background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+    /* Stat cards */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+    .stat-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
+    .stat-value { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; }
+    .stat-sub { font-size: 11.5px; color: var(--text3); margin-top: 4px; }
+
+    /* Table */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .table-toolbar { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .search-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; color: var(--text); font-size: 13px; outline: none; }
+    .search-input:focus { border-color: var(--accent); }
+    .filter-select { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text2); font-size: 13px; outline: none; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; border-bottom: 1px solid rgba(99,102,241,0.06); color: var(--text2); font-size: 13px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(99,102,241,0.04); color: var(--text); }
+    .empty { text-align: center; padding: 48px; color: var(--text3); }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-queued { background: rgba(99,102,241,0.15); color: #818CF8; }
+    .badge-sent { background: rgba(34,197,94,0.15); color: #4ADE80; }
+    .badge-replied { background: rgba(34,197,94,0.25); color: #22C55E; }
+    .badge-bounced { background: rgba(239,68,68,0.15); color: #F87171; }
+    .badge-complained { background: rgba(239,68,68,0.2); color: #EF4444; }
+    .badge-converted { background: rgba(99,102,241,0.3); color: #6366F1; }
+    .badge-prospect { background: rgba(234,179,8,0.15); color: #FCD34D; }
+    .badge-active { background: rgba(34,197,94,0.15); color: #4ADE80; }
+    .badge-completed { background: rgba(99,102,241,0.15); color: #818CF8; }
+    .badge-scoping { background: rgba(234,179,8,0.15); color: #FCD34D; }
+    .badge-in_progress { background: rgba(99,102,241,0.15); color: #818CF8; }
+    .badge-review { background: rgba(251,146,60,0.15); color: #FB923C; }
+
+    /* Score pill */
+    .score { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 20px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .score-high { background: rgba(34,197,94,0.15); color: #4ADE80; }
+    .score-mid { background: rgba(234,179,8,0.15); color: #FCD34D; }
+    .score-low { background: rgba(239,68,68,0.15); color: #F87171; }
+
+    /* Analytics bars */
+    .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+    .analytics-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .analytics-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 16px; }
+    .metric-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .metric-label { font-size: 12px; color: var(--text3); width: 100px; flex-shrink: 0; }
+    .metric-bar-wrap { flex: 1; background: rgba(255,255,255,0.05); border-radius: 4px; height: 6px; }
+    .metric-bar { height: 6px; border-radius: 4px; transition: width 0.4s ease; }
+    .metric-val { font-size: 12px; font-weight: 600; color: var(--text); width: 36px; text-align: right; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 520px; padding: 28px; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; line-height: 1; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+    .tab { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text3); background: none; border: none; transition: all 0.15s; }
+    .tab.active { background: rgba(99,102,241,0.15); color: var(--text); }
+    .tab:hover:not(.active) { color: var(--text2); }
+
+    /* Loading */
+    .loading { text-align: center; padding: 48px; color: var(--text3); }
+    .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin: 0 2px; animation: pulse 1.2s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .analytics-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+    @media (max-width: 640px) {
+      .main { padding: 20px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">A</div>
+      Aevon CRM
+    </div>
+    <div class="nav-section">Outreach</div>
+    <div class="nav-item active" onclick="showView('pipeline')">
+      <span>&#9776;</span> Pipeline
+    </div>
+    <div class="nav-item" onclick="showView('analytics')">
+      <span>&#9641;</span> Analytics
+    </div>
+    <div class="nav-section">Business</div>
+    <div class="nav-item" onclick="showView('customers')">
+      <span>&#9786;</span> Customers
+    </div>
+    <div class="nav-item" onclick="showView('projects')">
+      <span>&#10697;</span> Projects
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="main">
+    <div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  </main>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal-overlay" id="customerModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Customer</div>
+      <button class="modal-close" onclick="closeModal()">&#215;</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input class="form-input" id="f-company" placeholder="Acme Corp">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact Name</label>
+        <input class="form-input" id="f-contact" placeholder="Jane Smith">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="f-email" type="email" placeholder="jane@acme.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-input" id="f-phone" placeholder="+1 604-555-0100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Industry</label>
+        <input class="form-input" id="f-industry" placeholder="Property Management">
+      </div>
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input class="form-input" id="f-city" placeholder="Vancouver BC">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Website</label>
+      <input class="form-input" id="f-website" placeholder="https://acme.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-input filter-select" id="f-status" style="width:100%">
+        <option value="prospect">Prospect</option>
+        <option value="active">Active</option>
+        <option value="completed">Completed</option>
+        <option value="churned">Churned</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <input class="form-input" id="f-notes" placeholder="Optional notes">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Project Modal -->
+<div class="modal-overlay" id="projectModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Project</div>
+      <button class="modal-close" onclick="closeProjectModal()">&#215;</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Customer</label>
+      <select class="form-input filter-select" id="p-customer" style="width:100%"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project Name</label>
+      <input class="form-input" id="p-name" placeholder="Internal Ticketing App">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="p-description" placeholder="Brief description">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input filter-select" id="p-status" style="width:100%">
+          <option value="scoping">Scoping</option>
+          <option value="in_progress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Build Fee ($)</label>
+        <input class="form-input" id="p-fee" type="number" placeholder="3000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Monthly Fee ($)</label>
+        <input class="form-input" id="p-monthly" type="number" placeholder="65">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Due Date</label>
+        <input class="form-input" id="p-due" type="date">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeProjectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  // CONFIG - update these if you move the file
+  const SUPABASE_URL = 'https://qzxtfgzpyptvriorfhxw.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_yeGHZBOyEf0wPb-YSCivPg_jA2dB5Kg';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let currentView = 'pipeline';
+  let editingCustomerId = null;
+
+  // ── Navigation ──────────────────────────────────────────────
+  function showView(view) {
+    currentView = view;
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    renderView(view);
+  }
+
+  async function renderView(view) {
+    const main = document.getElementById('main');
+    main.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+    if (view === 'pipeline') await renderPipeline();
+    else if (view === 'analytics') await renderAnalytics();
+    else if (view === 'customers') await renderCustomers();
+    else if (view === 'projects') await renderProjects();
+  }
+
+  // ── Pipeline ─────────────────────────────────────────────────
+  async function renderPipeline() {
+    const [{ data: leads }, { data: events }] = await Promise.all([
+      sb.from('leads').select('*').order('scheduled_send_at', { ascending: true, nullsFirst: false }),
+      sb.from('email_events').select('lead_id, event_type'),
+    ]);
+
+    const eventMap = {};
+    (events || []).forEach(e => {
+      if (!eventMap[e.lead_id]) eventMap[e.lead_id] = new Set();
+      eventMap[e.lead_id].add(e.event_type);
+    });
+
+    const total = leads?.length || 0;
+    const withEmail = leads?.filter(l => l.email).length || 0;
+    const personalized = leads?.filter(l => l.email_subject).length || 0;
+    const sent = leads?.filter(l => ['sent','replied','converted'].includes(l.status)).length || 0;
+    const replied = leads?.filter(l => l.status === 'replied').length || 0;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Pipeline</div>
+        <div style="display:flex;gap:8px">
+          <select class="filter-select" id="statusFilter" onchange="filterPipeline()">
+            <option value="">All statuses</option>
+            <option value="queued">Queued</option>
+            <option value="sent">Sent</option>
+            <option value="replied">Replied</option>
+            <option value="bounced">Bounced</option>
+            <option value="converted">Converted</option>
+          </select>
+          <input class="search-input" style="width:200px" id="pipelineSearch" placeholder="Search..." oninput="filterPipeline()">
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${total}</div></div>
+        <div class="stat-card"><div class="stat-label">Have Email</div><div class="stat-value">${withEmail}</div><div class="stat-sub">${total ? Math.round(withEmail/total*100) : 0}% of leads</div></div>
+        <div class="stat-card"><div class="stat-label">Personalized</div><div class="stat-value">${personalized}</div></div>
+        <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value">${sent}</div></div>
+        <div class="stat-card"><div class="stat-label">Replies</div><div class="stat-value">${replied}</div><div class="stat-sub">${sent ? Math.round(replied/sent*100) : 0}% reply rate</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Business</th>
+            <th>Industry</th>
+            <th>City</th>
+            <th>Email</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Events</th>
+            <th>Scheduled</th>
+          </tr></thead>
+          <tbody id="pipelineBody">${renderLeadRows(leads, eventMap)}</tbody>
+        </table>
+      </div>
+    `;
+
+    window._allLeads = leads || [];
+    window._eventMap = eventMap;
+  }
+
+  function renderLeadRows(leads, eventMap) {
+    if (!leads || leads.length === 0) return '<tr><td colspan="8" class="empty">No leads yet. Run lead-finder.js to populate.</td></tr>';
+    return leads.map(l => {
+      const evts = eventMap[l.id] ? [...eventMap[l.id]].join(', ') : '';
+      const scoreClass = l.qualification_score >= 8 ? 'score-high' : l.qualification_score >= 6 ? 'score-mid' : 'score-low';
+      const scheduled = l.scheduled_send_at ? new Date(l.scheduled_send_at).toLocaleDateString('en-CA') : '';
+      return `<tr title="${l.qualification_notes || ''}">
+        <td><a href="${l.website || '#'}" target="_blank" style="color:var(--text);text-decoration:none">${l.business_name}</a></td>
+        <td style="color:var(--text3);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.industry || ''}</td>
+        <td style="color:var(--text3)">${(l.city||'').replace(' BC','')}</td>
+        <td style="color:var(--text3);font-size:12px">${l.email || '<span style="color:var(--text3);opacity:0.5">none</span>'}</td>
+        <td>${l.qualification_score ? `<span class="score ${scoreClass}">${l.qualification_score}</span>` : ''}</td>
+        <td><span class="badge badge-${l.status}">${l.status}</span></td>
+        <td style="font-size:11px;color:var(--text3)">${evts}</td>
+        <td style="color:var(--text3)">${scheduled}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function filterPipeline() {
+    const status = document.getElementById('statusFilter')?.value || '';
+    const search = document.getElementById('pipelineSearch')?.value.toLowerCase() || '';
+    let filtered = window._allLeads || [];
+    if (status) filtered = filtered.filter(l => l.status === status);
+    if (search) filtered = filtered.filter(l =>
+      l.business_name?.toLowerCase().includes(search) ||
+      l.industry?.toLowerCase().includes(search) ||
+      l.city?.toLowerCase().includes(search) ||
+      l.email?.toLowerCase().includes(search)
+    );
+    const body = document.getElementById('pipelineBody');
+    if (body) body.innerHTML = renderLeadRows(filtered, window._eventMap || {});
+  }
+
+  // ── Analytics ────────────────────────────────────────────────
+  async function renderAnalytics() {
+    const [{ data: leads }, { data: events }] = await Promise.all([
+      sb.from('leads').select('status, opened_at, clicked_at, sequence_step'),
+      sb.from('email_events').select('event_type, created_at'),
+    ]);
+
+    const total = leads?.length || 0;
+    const sent = leads?.filter(l => l.sequence_step > 0).length || 0;
+    const opened = leads?.filter(l => l.opened_at).length || 0;
+    const clicked = leads?.filter(l => l.clicked_at).length || 0;
+    const replied = leads?.filter(l => l.status === 'replied').length || 0;
+    const bounced = leads?.filter(l => l.status === 'bounced').length || 0;
+
+    const openRate = sent ? Math.round(opened / sent * 100) : 0;
+    const clickRate = sent ? Math.round(clicked / sent * 100) : 0;
+    const replyRate = sent ? Math.round(replied / sent * 100) : 0;
+    const bounceRate = sent ? Math.round(bounced / sent * 100) : 0;
+
+    // Event timeline (last 30 days)
+    const now = Date.now();
+    const byDay = {};
+    (events || []).forEach(e => {
+      const d = new Date(e.created_at).toLocaleDateString('en-CA');
+      byDay[d] = (byDay[d] || 0) + 1;
+    });
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Analytics</div>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Leads Total</div><div class="stat-value">${total}</div></div>
+        <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value">${sent}</div></div>
+        <div class="stat-card"><div class="stat-label">Open Rate</div><div class="stat-value" style="color:var(--green)">${openRate}%</div><div class="stat-sub">${opened} opened</div></div>
+        <div class="stat-card"><div class="stat-label">Click Rate</div><div class="stat-value" style="color:var(--accent)">${clickRate}%</div><div class="stat-sub">${clicked} clicked</div></div>
+        <div class="stat-card"><div class="stat-label">Reply Rate</div><div class="stat-value" style="color:var(--yellow)">${replyRate}%</div><div class="stat-sub">${replied} replied</div></div>
+        <div class="stat-card"><div class="stat-label">Bounce Rate</div><div class="stat-value" style="color:var(--red)">${bounceRate}%</div><div class="stat-sub">${bounced} bounced</div></div>
+      </div>
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <div class="analytics-title">Email Funnel</div>
+          ${bar('Sent', sent, total, '#6366F1')}
+          ${bar('Delivered', sent - bounced, sent, '#818CF8')}
+          ${bar('Opened', opened, sent, '#22C55E')}
+          ${bar('Clicked', clicked, sent, '#EAB308')}
+          ${bar('Replied', replied, sent, '#FB923C')}
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-title">Lead Status Breakdown</div>
+          ${bar('Queued', leads?.filter(l=>l.status==='queued').length||0, total, '#6366F1')}
+          ${bar('Sent', leads?.filter(l=>l.status==='sent').length||0, total, '#4ADE80')}
+          ${bar('Replied', replied, total, '#FB923C')}
+          ${bar('Bounced', bounced, total, '#EF4444')}
+          ${bar('Converted', leads?.filter(l=>l.status==='converted').length||0, total, '#A78BFA')}
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text2)">Recent Email Events</div>
+        <table>
+          <thead><tr><th>Date</th><th>Event</th><th>Resend ID</th></tr></thead>
+          <tbody>${renderEventRows(events)}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function bar(label, val, total, color) {
+    const pct = total ? Math.round(val / total * 100) : 0;
+    return `<div class="metric-row">
+      <span class="metric-label">${label}</span>
+      <div class="metric-bar-wrap"><div class="metric-bar" style="width:${pct}%;background:${color}"></div></div>
+      <span class="metric-val">${pct}%</span>
+    </div>`;
+  }
+
+  function renderEventRows(events) {
+    if (!events || events.length === 0) return '<tr><td colspan="3" class="empty">No events yet.</td></tr>';
+    return [...events].reverse().slice(0, 50).map(e => `<tr>
+      <td style="color:var(--text3)">${new Date(e.created_at).toLocaleString('en-CA')}</td>
+      <td><span class="badge badge-${e.event_type}">${e.event_type}</span></td>
+      <td style="font-size:11px;color:var(--text3)">${e.resend_email_id || ''}</td>
+    </tr>`).join('');
+  }
+
+  // ── Customers ────────────────────────────────────────────────
+  async function renderCustomers() {
+    const { data: customers } = await sb.from('customers').select('*').order('created_at', { ascending: false });
+
+    const active = customers?.filter(c => c.status === 'active').length || 0;
+    const prospects = customers?.filter(c => c.status === 'prospect').length || 0;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Customers</div>
+        <button class="btn btn-primary" onclick="openCustomerModal()">+ Add Customer</button>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${customers?.length || 0}</div></div>
+        <div class="stat-card"><div class="stat-label">Active Clients</div><div class="stat-value" style="color:var(--green)">${active}</div></div>
+        <div class="stat-card"><div class="stat-label">Prospects</div><div class="stat-value" style="color:var(--yellow)">${prospects}</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company</th><th>Contact</th><th>Email</th><th>Industry</th><th>City</th><th>Status</th><th></th></tr></thead>
+          <tbody>${renderCustomerRows(customers)}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderCustomerRows(customers) {
+    if (!customers || customers.length === 0) return '<tr><td colspan="7" class="empty">No customers yet. Add one or convert a lead.</td></tr>';
+    return customers.map(c => `<tr>
+      <td><strong style="color:var(--text)">${c.company_name}</strong></td>
+      <td style="color:var(--text2)">${c.contact_name || ''}</td>
+      <td style="color:var(--text3);font-size:12px">${c.email || ''}</td>
+      <td style="color:var(--text3)">${c.industry || ''}</td>
+      <td style="color:var(--text3)">${(c.city||'').replace(' BC','')}</td>
+      <td><span class="badge badge-${c.status}">${c.status}</span></td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="editCustomer('${c.id}')">Edit</button></td>
+    </tr>`).join('');
+  }
+
+  // ── Projects ─────────────────────────────────────────────────
+  async function renderProjects() {
+    const [{ data: projects }, { data: customers }] = await Promise.all([
+      sb.from('projects').select('*, customers(company_name)').order('created_at', { ascending: false }),
+      sb.from('customers').select('id, company_name'),
+    ]);
+    window._customers = customers || [];
+
+    const activeProjects = projects?.filter(p => p.status === 'in_progress').length || 0;
+    const totalRevenue = projects?.reduce((sum, p) => sum + (p.build_fee || 0), 0) || 0;
+    const mrr = projects?.filter(p => p.status !== 'cancelled').reduce((sum, p) => sum + (p.monthly_fee || 0), 0) || 0;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Projects</div>
+        <button class="btn btn-primary" onclick="openProjectModal()">+ Add Project</button>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Total Projects</div><div class="stat-value">${projects?.length || 0}</div></div>
+        <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--accent)">${activeProjects}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Build Revenue</div><div class="stat-value">$${totalRevenue.toLocaleString()}</div></div>
+        <div class="stat-card"><div class="stat-label">Monthly Recurring</div><div class="stat-value" style="color:var(--green)">$${mrr.toLocaleString()}<span style="font-size:14px;font-weight:400">/mo</span></div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Project</th><th>Customer</th><th>Status</th><th>Build Fee</th><th>Monthly</th><th>Due</th></tr></thead>
+          <tbody>${renderProjectRows(projects)}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderProjectRows(projects) {
+    if (!projects || projects.length === 0) return '<tr><td colspan="6" class="empty">No projects yet.</td></tr>';
+    return projects.map(p => `<tr>
+      <td><strong style="color:var(--text)">${p.name}</strong>${p.description ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${p.description}</div>` : ''}</td>
+      <td style="color:var(--text2)">${p.customers?.company_name || ''}</td>
+      <td><span class="badge badge-${p.status}">${p.status.replace('_',' ')}</span></td>
+      <td style="color:var(--text)">${p.build_fee ? '$' + p.build_fee.toLocaleString() : ''}</td>
+      <td style="color:var(--green)">${p.monthly_fee ? '$' + p.monthly_fee + '/mo' : ''}</td>
+      <td style="color:var(--text3)">${p.due_date || ''}</td>
+    </tr>`).join('');
+  }
+
+  // ── Customer Modal ───────────────────────────────────────────
+  function openCustomerModal() {
+    editingCustomerId = null;
+    document.getElementById('modalTitle').textContent = 'Add Customer';
+    ['f-company','f-contact','f-email','f-phone','f-industry','f-city','f-website','f-notes'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('f-status').value = 'prospect';
+    document.getElementById('customerModal').style.display = 'flex';
+  }
+
+  async function editCustomer(id) {
+    const { data } = await sb.from('customers').select('*').eq('id', id).single();
+    if (!data) return;
+    editingCustomerId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Customer';
+    document.getElementById('f-company').value = data.company_name || '';
+    document.getElementById('f-contact').value = data.contact_name || '';
+    document.getElementById('f-email').value = data.email || '';
+    document.getElementById('f-phone').value = data.phone || '';
+    document.getElementById('f-industry').value = data.industry || '';
+    document.getElementById('f-city').value = data.city || '';
+    document.getElementById('f-website').value = data.website || '';
+    document.getElementById('f-notes').value = data.notes || '';
+    document.getElementById('f-status').value = data.status || 'prospect';
+    document.getElementById('customerModal').style.display = 'flex';
+  }
+
+  async function saveCustomer() {
+    const payload = {
+      company_name: document.getElementById('f-company').value.trim(),
+      contact_name: document.getElementById('f-contact').value.trim() || null,
+      email: document.getElementById('f-email').value.trim() || null,
+      phone: document.getElementById('f-phone').value.trim() || null,
+      industry: document.getElementById('f-industry').value.trim() || null,
+      city: document.getElementById('f-city').value.trim() || null,
+      website: document.getElementById('f-website').value.trim() || null,
+      notes: document.getElementById('f-notes').value.trim() || null,
+      status: document.getElementById('f-status').value,
+    };
+    if (!payload.company_name) return alert('Company name is required.');
+
+    if (editingCustomerId) {
+      await sb.from('customers').update(payload).eq('id', editingCustomerId);
+    } else {
+      await sb.from('customers').insert(payload);
+    }
+    closeModal();
+    renderView('customers');
+  }
+
+  function closeModal() {
+    document.getElementById('customerModal').style.display = 'none';
+  }
+
+  // ── Project Modal ────────────────────────────────────────────
+  function openProjectModal() {
+    const select = document.getElementById('p-customer');
+    select.innerHTML = (window._customers || []).map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+    if (!window._customers?.length) {
+      alert('Add a customer first before creating a project.');
+      return;
+    }
+    ['p-name','p-description','p-fee','p-monthly','p-due'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('p-status').value = 'scoping';
+    document.getElementById('projectModal').style.display = 'flex';
+  }
+
+  async function saveProject() {
+    const payload = {
+      customer_id: document.getElementById('p-customer').value,
+      name: document.getElementById('p-name').value.trim(),
+      description: document.getElementById('p-description').value.trim() || null,
+      status: document.getElementById('p-status').value,
+      build_fee: parseInt(document.getElementById('p-fee').value) || null,
+      monthly_fee: parseInt(document.getElementById('p-monthly').value) || null,
+      due_date: document.getElementById('p-due').value || null,
+    };
+    if (!payload.name) return alert('Project name is required.');
+    await sb.from('projects').insert(payload);
+    closeProjectModal();
+    renderView('projects');
+  }
+
+  function closeProjectModal() {
+    document.getElementById('projectModal').style.display = 'none';
+  }
+
+  // ── Init ─────────────────────────────────────────────────────
+  renderView('pipeline');
+</script>
+</body>
+</html>
