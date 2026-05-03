@@ -59,7 +59,7 @@ Lead details:
 - City: ${lead.city}
 - Website: ${lead.website || 'unknown'}
 
-Write TWO emails:
+Write TWO emails AND a lead insight:
 
 EMAIL 1 (initial outreach):
 - Subject line: short, specific, not salesy
@@ -71,12 +71,18 @@ EMAIL 2 (follow-up, send 5 days later if no reply):
 - Body: 2 short paragraphs. Friendly bump, add one new angle or specific example relevant to their industry. Same CTA.
 - Tone: same as above
 
+LEAD INSIGHT (2-3 sentences):
+- Why this business is a good fit for Aevon
+- What specific software pain points they likely have based on their industry and size
+- What type of custom app would most benefit them
+
 Format your response as valid JSON only, no markdown, no explanation:
 {
   "email_subject": "...",
   "email_body": "...",
   "followup_subject": "...",
-  "followup_body": "..."
+  "followup_body": "...",
+  "lead_insights": "..."
 }`;
 }
 
@@ -104,7 +110,7 @@ async function run() {
     .select('scheduled_send_at')
     .not('scheduled_send_at', 'is', null);
 
-  const existingSlots = new Set((scheduled || []).map(r => r.scheduled_send_at));
+  const existingSlots = new Set((scheduled || []).map(r => new Date(r.scheduled_send_at).toISOString()));
 
   let success = 0;
   let failed = 0;
@@ -134,6 +140,7 @@ async function run() {
           email_body: content.email_body,
           followup_subject: content.followup_subject,
           followup_body: content.followup_body,
+          lead_insights: content.lead_insights || null,
           scheduled_send_at: sendAt,
         })
         .eq('id', lead.id);

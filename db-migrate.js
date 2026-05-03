@@ -42,6 +42,7 @@ const migrations = [
         clicked_at timestamptz,
         qualification_score integer,
         qualification_notes text,
+        lead_insights text,
         notes text
       );
       create index if not exists leads_send_queue
@@ -124,7 +125,11 @@ const migrations = [
     `,
   },
   {
-    name: '006_rls',
+    name: '006_leads_insights_column',
+    sql: `alter table leads add column if not exists lead_insights text;`,
+  },
+  {
+    name: '008_rls',
     sql: `
       alter table leads enable row level security;
       drop policy if exists "anon read" on leads;

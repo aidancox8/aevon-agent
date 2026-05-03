@@ -180,20 +180,23 @@
       <button class="btn btn-ghost" id="themeToggle" onclick="toggleTheme()" style="width:100%;font-size:12px;padding:6px 10px">☀ Light mode</button>
     </div>
     <div class="nav-section">Outreach</div>
-    <div class="nav-item active" onclick="showView('pipeline')">
+    <div class="nav-item active" onclick="showView('pipeline', event)">
       <span>&#9776;</span> Pipeline
     </div>
-    <div class="nav-item" onclick="showView('analytics')">
+    <div class="nav-item" onclick="showView('analytics', event)">
       <span>&#9641;</span> Analytics
     </div>
+    <div class="nav-item" onclick="showView('activity', event)">
+      <span>&#9680;</span> Activity
+    </div>
     <div class="nav-section">Business</div>
-    <div class="nav-item" onclick="showView('customers')">
+    <div class="nav-item" onclick="showView('customers', event)">
       <span>&#9786;</span> Customers
     </div>
-    <div class="nav-item" onclick="showView('projects')">
+    <div class="nav-item" onclick="showView('projects', event)">
       <span>&#10697;</span> Projects
     </div>
-    <div class="nav-item" onclick="showView('invoices')">
+    <div class="nav-item" onclick="showView('invoices', event)">
       <span>&#9654;</span> Invoices
     </div>
   </aside>
@@ -399,10 +402,10 @@
   let editingCustomerId = null;
 
   // ── Navigation ──────────────────────────────────────────────
-  function showView(view) {
+  function showView(view, evt) {
     currentView = view;
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
     renderView(view);
   }
 
@@ -411,9 +414,12 @@
     main.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
     if (view === 'pipeline') await renderPipeline();
     else if (view === 'analytics') await renderAnalytics();
+    else if (view === 'activity') await renderActivity();
     else if (view === 'customers') await renderCustomers();
     else if (view === 'projects') await renderProjects();
     else if (view === 'invoices') await renderInvoices();
+    else if (view === 'lead-profile') await renderLeadProfile(window._profileId);
+    else if (view === 'customer-profile') await renderCustomerProfile(window._profileId);
   }
 
   // ── Pipeline ─────────────────────────────────────────────────
@@ -484,7 +490,7 @@
       const evts = eventMap[l.id] ? [...eventMap[l.id]].join(', ') : '';
       const scoreClass = l.qualification_score >= 8 ? 'score-high' : l.qualification_score >= 6 ? 'score-mid' : 'score-low';
       const scheduled = l.scheduled_send_at ? new Date(l.scheduled_send_at).toLocaleDateString('en-CA') : '';
-      return `<tr style="cursor:pointer" onclick="openLeadDrawer('${l.id}')">
+      return `<tr style="cursor:pointer" onclick="openLeadProfile('${l.id}')">
         <td><span style="color:var(--text)">${l.business_name}</span></td>
         <td style="color:var(--text3);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.industry || ''}</td>
         <td style="color:var(--text3)">${(l.city||'').replace(' BC','')}</td>
@@ -497,7 +503,263 @@
     }).join('');
   }
 
-  // ── Lead Drawer ───────────────────────────────────────────────
+  // ── Lead Profile (full page) ──────────────────────────────────
+  function openLeadProfile(id) {
+    window._profileId = id;
+    window._prevView = currentView;
+    currentView = 'lead-profile';
+    renderView('lead-profile');
+  }
+
+  async function renderLeadProfile(id) {
+    const lead = (window._allLeads || []).find(l => l.id === id);
+    if (!lead) { renderView('pipeline'); return; }
+
+    const { data: events } = await sb.from('email_events').select('*').eq('lead_id', id).order('created_at', { ascending: true });
+    const scoreClass = lead.qualification_score >= 8 ? 'score-high' : lead.qualification_score >= 6 ? 'score-mid' : 'score-low';
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-ghost" onclick="renderView('${window._prevView || 'pipeline'}')">&#8592; Back</button>
+          <div>
+            <div class="page-title">${lead.business_name}</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:2px">${[lead.industry, lead.city].filter(Boolean).join(' · ')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${lead.status !== 'replied' && lead.status !== 'converted' ? `<button class="btn btn-ghost" onclick="markReplied('${lead.id}')">Mark Replied</button>` : ''}
+          ${lead.status !== 'converted' ? `<button class="btn btn-primary" onclick="convertToCustomer(${JSON.stringify(lead).replace(/"/g, '&quot;')})">Convert to Customer</button>` : ''}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div class="analytics-card">
+          <div class="analytics-title">Lead Details</div>
+          ${lead.email ? `<div class="drawer-field"><span class="drawer-field-label">Email</span><span class="drawer-field-value">${lead.email}</span></div>` : ''}
+          ${lead.phone ? `<div class="drawer-field"><span class="drawer-field-label">Phone</span><span class="drawer-field-value">${lead.phone}</span></div>` : ''}
+          ${lead.address ? `<div class="drawer-field"><span class="drawer-field-label">Address</span><span class="drawer-field-value">${lead.address}</span></div>` : ''}
+          ${lead.website ? `<div class="drawer-field"><span class="drawer-field-label">Website</span><a href="${lead.website}" target="_blank" style="color:var(--accent);font-size:13px">${lead.website}</a></div>` : ''}
+          <div class="drawer-field"><span class="drawer-field-label">Status</span><span class="badge badge-${lead.status}">${lead.status}</span></div>
+          ${lead.qualification_score ? `<div class="drawer-field"><span class="drawer-field-label">Fit Score</span><span class="score ${scoreClass}">${lead.qualification_score}/10</span></div>` : ''}
+          ${lead.scheduled_send_at ? `<div class="drawer-field"><span class="drawer-field-label">Next Send</span><span class="drawer-field-value">${new Date(lead.scheduled_send_at).toLocaleString('en-CA', { timeZone: 'America/Vancouver' })}</span></div>` : ''}
+        </div>
+
+        <div class="analytics-card">
+          <div class="analytics-title">AI Insight</div>
+          ${lead.lead_insights
+            ? `<p style="font-size:13px;color:var(--text2);line-height:1.7">${lead.lead_insights}</p>`
+            : lead.qualification_notes
+              ? `<p style="font-size:13px;color:var(--text2);line-height:1.7;font-style:italic">${lead.qualification_notes}</p><p style="font-size:11px;color:var(--text3);margin-top:8px">Run personalizer.js to generate full insights.</p>`
+              : `<p style="font-size:13px;color:var(--text3)">No insights yet. Run personalizer.js.</p>`
+          }
+        </div>
+      </div>
+
+      ${lead.email_subject ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div class="analytics-card">
+          <div class="analytics-title">Initial Email</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">${lead.email_subject}</div>
+          <div class="email-preview">${lead.email_body || ''}</div>
+        </div>
+        ${lead.followup_subject ? `
+        <div class="analytics-card">
+          <div class="analytics-title">Follow-up Email</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">${lead.followup_subject}</div>
+          <div class="email-preview">${lead.followup_body || ''}</div>
+        </div>` : '<div></div>'}
+      </div>` : ''}
+
+      <div class="table-wrap">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text2)">Email Events</div>
+        <table>
+          <thead><tr><th>Date</th><th>Event</th><th>Details</th></tr></thead>
+          <tbody>${events && events.length
+            ? events.map(e => `<tr>
+                <td style="color:var(--text3)">${new Date(e.created_at).toLocaleString('en-CA')}</td>
+                <td><span class="badge badge-${e.event_type}">${e.event_type}</span></td>
+                <td style="font-size:11px;color:var(--text3)">${e.resend_email_id || (e.metadata?.note ? 'Note: ' + e.metadata.note : '')}</td>
+              </tr>`).join('')
+            : '<tr><td colspan="3" class="empty">No events yet.</td></tr>'
+          }</tbody>
+        </table>
+      </div>
+
+      ${lead.status !== 'replied' ? `
+      <div class="analytics-card" style="margin-top:16px">
+        <div class="analytics-title">Log a Reply</div>
+        <textarea class="reply-input" id="replyNote" rows="2" placeholder="Optional note about the reply..."></textarea>
+        <div style="margin-top:10px">
+          <button class="btn btn-primary" onclick="markReplied('${lead.id}')">Mark as Replied</button>
+        </div>
+      </div>` : ''}
+    `;
+  }
+
+  // ── Customer Profile (full page) ──────────────────────────────
+  function openCustomerProfile(id) {
+    window._profileId = id;
+    window._prevView = currentView;
+    currentView = 'customer-profile';
+    renderView('customer-profile');
+  }
+
+  async function renderCustomerProfile(id) {
+    const [{ data: customer }, { data: projects }, { data: invoices }] = await Promise.all([
+      sb.from('customers').select('*').eq('id', id).single(),
+      sb.from('projects').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+      sb.from('invoices').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+    ]);
+
+    if (!customer) { renderView('customers'); return; }
+
+    const totalBilled = invoices?.reduce((s, i) => s + i.amount, 0) || 0;
+    const totalPaid = invoices?.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0) || 0;
+    const mrr = projects?.filter(p => p.status !== 'cancelled' && p.monthly_fee).reduce((s, p) => s + p.monthly_fee, 0) || 0;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-ghost" onclick="renderView('${window._prevView || 'customers'}')">&#8592; Back</button>
+          <div>
+            <div class="page-title">${customer.company_name}</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:2px">${[customer.industry, customer.city].filter(Boolean).join(' · ')}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="editCustomer('${customer.id}')">Edit</button>
+      </div>
+
+      <div class="stats" style="margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">Status</div><div class="stat-value" style="font-size:18px;margin-top:4px"><span class="badge badge-${customer.status}">${customer.status}</span></div></div>
+        <div class="stat-card"><div class="stat-label">Total Billed</div><div class="stat-value">$${totalBilled.toLocaleString()}</div></div>
+        <div class="stat-card"><div class="stat-label">Total Paid</div><div class="stat-value" style="color:var(--green)">$${totalPaid.toLocaleString()}</div></div>
+        <div class="stat-card"><div class="stat-label">Monthly Recurring</div><div class="stat-value" style="color:var(--accent)">$${mrr}/mo</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div class="analytics-card">
+          <div class="analytics-title">Contact Info</div>
+          ${customer.contact_name ? `<div class="drawer-field"><span class="drawer-field-label">Contact</span><span class="drawer-field-value">${customer.contact_name}</span></div>` : ''}
+          ${customer.email ? `<div class="drawer-field"><span class="drawer-field-label">Email</span><a href="mailto:${customer.email}" style="color:var(--accent);font-size:13px">${customer.email}</a></div>` : ''}
+          ${customer.phone ? `<div class="drawer-field"><span class="drawer-field-label">Phone</span><span class="drawer-field-value">${customer.phone}</span></div>` : ''}
+          ${customer.website ? `<div class="drawer-field"><span class="drawer-field-label">Website</span><a href="${customer.website}" target="_blank" style="color:var(--accent);font-size:13px">${customer.website}</a></div>` : ''}
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-title">Notes</div>
+          <textarea class="reply-input" id="customerNotes" rows="4" style="width:100%">${customer.notes || ''}</textarea>
+          <button class="btn btn-ghost" style="margin-top:8px;font-size:12px" onclick="saveCustomerNotes('${customer.id}')">Save Notes</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-bottom:16px">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:var(--text2)">Projects</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="window._customers=[{id:'${customer.id}',company_name:'${customer.company_name.replace(/'/g, "\\'")}'}];openProjectModal()">+ Add</button>
+        </div>
+        <table><thead><tr><th>Name</th><th>Status</th><th>Build Fee</th><th>Monthly</th><th>Due</th></tr></thead>
+        <tbody>${projects?.length ? projects.map(p => `<tr>
+          <td style="color:var(--text)">${p.name}${p.description ? `<div style="font-size:11px;color:var(--text3)">${p.description}</div>` : ''}</td>
+          <td><span class="badge badge-${p.status}">${p.status.replace('_',' ')}</span></td>
+          <td>${p.build_fee ? '$' + p.build_fee.toLocaleString() : ''}</td>
+          <td style="color:var(--green)">${p.monthly_fee ? '$' + p.monthly_fee + '/mo' : ''}</td>
+          <td style="color:var(--text3)">${p.due_date || ''}</td>
+        </tr>`).join('') : '<tr><td colspan="5" class="empty">No projects yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:var(--text2)">Invoices</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="window._customers=[{id:'${customer.id}',company_name:'${customer.company_name.replace(/'/g, "\\'")}'}];openInvoiceModal()">+ Add</button>
+        </div>
+        <table><thead><tr><th>Invoice #</th><th>Amount</th><th>Status</th><th>Due</th><th>Paid</th></tr></thead>
+        <tbody>${invoices?.length ? invoices.map(i => `<tr>
+          <td style="color:var(--text);font-weight:600">${i.invoice_number || 'INV'}</td>
+          <td style="color:var(--text)">$${i.amount.toLocaleString()}</td>
+          <td><span class="badge badge-${i.status}">${i.status}</span></td>
+          <td style="color:${i.status === 'overdue' ? 'var(--red)' : 'var(--text3)'}">${i.due_date || ''}</td>
+          <td style="color:var(--green)">${i.paid_date || ''}</td>
+        </tr>`).join('') : '<tr><td colspan="5" class="empty">No invoices yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  async function saveCustomerNotes(id) {
+    const notes = document.getElementById('customerNotes')?.value || '';
+    await sb.from('customers').update({ notes }).eq('id', id);
+    const btn = document.querySelector('[onclick*="saveCustomerNotes"]');
+    if (btn) { btn.textContent = 'Saved!'; setTimeout(() => btn.textContent = 'Save Notes', 1500); }
+  }
+
+  // ── Activity Feed ─────────────────────────────────────────────
+  async function renderActivity() {
+    const [{ data: events }, { data: leads }, { data: customers }, { data: projects }] = await Promise.all([
+      sb.from('email_events').select('*, leads(business_name)').order('created_at', { ascending: false }).limit(100),
+      sb.from('leads').select('id, business_name, created_at, status').order('created_at', { ascending: false }).limit(20),
+      sb.from('customers').select('id, company_name, created_at, status').order('created_at', { ascending: false }).limit(10),
+      sb.from('projects').select('id, name, created_at, status, customers(company_name)').order('created_at', { ascending: false }).limit(10),
+    ]);
+
+    // Merge all events into a single timeline
+    const timeline = [
+      ...(events || []).map(e => ({
+        time: e.created_at,
+        type: 'email',
+        event: e.event_type,
+        label: e.leads?.business_name || 'Unknown',
+        badge: e.event_type,
+      })),
+      ...(leads || []).map(l => ({
+        time: l.created_at,
+        type: 'lead',
+        event: 'lead_added',
+        label: l.business_name,
+        badge: 'queued',
+      })),
+      ...(customers || []).map(c => ({
+        time: c.created_at,
+        type: 'customer',
+        event: 'customer_added',
+        label: c.company_name,
+        badge: c.status,
+      })),
+      ...(projects || []).map(p => ({
+        time: p.created_at,
+        type: 'project',
+        event: 'project_added',
+        label: `${p.name} (${p.customers?.company_name || ''})`,
+        badge: p.status,
+      })),
+    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 80);
+
+    const icons = { email: '✉', lead: '◎', customer: '★', project: '◈' };
+    const labels = {
+      email: 'Email', lead_added: 'Lead added', customer_added: 'Customer added',
+      project_added: 'Project created', sent: 'Email sent', opened: 'Email opened',
+      clicked: 'Link clicked', replied: 'Replied', bounced: 'Bounced', delivered: 'Delivered',
+    };
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Activity Feed</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Type</th><th>Event</th><th>Name</th></tr></thead>
+          <tbody>${timeline.length ? timeline.map(item => `<tr>
+            <td style="color:var(--text3);font-size:12px;white-space:nowrap">${new Date(item.time).toLocaleString('en-CA')}</td>
+            <td style="color:var(--text3);font-size:12px">${icons[item.type] || ''} ${item.type}</td>
+            <td><span class="badge badge-${item.badge}">${labels[item.event] || item.event}</span></td>
+            <td style="color:var(--text2)">${item.label}</td>
+          </tr>`).join('') : '<tr><td colspan="4" class="empty">No activity yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // ── Lead Drawer (kept for compatibility) ─────────────────────
   async function openLeadDrawer(id) {
     const lead = (window._allLeads || []).find(l => l.id === id);
     if (!lead) return;
@@ -746,14 +1008,14 @@
 
   function renderCustomerRows(customers) {
     if (!customers || customers.length === 0) return '<tr><td colspan="7" class="empty">No customers yet. Add one or convert a lead.</td></tr>';
-    return customers.map(c => `<tr>
+    return customers.map(c => `<tr style="cursor:pointer" onclick="openCustomerProfile('${c.id}')">
       <td><strong style="color:var(--text)">${c.company_name}</strong></td>
       <td style="color:var(--text2)">${c.contact_name || ''}</td>
       <td style="color:var(--text3);font-size:12px">${c.email || ''}</td>
       <td style="color:var(--text3)">${c.industry || ''}</td>
       <td style="color:var(--text3)">${(c.city||'').replace(' BC','')}</td>
       <td><span class="badge badge-${c.status}">${c.status}</span></td>
-      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="editCustomer('${c.id}')">Edit</button></td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();editCustomer('${c.id}')">Edit</button></td>
     </tr>`).join('');
   }
 

@@ -173,12 +173,19 @@ Respond with JSON only:
 }
 
 async function isDuplicate(businessName, website) {
-  const { data } = await supabase
-    .from('leads')
-    .select('id')
-    .or(`business_name.eq."${businessName}"${website ? `,website.eq."${website}"` : ''}`)
-    .limit(1);
-  return data && data.length > 0;
+  // Check by name first
+  const { data: byName } = await supabase
+    .from('leads').select('id').eq('business_name', businessName).limit(1);
+  if (byName && byName.length > 0) return true;
+
+  // Check by website if available
+  if (website) {
+    const { data: bySite } = await supabase
+      .from('leads').select('id').eq('website', website).limit(1);
+    if (bySite && bySite.length > 0) return true;
+  }
+
+  return false;
 }
 
 async function run() {
@@ -230,7 +237,6 @@ async function run() {
 
           if (score < minScore) {
             console.log(`skip (score ${score}/10: ${notes})`);
-            totalFound--;
             await new Promise(r => setTimeout(r, 2000));
             continue;
           }

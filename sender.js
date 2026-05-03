@@ -125,13 +125,18 @@ async function run() {
       await new Promise(r => setTimeout(r, 500));
 
     } catch (err) {
-      console.log(`FAILED: ${err.message}`);
-      await supabase.from('leads').update({ status: 'bounced', notes: err.message }).eq('id', lead.id);
-      await supabase.from('email_events').insert({
-        lead_id: lead.id,
-        event_type: 'bounced',
-        metadata: { error: err.message },
-      });
+      const msg = err?.message || String(err);
+      console.log(`FAILED: ${msg}`);
+      try {
+        await supabase.from('leads').update({ status: 'bounced', notes: msg }).eq('id', lead.id);
+        await supabase.from('email_events').insert({
+          lead_id: lead.id,
+          event_type: 'bounced',
+          metadata: { error: msg },
+        });
+      } catch (dbErr) {
+        console.error(`  Could not log failure to Supabase: ${dbErr.message}`);
+      }
       failed++;
     }
   }
