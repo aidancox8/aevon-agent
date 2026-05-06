@@ -31,14 +31,10 @@ const CITIES = [
   'New Westminster BC',
 ];
 
-// Wide variety of business types - Gemini qualification handles fit, not this list
 const SEARCH_QUERIES = [
   'property management company',
   'construction company',
   'marketing agency',
-  'real estate brokerage',
-  'dental clinic',
-  'physiotherapy clinic',
   'law firm',
   'engineering firm',
   'staffing agency',
@@ -47,27 +43,16 @@ const SEARCH_QUERIES = [
   'IT consulting firm',
   'logistics company',
   'wholesale distributor',
-  'medical equipment company',
-  'environmental consulting',
+  'environmental consulting firm',
   'architecture firm',
   'accounting firm',
-  'immigration consultant',
-  'mortgage broker',
-  'printing company',
-  'event planning company',
-  'security company',
-  'cleaning services company',
   'manufacturing company',
-  'automotive dealership',
-  'veterinary clinic',
-  'optometry clinic',
-  'chiropractic clinic',
-  'travel agency',
+  'security company',
 ];
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const result = { minScore: 6 };
+  const result = { minScore: 7 };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--query') result.query = args[++i];
     if (args[i] === '--city') result.city = args[++i];
