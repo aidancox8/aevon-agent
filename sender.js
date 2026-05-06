@@ -126,12 +126,14 @@ async function run() {
 
     } catch (err) {
       const msg = err?.message || String(err);
-      console.log(`FAILED: ${msg}`);
+      const isPermanent = /invalid|not found|unsubscribed|bounced/i.test(msg) || err?.statusCode === 422;
+      const newStatus = isPermanent ? 'bounced' : 'error';
+      console.log(`FAILED (${newStatus}): ${msg}`);
       try {
-        await supabase.from('leads').update({ status: 'bounced', notes: msg }).eq('id', lead.id);
+        await supabase.from('leads').update({ status: newStatus, notes: msg }).eq('id', lead.id);
         await supabase.from('email_events').insert({
           lead_id: lead.id,
-          event_type: 'bounced',
+          event_type: newStatus,
           metadata: { error: msg },
         });
       } catch (dbErr) {

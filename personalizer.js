@@ -58,6 +58,8 @@ Lead details:
 - Industry: ${lead.industry}
 - City: ${lead.city}
 - Website: ${lead.website || 'unknown'}
+${lead.qualification_notes ? `- What we know about them: ${lead.qualification_notes}` : ''}
+${lead.lead_insights ? `- Their likely pain points: ${lead.lead_insights}` : ''}
 
 Write TWO emails AND a lead insight:
 
@@ -90,7 +92,7 @@ async function run() {
   // Fetch leads that need personalization (no email content yet, have an email address)
   const { data: leads, error } = await supabase
     .from('leads')
-    .select('id, business_name, industry, city, website, email')
+    .select('id, business_name, industry, city, website, email, lead_insights, qualification_notes')
     .is('email_subject', null)
     .not('email', 'is', null)
     .eq('status', 'queued')
