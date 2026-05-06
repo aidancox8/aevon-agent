@@ -48,6 +48,7 @@ const SEARCH_QUERIES = [
   'accounting firm',
   'manufacturing company',
   'security company',
+  'event planning company',
 ];
 
 function parseArgs() {
