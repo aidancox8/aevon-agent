@@ -1,9 +1,9 @@
 name: Send Outreach Emails
 
 on:
-  workflow_dispatch: # Manual trigger only - enable cron below once aevon.ca is set up
-  # schedule:
-  #   - cron: '0 16-23 * * 1-5'  # Mon-Fri 9am-4pm PT
+  workflow_dispatch:
+  schedule:
+    - cron: '0 16-23 * * 1-5'  # Mon-Fri 9am-4pm PT
 
 jobs:
   send:
