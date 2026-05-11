@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aevon CRM</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='8' y1='8' x2='56' y2='56' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%236366F1'/%3E%3Cstop offset='1' stop-color='%237C3AED'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%231E1B4B'/%3E%3Cpath d='M8 56 L32 8 L40 24 L24 56 Z' fill='url(%23g)'/%3E%3Cpath d='M40 24 L56 56 L32 56 L32 40 Z' fill='url(%23g)' opacity='0.55'/%3E%3Cpath d='M32 40 L40 40 L40 24 L36 32 Z' fill='url(%23g)'/%3E%3C/svg%3E">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -1459,13 +1460,31 @@
 
   async function togglePauseBtn(btn) {
     const id = btn.dataset.id;
+    if (!id) return;
     const currentStatus = btn.dataset.status;
     const newStatus = currentStatus === 'queued' ? 'paused' : 'queued';
     const update = { status: newStatus };
     if (newStatus === 'paused') update.scheduled_send_at = null;
+
+    btn.disabled = true;
     const { error } = await sb.from('leads').update(update).eq('id', id);
-    if (error) { alert('Error: ' + error.message); return; }
-    renderOutreach();
+    if (error) { alert('Error: ' + error.message); btn.disabled = false; return; }
+
+    // Update row in-place — no re-render, no reordering confusion
+    const row = btn.closest('tr');
+    const badge = row.querySelector('.badge');
+    if (badge) { badge.className = `badge badge-${newStatus}`; badge.textContent = newStatus; }
+    const cells = row.querySelectorAll('td');
+    if (newStatus === 'paused' && cells[6]) cells[6].innerHTML = '<span style="opacity:0.35">none</span>';
+    btn.dataset.status = newStatus;
+    btn.title = newStatus === 'paused' ? 'Resume' : 'Pause';
+    btn.textContent = newStatus === 'paused' ? '▶' : '⏸';
+    btn.disabled = false;
+
+    if (window._outreachLeads) {
+      const lead = window._outreachLeads.find(l => l.id === id);
+      if (lead) { lead.status = newStatus; if (newStatus === 'paused') lead.scheduled_send_at = null; }
+    }
   }
 
   async function deleteLeadBtn(btn) {
@@ -1474,7 +1493,8 @@
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     const { error } = await sb.from('leads').delete().eq('id', id);
     if (error) { alert('Error: ' + error.message); return; }
-    renderOutreach();
+    btn.closest('tr').remove();
+    if (window._outreachLeads) window._outreachLeads = window._outreachLeads.filter(l => l.id !== id);
   }
 
   async function bulkPause() {
