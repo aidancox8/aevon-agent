@@ -7,8 +7,26 @@
  */
 
 require('dotenv').config();
+const axios = require('axios');
+const cheerio = require('cheerio');
 const supabase = require('./lib/supabase');
 const { generate } = require('./lib/gemini');
+
+async function scrapeWebsite(url) {
+  if (!url) return null;
+  try {
+    const { data } = await axios.get(url, {
+      timeout: 8000,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+    });
+    const $ = cheerio.load(data);
+    $('script, style, nav, footer, noscript, iframe').remove();
+    const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 900);
+    return text || null;
+  } catch {
+    return null;
+  }
+}
 
 // Spread sends across Mon-Fri 9am-4pm PT (UTC-7 = UTC+0 offset of 16-23)
 // scheduled_send_at stored in UTC
@@ -43,15 +61,15 @@ function nextWeekdaySendSlot(existingSlots) {
   throw new Error('Could not find an open send slot in the next 14 days');
 }
 
-function buildPrompt(lead) {
-  return `You are writing a cold outreach email on behalf of Aevon, a custom business app development company based in the Lower Mainland, BC.
+function buildPrompt(lead, websiteContent) {
+  return `You are writing a cold outreach email on behalf of Aevon, a custom business software company based in the Lower Mainland, BC.
 
 About Aevon:
-- Builds custom internal software tailored exactly to a business's workflow
-- No per-seat pricing, no subscription lock-in — clients pay once and own the software
-- Typical projects: internal tools, document signing, scheduling apps, AI-powered knowledge bases
-- Price range: $1,500-$8,000 one-time build fee, optional $50-75/mo hosting + maintenance
-- Target clients: 5-50 employee businesses in the Lower Mainland frustrated with SaaS costs or workarounds
+- Builds custom internal tools tailored exactly to how a business actually operates
+- Replaces the patchwork of SaaS tools and manual workarounds most growing teams rely on
+- Clients pay once and own the software outright — no seat-based pricing, no vendor lock-in
+- Typical projects: internal workflow tools, scheduling apps, document management, AI-powered knowledge bases
+- Target clients: 5-50 employee businesses in the Lower Mainland dealing with operational friction
 
 Lead details:
 - Business name: ${lead.business_name}
@@ -60,23 +78,29 @@ Lead details:
 - Website: ${lead.website || 'unknown'}
 ${lead.qualification_notes ? `- What we know about them: ${lead.qualification_notes}` : ''}
 ${lead.lead_insights ? `- Their likely pain points: ${lead.lead_insights}` : ''}
+${websiteContent ? `- Scraped from their website: ${websiteContent}` : ''}
 
 Write TWO emails AND a lead insight:
 
 EMAIL 1 (initial outreach):
-- Subject line: short, specific, not salesy
-- Body: 3-4 short paragraphs. Open with a specific observation about their industry's common software pain point. Pitch Aevon briefly. One clear CTA (15-min call). Sign off as "Aidan" from Aevon.
-- Tone: direct, human, no buzzwords, no em dashes
+- Subject line: short, specific, not salesy — reference something concrete about their business or industry
+- Body: 3 sentences max per paragraph, 2 paragraphs max total. One sentence to name the operational pain point. One to two sentences introducing Aevon. One clear CTA (15-min call). Sign off as "Aidan" from Aevon.
+- The whole email body should be under 80 words. Treat every word as earned.
+- Do NOT open with a compliment or flattery
+- Do NOT fabricate specific details (employee counts, property counts, revenue figures) — only use what is provided in the lead details above
+- Do NOT focus on software costs or savings — focus on the operational problem and what having the right tool makes possible
+- Do NOT describe Aevon as a "shop" or "local shop" — refer to it as "Aevon" or "we"
+- Tone: direct, confident, conversational. No buzzwords, no em dashes, no filler phrases
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
-- Subject line: brief reply thread style (e.g. "Re: [original subject]" or a new short line)
-- Body: 2 short paragraphs. Friendly bump, add one new angle or specific example relevant to their industry. Same CTA.
+- Subject line: brief, reply-thread style
+- Body: 2 short paragraphs, under 60 words total. Friendly bump, one new angle or specific use case. Same CTA.
 - Tone: same as above
 
 LEAD INSIGHT (2-3 sentences):
 - Why this business is a good fit for Aevon
-- What specific software pain points they likely have based on their industry and size
-- What type of custom app would most benefit them
+- What specific operational pain points they likely have based on their industry and size
+- What type of custom tool would most benefit them
 
 Format your response as valid JSON only, no markdown, no explanation:
 {
@@ -121,7 +145,9 @@ async function run() {
     process.stdout.write(`  [${lead.business_name}]... `);
 
     try {
-      const prompt = buildPrompt(lead);
+      const websiteContent = await scrapeWebsite(lead.website);
+      if (websiteContent) process.stdout.write(`(scraped) `);
+      const prompt = buildPrompt(lead, websiteContent);
       const raw = await generate(prompt);
 
       // Extract JSON - handle markdown fences and stray text
