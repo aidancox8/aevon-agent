@@ -190,6 +190,9 @@
     <div class="nav-item active" onclick="showView('pipeline', event)">
       <span>&#9776;</span> Pipeline
     </div>
+    <div class="nav-item" onclick="showView('outreach', event)">
+      <span>&#9993;</span> Outreach
+    </div>
     <div class="nav-item" onclick="showView('analytics', event)">
       <span>&#9641;</span> Analytics
     </div>
@@ -420,6 +423,7 @@
     const main = document.getElementById('main');
     main.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
     if (view === 'pipeline') await renderPipeline();
+    else if (view === 'outreach') await renderOutreach();
     else if (view === 'analytics') await renderAnalytics();
     else if (view === 'activity') await renderActivity();
     else if (view === 'customers') await renderCustomers();
@@ -1333,8 +1337,247 @@
     document.getElementById('themeToggle').textContent = '🌙 Dark mode';
   }
 
+  // ── Outreach ──────────────────────────────────────────────────
+  async function renderOutreach() {
+    const { data: leads } = await sb.from('leads')
+      .select('id, business_name, industry, city, email, qualification_score, status, scheduled_send_at, email_subject')
+      .order('qualification_score', { ascending: false });
+
+    const queued = leads?.filter(l => l.status === 'queued').length || 0;
+    const paused = leads?.filter(l => l.status === 'paused').length || 0;
+    const sent   = leads?.filter(l => ['sent','replied'].includes(l.status)).length || 0;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Outreach</div>
+        <button class="btn btn-primary" onclick="showAddLeadModal()">+ Add Lead</button>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Queued</div><div class="stat-value">${queued}</div></div>
+        <div class="stat-card"><div class="stat-label">Paused</div><div class="stat-value">${paused}</div></div>
+        <div class="stat-card"><div class="stat-label">Sent</div><div class="stat-value">${sent}</div></div>
+      </div>
+      <div id="bulk-bar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;margin-bottom:12px;font-size:13px">
+        <span id="bulk-count" style="color:var(--text2);font-weight:600"></span>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="bulkPause()">Pause</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="bulkResume()">Resume (tomorrow 9am)</button>
+        <button style="font-size:12px;padding:5px 12px;background:rgba(239,68,68,0.12);color:#F87171;border:none;border-radius:7px;cursor:pointer;font-weight:600" onclick="bulkDelete()">Delete</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px;margin-left:auto" onclick="clearSelection()">Clear</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <select class="filter-select" id="outreachFilter" onchange="filterOutreach()">
+          <option value="">All statuses</option>
+          <option value="queued">Queued</option>
+          <option value="paused">Paused</option>
+          <option value="sent">Sent</option>
+          <option value="replied">Replied</option>
+          <option value="bounced">Bounced</option>
+        </select>
+        <input class="search-input" style="width:220px" id="outreachSearch" placeholder="Search business or industry..." oninput="filterOutreach()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:36px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="cursor:pointer"></th>
+            <th>Business</th>
+            <th>Industry</th>
+            <th>City</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th style="width:70px"></th>
+          </tr></thead>
+          <tbody id="outreachBody">${renderOutreachRows(leads)}</tbody>
+        </table>
+      </div>
+    `;
+    window._outreachLeads = leads || [];
+  }
+
+  function renderOutreachRows(leads) {
+    if (!leads || !leads.length) return '<tr><td colspan="8" class="empty">No leads.</td></tr>';
+    return leads.map(l => {
+      const scoreClass = l.qualification_score >= 8 ? 'score-high' : l.qualification_score >= 6 ? 'score-mid' : 'score-low';
+      const scheduled = l.scheduled_send_at
+        ? new Date(l.scheduled_send_at).toLocaleDateString('en-CA')
+        : `<span style="opacity:0.35">none</span>`;
+      const isPaused = l.status === 'paused';
+      const canToggle = ['queued','paused'].includes(l.status);
+      const nameEsc = l.business_name.replace(/"/g,'&quot;');
+      return `<tr>
+        <td onclick="event.stopPropagation()"><input type="checkbox" class="lead-check" data-id="${l.id}" onchange="updateBulkBar()" style="cursor:pointer"></td>
+        <td style="cursor:pointer;color:var(--text);font-weight:500" onclick="openLeadProfile('${l.id}')">${l.business_name}</td>
+        <td style="color:var(--text3);font-size:12px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.industry||''}</td>
+        <td style="color:var(--text3);font-size:12px">${(l.city||'').replace(' BC','')}</td>
+        <td>${l.qualification_score ? `<span class="score ${scoreClass}">${l.qualification_score}</span>` : ''}</td>
+        <td><span class="badge badge-${l.status}">${l.status}</span></td>
+        <td style="font-size:12px;color:var(--text3)">${scheduled}</td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;text-align:right">
+          ${canToggle ? `<button data-id="${l.id}" data-status="${l.status}" onclick="togglePauseBtn(this)" title="${isPaused?'Resume':'Pause'}" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);padding:3px 5px;border-radius:4px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">${isPaused?'▶':'⏸'}</button>` : ''}
+          <button data-id="${l.id}" data-name="${nameEsc}" onclick="deleteLeadBtn(this)" title="Delete" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);padding:3px 5px;border-radius:4px" onmouseover="this.style.color='#F87171';this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.color='var(--text3)';this.style.background='none'">&#128465;</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function filterOutreach() {
+    const status = document.getElementById('outreachFilter')?.value || '';
+    const q = (document.getElementById('outreachSearch')?.value || '').toLowerCase();
+    const leads = (window._outreachLeads || []).filter(l => {
+      if (status && l.status !== status) return false;
+      if (q && !l.business_name.toLowerCase().includes(q) && !(l.industry||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const body = document.getElementById('outreachBody');
+    if (body) body.innerHTML = renderOutreachRows(leads);
+  }
+
+  function toggleSelectAll(cb) {
+    document.querySelectorAll('.lead-check').forEach(c => c.checked = cb.checked);
+    updateBulkBar();
+  }
+
+  function updateBulkBar() {
+    const checked = document.querySelectorAll('.lead-check:checked');
+    const bar = document.getElementById('bulk-bar');
+    if (!bar) return;
+    bar.style.display = checked.length > 0 ? 'flex' : 'none';
+    const el = document.getElementById('bulk-count');
+    if (el) el.textContent = `${checked.length} selected`;
+  }
+
+  function clearSelection() {
+    document.querySelectorAll('.lead-check').forEach(c => c.checked = false);
+    const sa = document.getElementById('selectAll');
+    if (sa) sa.checked = false;
+    updateBulkBar();
+  }
+
+  function getSelectedIds() {
+    return [...document.querySelectorAll('.lead-check:checked')].map(c => c.dataset.id);
+  }
+
+  async function togglePauseBtn(btn) {
+    const id = btn.dataset.id;
+    const currentStatus = btn.dataset.status;
+    const newStatus = currentStatus === 'queued' ? 'paused' : 'queued';
+    const update = { status: newStatus };
+    if (newStatus === 'paused') update.scheduled_send_at = null;
+    const { error } = await sb.from('leads').update(update).eq('id', id);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderOutreach();
+  }
+
+  async function deleteLeadBtn(btn) {
+    const id = btn.dataset.id;
+    const name = btn.dataset.name;
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const { error } = await sb.from('leads').delete().eq('id', id);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderOutreach();
+  }
+
+  async function bulkPause() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const { error } = await sb.from('leads').update({ status: 'paused', scheduled_send_at: null }).in('id', ids);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderOutreach();
+  }
+
+  async function bulkResume() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setUTCHours(16, 0, 0, 0);
+    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: tomorrow.toISOString() }).in('id', ids);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderOutreach();
+  }
+
+  async function bulkDelete() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} lead(s)? This cannot be undone.`)) return;
+    const { error } = await sb.from('leads').delete().in('id', ids);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderOutreach();
+  }
+
+  function showAddLeadModal() {
+    document.getElementById('add-lead-modal').style.display = 'flex';
+  }
+
+  function closeAddLeadModal() {
+    document.getElementById('add-lead-modal').style.display = 'none';
+    ['newLeadName','newLeadEmail','newLeadIndustry','newLeadCity','newLeadWebsite','newLeadPhone'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+  }
+
+  async function saveNewLead() {
+    const name  = document.getElementById('newLeadName').value.trim();
+    const email = document.getElementById('newLeadEmail').value.trim();
+    if (!name || !email) { alert('Business name and email are required.'); return; }
+    const { error } = await sb.from('leads').insert({
+      business_name: name,
+      email,
+      industry: document.getElementById('newLeadIndustry').value.trim() || null,
+      city:     document.getElementById('newLeadCity').value.trim() || null,
+      website:  document.getElementById('newLeadWebsite').value.trim() || null,
+      phone:    document.getElementById('newLeadPhone').value.trim() || null,
+      status: 'queued',
+      sequence_step: 0,
+      source: 'manual',
+    });
+    if (error) { alert('Error: ' + error.message); return; }
+    closeAddLeadModal();
+    renderOutreach();
+  }
+
   // ── Init ─────────────────────────────────────────────────────
   renderView('pipeline');
 </script>
+
+<!-- Add Lead Modal -->
+<div id="add-lead-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeAddLeadModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Add Lead</div>
+      <button class="modal-close" onclick="closeAddLeadModal()">&#215;</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Business Name *</label>
+      <input class="form-input" id="newLeadName" placeholder="Acme Property Management">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input class="form-input" id="newLeadEmail" type="email" placeholder="info@acme.ca">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Industry</label>
+        <input class="form-input" id="newLeadIndustry" placeholder="Property management">
+      </div>
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input class="form-input" id="newLeadCity" placeholder="Vancouver BC">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Website</label>
+      <input class="form-input" id="newLeadWebsite" placeholder="https://acme.ca">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone</label>
+      <input class="form-input" id="newLeadPhone" placeholder="604-555-0100">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveNewLead()">Add Lead</button>
+      <button class="btn btn-ghost" onclick="closeAddLeadModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
