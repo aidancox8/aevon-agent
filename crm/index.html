@@ -81,6 +81,7 @@
     /* Badges */
     .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
     .badge-queued { background: rgba(99,102,241,0.15); color: #818CF8; }
+    .badge-paused { background: rgba(148,163,184,0.15); color: #94A3B8; }
     .badge-sent { background: rgba(34,197,94,0.15); color: #4ADE80; }
     .badge-replied { background: rgba(34,197,94,0.25); color: #22C55E; }
     .badge-bounced { background: rgba(239,68,68,0.15); color: #F87171; }
@@ -455,6 +456,7 @@
             <option value="">All statuses</option>
             <option value="website_lead">Website Lead</option>
             <option value="queued">Queued</option>
+            <option value="paused">Paused</option>
             <option value="sent">Sent</option>
             <option value="replied">Replied</option>
             <option value="bounced">Bounced</option>
@@ -535,6 +537,8 @@
           </div>
         </div>
         <div style="display:flex;gap:8px">
+          ${lead.status === 'queued' ? `<button class="btn btn-ghost" onclick="pauseLead('${lead.id}')">Pause</button>` : ''}
+          ${lead.status === 'paused' || (lead.email_subject && !lead.scheduled_send_at && lead.status !== 'sent' && lead.status !== 'replied' && lead.status !== 'converted') ? `<button class="btn btn-ghost" onclick="showQueuePicker('${lead.id}')">Queue</button>` : ''}
           ${lead.status !== 'replied' && lead.status !== 'converted' ? `<button class="btn btn-ghost" onclick="markReplied('${lead.id}')">Mark Replied</button>` : ''}
           ${lead.status !== 'converted' ? `<button class="btn btn-primary" onclick="convertToCustomer(${JSON.stringify(lead).replace(/"/g, '&quot;')})">Convert to Customer</button>` : ''}
         </div>
@@ -855,6 +859,39 @@
   function closeDrawer() {
     document.getElementById('drawerOverlay').classList.remove('open');
     document.getElementById('leadDrawer').classList.remove('open');
+  }
+
+  async function pauseLead(leadId) {
+    const { error } = await sb.from('leads').update({ status: 'paused', scheduled_send_at: null }).eq('id', leadId);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderLeadProfile(leadId);
+  }
+
+  function showQueuePicker(leadId) {
+    const existing = document.getElementById('queue-picker');
+    if (existing) { existing.remove(); return; }
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    const localIso = new Date(tomorrow - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const div = document.createElement('div');
+    div.id = 'queue-picker';
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 0 0;flex-wrap:wrap';
+    div.innerHTML = `
+      <input type="datetime-local" id="queue-dt" value="${localIso}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px">
+      <button class="btn btn-primary" style="font-size:13px" onclick="confirmQueue('${leadId}')">Confirm</button>
+      <button class="btn btn-ghost" style="font-size:13px" onclick="document.getElementById('queue-picker').remove()">Cancel</button>
+    `;
+    document.querySelector('.page-header').after(div);
+  }
+
+  async function confirmQueue(leadId) {
+    const dt = document.getElementById('queue-dt')?.value;
+    if (!dt) { alert('Pick a date first.'); return; }
+    const utcIso = new Date(dt).toISOString();
+    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: utcIso }).eq('id', leadId);
+    if (error) { alert('Error: ' + error.message); return; }
+    renderLeadProfile(leadId);
   }
 
   async function markReplied(leadId) {
