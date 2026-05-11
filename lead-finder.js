@@ -32,22 +32,47 @@ const CITIES = [
 ];
 
 const SEARCH_QUERIES = [
+  // Property & real estate
   'property management company',
+  // Professional services
   'marketing agency',
-  'law firm',
   'engineering firm',
   'staffing agency',
   'insurance brokerage',
-  'financial advisory firm',
   'IT consulting firm',
-  'logistics company',
-  'wholesale distributor',
   'environmental consulting firm',
   'architecture firm',
-  'accounting firm',
+  'management consulting firm',
+  'public relations firm',
+  'market research firm',
+  'recruitment agency',
+  'surveying company',
+  'inspection company',
+  // Trades & field service
+  'HVAC company',
+  'plumbing company',
+  'electrical contractor',
+  'equipment rental company',
+  'moving company',
+  'courier company',
+  'field service company',
+  // Corporate & distribution
+  'trading company',
+  'import export company',
+  'distribution company',
+  'wholesale distributor',
+  'logistics company',
   'manufacturing company',
-  'security company',
-  'event planning company',
+  'media company',
+  'research company',
+  'pharmaceutical company',
+  // Clinics & healthcare
+  'medical clinic',
+  'dental clinic',
+  'physiotherapy clinic',
+  'chiropractic clinic',
+  'optometry clinic',
+  'veterinary clinic',
 ];
 
 function parseArgs() {
@@ -118,20 +143,26 @@ async function scrapeWebsite(websiteUrl) {
 async function qualifyLead(business, websiteText) {
   const prompt = `You are evaluating whether a small business is a good prospect for Aevon, a custom business app development company.
 
-Aevon builds custom internal software for businesses with 5-50 employees in the Lower Mainland, BC. They replace overpriced or generic SaaS tools with tailored apps the client owns outright. Typical projects: internal tools, scheduling systems, document signing, client portals, workflow automation, AI-powered knowledge bases.
+Aevon builds custom internal software for businesses in the Lower Mainland, BC. Clients pay a one-time build fee ($3,000-$15,000) and own the software outright. Typical projects: internal workflow tools, scheduling systems, client portals, document management, field reporting apps, AI-powered knowledge bases.
 
-Good prospects:
-- 5-50 employees (look for team page hints, "our team of X", staff photos)
-- Operational complexity (multiple locations, bookings, client intake, field workers, inventory)
-- Likely paying for multiple SaaS tools that almost fit their needs
-- B2B or professional services (not retail food, not solo freelancers)
-- Based in the Lower Mainland
+Good prospects (score 8-10):
+- 15-100 employees — large enough to have real operational pain and budget to spend
+- Clear operational complexity (multiple staff roles, field workers, client intake, scheduling, inventory, reporting)
+- Professional services, healthcare, distribution, or corporate ops — industries where staff time is expensive and inefficiency has real cost
+- Signs of budget: professional website, multiple locations, named team members, established brand
+- B2B focused — they have clients or customers they manage
 
-Bad prospects:
-- Solo operators / one-person shops
-- Pure retail (restaurant, cafe, salon) with no operational complexity
-- Enterprise companies (too big, have IT departments)
+Acceptable prospects (score 6-7):
+- 5-15 employees with clear operational pain
+- Trades businesses (HVAC, plumbing, electrical) with dispatch and job tracking needs
+
+Bad prospects (score 1-5):
+- Solo operators or owner-only businesses — no budget, no need
+- Pure retail (restaurant, cafe, salon, grocery) — no internal ops complexity
+- Residential-only service providers with no staff
+- Enterprise companies with IT departments
 - No web presence or clearly out of business
+- Franchises of large chains (e.g. RE/MAX individual agents, Tim Hortons)
 
 Business details:
 - Name: ${business.name}
