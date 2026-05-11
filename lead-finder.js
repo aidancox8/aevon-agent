@@ -32,8 +32,6 @@ const CITIES = [
 ];
 
 const SEARCH_QUERIES = [
-  // Property & real estate
-  'property management company',
   // Professional services
   'marketing agency',
   'engineering firm',
@@ -66,6 +64,12 @@ const SEARCH_QUERIES = [
   'media company',
   'research company',
   'pharmaceutical company',
+  // Sales & financial
+  'real estate brokerage',
+  'mortgage broker',
+  'business broker',
+  'financial planning firm',
+  'investment advisory firm',
   // Clinics & healthcare
   'medical clinic',
   'dental clinic',
