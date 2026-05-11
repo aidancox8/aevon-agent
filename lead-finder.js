@@ -60,10 +60,14 @@ const SEARCH_QUERIES = [
   'distribution company',
   'wholesale distributor',
   'logistics company',
+  'freight company',
+  'warehouse company',
   'manufacturing company',
   'media company',
   'research company',
   'pharmaceutical company',
+  'nonprofit organization',
+  'private school',
   // Sales & financial
   'real estate brokerage',
   'mortgage broker',
@@ -77,6 +81,9 @@ const SEARCH_QUERIES = [
   'chiropractic clinic',
   'optometry clinic',
   'veterinary clinic',
+  'mental health clinic',
+  'rehabilitation clinic',
+  'medical imaging clinic',
 ];
 
 function parseArgs() {
