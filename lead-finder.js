@@ -33,7 +33,6 @@ const CITIES = [
 
 const SEARCH_QUERIES = [
   'property management company',
-  'construction company',
   'marketing agency',
   'law firm',
   'engineering firm',
