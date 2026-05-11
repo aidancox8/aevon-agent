@@ -88,7 +88,7 @@ const SEARCH_QUERIES = [
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const result = { minScore: 7 };
+  const result = { minScore: 8 };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--query') result.query = args[++i];
     if (args[i] === '--city') result.city = args[++i];
@@ -152,41 +152,51 @@ async function scrapeWebsite(websiteUrl) {
 }
 
 async function qualifyLead(business, websiteText) {
-  const prompt = `You are evaluating whether a small business is a good prospect for Aevon, a custom business app development company.
+  const prompt = `You are a strict lead qualifier for Aevon, a custom business software company in the Lower Mainland, BC. Your job is to filter out bad leads aggressively — it is better to miss a mediocre lead than to let a bad one through.
 
-Aevon builds custom internal software for businesses in the Lower Mainland, BC. Clients pay a one-time build fee ($3,000-$15,000) and own the software outright. Typical projects: internal workflow tools, scheduling systems, client portals, document management, field reporting apps, AI-powered knowledge bases.
+Aevon builds custom internal software for businesses. Clients pay a one-time build fee and own the software. Projects: workflow tools, scheduling systems, client portals, document management, field reporting, AI knowledge bases, outreach automation.
 
-Good prospects (score 8-10):
-- 15-100 employees — large enough to have real operational pain and budget to spend
-- Clear operational complexity (multiple staff roles, field workers, client intake, scheduling, inventory, reporting)
-- Professional services, healthcare, distribution, or corporate ops — industries where staff time is expensive and inefficiency has real cost
-- Signs of budget: professional website, multiple locations, named team members, established brand
-- B2B focused — they have clients or customers they manage
+The ideal client has real operational complexity, real staff, and real budget. They are frustrated by manual processes or software that doesn't fit how they work.
 
-Acceptable prospects (score 6-7):
-- 5-15 employees with clear operational pain
-- Trades businesses (HVAC, plumbing, electrical) with dispatch and job tracking needs
+SCORE 8-10 (strong fit — save these):
+- 15+ employees with clear internal ops complexity
+- Multiple staff roles coordinating work (dispatchers, coordinators, managers, field teams)
+- Industries where staff time is expensive: healthcare, professional services, distribution, logistics, corporate ops, finance, research
+- Evidence of budget: polished website, multiple service lines, named leadership team, established history
+- Actively managing clients, patients, properties, projects, or inventory at scale
+- Would obviously benefit from: scheduling automation, client portals, reporting dashboards, field reporting apps, document workflows
 
-Bad prospects (score 1-5):
-- Solo operators or owner-only businesses — no budget, no need
-- Pure retail (restaurant, cafe, salon, grocery) — no internal ops complexity
-- Residential-only service providers with no staff
-- Enterprise companies with IT departments
-- No web presence or clearly out of business
-- Franchises of large chains (e.g. RE/MAX individual agents, Tim Hortons)
+SCORE 6-7 (acceptable — save only if clear pain is visible):
+- 8-15 employees with obvious manual workflow pain
+- Trades with dispatch/job coordination needs (HVAC, plumbing, electrical, inspection)
+- Smaller professional services firms with clear client management complexity
+
+SCORE 1-5 (reject — do not save):
+- Solo operators, owner-only businesses, or fewer than 5 staff
+- Residential-only services with no internal team (house cleaners, handymen)
+- Pure consumer retail (restaurants, cafes, salons, gyms, grocery)
+- Franchises of large chains — they use the franchisor's systems
+- Enterprise companies (100+ staff) — they have IT departments
+- No website or website is clearly a placeholder/dead
+- Nonprofits that are clearly volunteer-run with no operational complexity
+- Schools that are part of a public school district — they have centralized IT
+- Any business where the core product is already a well-served SaaS category (e.g. a software company, a SaaS startup)
+- Businesses with no evidence of internal coordination needs
+
+Be skeptical. A professional-looking website alone is not enough — look for evidence of operational complexity and team size. When in doubt, score low.
 
 Business details:
 - Name: ${business.name}
 - Address: ${business.address}
 - Website: ${business.website || 'none'}
 
-Website text excerpt:
-${websiteText || '(no website content available)'}
+Website content:
+${websiteText || '(no website available — score conservatively)'}
 
 Respond with JSON only:
 {
   "score": <integer 1-10>,
-  "notes": "<one sentence explaining the score>"
+  "notes": "<one specific sentence explaining why this score — reference something concrete from the website or business type>"
 }`;
 
   try {
