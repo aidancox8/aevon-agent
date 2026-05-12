@@ -33,7 +33,6 @@ const CITIES = [
 
 const SEARCH_QUERIES = [
   // Professional services
-  'marketing agency',
   'engineering firm',
   'staffing agency',
   'insurance brokerage',
