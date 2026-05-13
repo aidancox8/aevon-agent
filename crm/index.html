@@ -1365,7 +1365,7 @@
         <button style="font-size:12px;padding:5px 12px;background:rgba(239,68,68,0.12);color:#F87171;border:none;border-radius:7px;cursor:pointer;font-weight:600" onclick="bulkDelete()">Delete</button>
         <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px;margin-left:auto" onclick="clearSelection()">Clear</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
         <select class="filter-select" id="outreachFilter" onchange="filterOutreach()">
           <option value="">All statuses</option>
           <option value="queued">Queued</option>
@@ -1374,7 +1374,11 @@
           <option value="replied">Replied</option>
           <option value="bounced">Bounced</option>
         </select>
-        <input class="search-input" style="width:220px" id="outreachSearch" placeholder="Search business or industry..." oninput="filterOutreach()">
+        <select class="filter-select" id="industryFilter" onchange="filterOutreach()">
+          <option value="">All industries</option>
+          ${[...new Set((leads||[]).map(l=>l.industry).filter(Boolean))].sort().map(i=>`<option value="${i}">${i}</option>`).join('')}
+        </select>
+        <input class="search-input" style="width:220px" id="outreachSearch" placeholder="Search business..." oninput="filterOutreach()">
       </div>
       <div class="table-wrap">
         <table>
@@ -1423,10 +1427,12 @@
 
   function filterOutreach() {
     const status = document.getElementById('outreachFilter')?.value || '';
+    const industry = document.getElementById('industryFilter')?.value || '';
     const q = (document.getElementById('outreachSearch')?.value || '').toLowerCase();
     const leads = (window._outreachLeads || []).filter(l => {
       if (status && l.status !== status) return false;
-      if (q && !l.business_name.toLowerCase().includes(q) && !(l.industry||'').toLowerCase().includes(q)) return false;
+      if (industry && l.industry !== industry) return false;
+      if (q && !l.business_name.toLowerCase().includes(q)) return false;
       return true;
     });
     const body = document.getElementById('outreachBody');
