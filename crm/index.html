@@ -953,66 +953,118 @@
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
     const [{ data: leads }, { data: events }] = await Promise.all([
-      sb.from('leads').select('status, opened_at, clicked_at, sequence_step'),
-      sb.from('email_events').select('event_type, created_at'),
+      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step'),
+      sb.from('email_events').select('event_type, created_at, resend_email_id'),
     ]);
 
-    const total = leads?.length || 0;
-    const sent = leads?.filter(l => l.sequence_step > 0).length || 0;
-    const opened = leads?.filter(l => l.opened_at).length || 0;
-    const clicked = leads?.filter(l => l.clicked_at).length || 0;
-    const replied = leads?.filter(l => l.status === 'replied').length || 0;
-    const bounced = leads?.filter(l => l.status === 'bounced').length || 0;
+    const L = leads || [];
+    const total = L.length;
+    const hasEmail = L.filter(l => l.email).length;
+    const personalized = L.filter(l => l.email_subject).length;
+    const queued = L.filter(l => l.status === 'queued').length;
+    const paused = L.filter(l => l.status === 'paused').length;
+    const sent = L.filter(l => ['sent','replied','converted'].includes(l.status)).length;
+    const replied = L.filter(l => l.status === 'replied').length;
+    const bounced = L.filter(l => l.status === 'bounced').length;
+    const opened = L.filter(l => l.opened_at).length;
+    const clicked = L.filter(l => l.clicked_at).length;
+
+    // By industry — top 12
+    const byIndustry = {};
+    L.forEach(l => { if (l.industry) byIndustry[l.industry] = (byIndustry[l.industry] || 0) + 1; });
+    const topIndustries = Object.entries(byIndustry).sort((a,b) => b[1]-a[1]).slice(0, 12);
+    const maxInd = topIndustries[0]?.[1] || 1;
+
+    // By city
+    const byCity = {};
+    L.forEach(l => { if (l.city) byCity[l.city] = (byCity[l.city] || 0) + 1; });
+    const topCities = Object.entries(byCity).sort((a,b) => b[1]-a[1]);
+    const maxCity = topCities[0]?.[1] || 1;
+
+    // Score distribution
+    const scoreBuckets = { '10': 0, '9': 0, '8': 0, '7': 0, '≤6': 0 };
+    L.forEach(l => {
+      const s = l.qualification_score;
+      if (!s) return;
+      if (s >= 10) scoreBuckets['10']++;
+      else if (s === 9) scoreBuckets['9']++;
+      else if (s === 8) scoreBuckets['8']++;
+      else if (s === 7) scoreBuckets['7']++;
+      else scoreBuckets['≤6']++;
+    });
+    const maxScore = Math.max(...Object.values(scoreBuckets), 1);
 
     const openRate = sent ? Math.round(opened / sent * 100) : 0;
-    const clickRate = sent ? Math.round(clicked / sent * 100) : 0;
     const replyRate = sent ? Math.round(replied / sent * 100) : 0;
     const bounceRate = sent ? Math.round(bounced / sent * 100) : 0;
 
-    // Event timeline (last 30 days)
-    const now = Date.now();
-    const byDay = {};
-    (events || []).forEach(e => {
-      const d = new Date(e.created_at).toLocaleDateString('en-CA');
-      byDay[d] = (byDay[d] || 0) + 1;
-    });
-
     document.getElementById('main').innerHTML = `
-      <div class="page-header">
-        <div class="page-title">Analytics</div>
+      <div class="page-header"><div class="page-title">Analytics</div></div>
+
+      <!-- Readiness funnel -->
+      <div class="stats" style="grid-template-columns:repeat(5,1fr)">
+        <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${total}</div></div>
+        <div class="stat-card"><div class="stat-label">Have Email</div><div class="stat-value">${hasEmail}</div><div class="stat-sub">${total ? Math.round(hasEmail/total*100) : 0}% of total</div></div>
+        <div class="stat-card"><div class="stat-label">Personalized</div><div class="stat-value">${personalized}</div><div class="stat-sub">${hasEmail ? Math.round(personalized/hasEmail*100) : 0}% of emailable</div></div>
+        <div class="stat-card"><div class="stat-label">Queued</div><div class="stat-value">${queued}</div><div class="stat-sub">${paused} paused</div></div>
+        <div class="stat-card"><div class="stat-label">Sent</div><div class="stat-value">${sent}</div><div class="stat-sub">${replied} replied · ${bounced} bounced</div></div>
       </div>
-      <div class="stats">
-        <div class="stat-card"><div class="stat-label">Leads Total</div><div class="stat-value">${total}</div></div>
-        <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value">${sent}</div></div>
-        <div class="stat-card"><div class="stat-label">Open Rate</div><div class="stat-value" style="color:var(--green)">${openRate}%</div><div class="stat-sub">${opened} opened</div></div>
-        <div class="stat-card"><div class="stat-label">Click Rate</div><div class="stat-value" style="color:var(--accent)">${clickRate}%</div><div class="stat-sub">${clicked} clicked</div></div>
-        <div class="stat-card"><div class="stat-label">Reply Rate</div><div class="stat-value" style="color:var(--yellow)">${replyRate}%</div><div class="stat-sub">${replied} replied</div></div>
-        <div class="stat-card"><div class="stat-label">Bounce Rate</div><div class="stat-value" style="color:var(--red)">${bounceRate}%</div><div class="stat-sub">${bounced} bounced</div></div>
-      </div>
-      <div class="analytics-grid">
+
+      <div class="analytics-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- By industry -->
         <div class="analytics-card">
-          <div class="analytics-title">Email Funnel</div>
+          <div class="analytics-title">Leads by Industry <span style="font-weight:400;color:var(--text3)">(top 12)</span></div>
+          ${topIndustries.map(([ind, count]) => `
+            <div class="metric-row">
+              <span class="metric-label" style="width:160px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ind}">${ind}</span>
+              <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(count/maxInd*100)}%;background:#6366F1"></div></div>
+              <span class="metric-val">${count}</span>
+            </div>`).join('')}
+        </div>
+
+        <!-- By city + score -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="analytics-card">
+            <div class="analytics-title">Leads by City</div>
+            ${topCities.map(([city, count]) => `
+              <div class="metric-row">
+                <span class="metric-label" style="font-size:11.5px">${city.replace(' BC','')}</span>
+                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(count/maxCity*100)}%;background:#7C3AED"></div></div>
+                <span class="metric-val">${count}</span>
+              </div>`).join('')}
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-title">Score Distribution</div>
+            ${Object.entries(scoreBuckets).map(([label, count]) => `
+              <div class="metric-row">
+                <span class="metric-label" style="font-size:11.5px">Score ${label}</span>
+                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(count/maxScore*100)}%;background:${label==='10'?'#4ADE80':label==='9'?'#6366F1':label==='8'?'#818CF8':label==='7'?'#EAB308':'#EF4444'}"></div></div>
+                <span class="metric-val">${count}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Email funnel (populates once sending starts) -->
+      <div class="analytics-grid" style="grid-template-columns:1fr 1fr;gap:16px">
+        <div class="analytics-card">
+          <div class="analytics-title">Email Campaign Funnel</div>
           ${bar('Sent', sent, total, '#6366F1')}
-          ${bar('Delivered', sent - bounced, sent, '#818CF8')}
-          ${bar('Opened', opened, sent, '#22C55E')}
-          ${bar('Clicked', clicked, sent, '#EAB308')}
-          ${bar('Replied', replied, sent, '#FB923C')}
+          ${bar('Opened', opened, sent || 1, '#22C55E')}
+          ${bar('Replied', replied, sent || 1, '#FB923C')}
+          ${bar('Bounced', bounced, sent || 1, '#EF4444')}
         </div>
         <div class="analytics-card">
-          <div class="analytics-title">Lead Status Breakdown</div>
-          ${bar('Queued', leads?.filter(l=>l.status==='queued').length||0, total, '#6366F1')}
-          ${bar('Sent', leads?.filter(l=>l.status==='sent').length||0, total, '#4ADE80')}
-          ${bar('Replied', replied, total, '#FB923C')}
-          ${bar('Bounced', bounced, total, '#EF4444')}
-          ${bar('Converted', leads?.filter(l=>l.status==='converted').length||0, total, '#A78BFA')}
+          <div class="analytics-title">Recent Email Events</div>
+          ${(events||[]).length === 0
+            ? `<div style="color:var(--text3);font-size:13px;padding:8px 0">No events yet — starts once emails go out.</div>`
+            : [...(events||[])].reverse().slice(0,8).map(e => `
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+                  <span style="color:var(--text3);width:100px;flex-shrink:0">${new Date(e.created_at).toLocaleDateString('en-CA')}</span>
+                  <span class="badge badge-${e.event_type}">${e.event_type}</span>
+                </div>`).join('')}
         </div>
-      </div>
-      <div class="table-wrap">
-        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text2)">Recent Email Events</div>
-        <table>
-          <thead><tr><th>Date</th><th>Event</th><th>Resend ID</th></tr></thead>
-          <tbody>${renderEventRows(events)}</tbody>
-        </table>
       </div>
     `;
   }
