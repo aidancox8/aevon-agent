@@ -1,22 +1,39 @@
 /**
- * lead-finder.js
- * Searches Google Places for businesses across the Lower Mainland,
- * uses Gemini to qualify each lead by reading their website,
- * and stores qualified leads in Supabase.
+ * agent-lead-finder.js
+ * Searches Google Places for businesses with high-volume repetitive knowledge work —
+ * the kind that AI agents can automate (outreach, research, drafting, routing, scheduling).
+ * Qualifies leads with Gemini and stores them in Supabase.
  *
  * Usage:
- *   node lead-finder.js                          (runs all queries)
- *   node lead-finder.js --query "dental clinics" --city "Surrey BC"
- *   node lead-finder.js --min-score 7            (only save score 7+)
+ *   node agent-lead-finder.js
+ *   node agent-lead-finder.js --query "staffing agency" --city "Vancouver BC"
+ *   node agent-lead-finder.js --min-score 7
  */
 
 require('dotenv').config();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const supabase = require('./lib/supabase');
-const { generate } = require('./lib/gemini');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+// Separate Gemini instance so agent-lead-finder uses its own API key and quota
+const _genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
+const _primary = _genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
+const _fallback = _genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+async function generate(prompt) {
+  try {
+    return (await _primary.generateContent(prompt)).response.text().trim();
+  } catch (err) {
+    if (err.message.includes('429') || err.message.includes('503')) {
+      console.warn(`Primary unavailable, falling back...`);
+      return (await _fallback.generateContent(prompt)).response.text().trim();
+    }
+    throw err;
+  }
+}
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 
 const CITIES = [
@@ -31,58 +48,47 @@ const CITIES = [
   'New Westminster BC',
 ];
 
+// Companies with high-volume repetitive knowledge work: outreach, research,
+// writing, routing, intake, scheduling, reporting — all strong AI agent targets.
 const SEARCH_QUERIES = [
-  // Professional services
-  'engineering firm',
+  // Outbound-heavy: lots of prospecting, follow-up, proposal writing
   'staffing agency',
-  'insurance brokerage',
-  'IT consulting firm',
-  'environmental consulting firm',
-  'architecture firm',
-  'management consulting firm',
-  'public relations firm',
-  'market research firm',
   'recruitment agency',
-  'surveying company',
-  'inspection company',
-  // Trades & field service
-  'HVAC company',
-  'plumbing company',
-  'electrical contractor',
-  'equipment rental company',
-  'moving company',
-  'courier company',
-  'field service company',
-  // Corporate & distribution
-  'trading company',
-  'import export company',
-  'distribution company',
-  'wholesale distributor',
-  'logistics company',
-  'freight company',
-  'warehouse company',
-  'manufacturing company',
-  'media company',
-  'research company',
-  'pharmaceutical company',
-  'nonprofit organization',
-  'private school',
-  // Sales & financial
+  'executive search firm',
+  'real estate team',
   'real estate brokerage',
-  'mortgage broker',
+  'mortgage brokerage',
+  'insurance brokerage',
   'business broker',
-  'financial planning firm',
-  'investment advisory firm',
-  // Clinics & healthcare
+  'financial advisor',
+  'investment advisor',
+  // Agencies: content creation, client reporting, research, pitching
+  'marketing agency',
+  'digital marketing agency',
+  'advertising agency',
+  'public relations firm',
+  'content marketing agency',
+  'SEO agency',
+  'media buying agency',
+  // Professional services: research, drafting, reporting, client intake
+  'law firm',
+  'accounting firm',
+  'business consulting firm',
+  'management consulting firm',
+  'market research firm',
+  'grant writing firm',
+  // High-volume intake and scheduling
   'medical clinic',
   'dental clinic',
   'physiotherapy clinic',
-  'chiropractic clinic',
-  'optometry clinic',
-  'veterinary clinic',
   'mental health clinic',
-  'rehabilitation clinic',
-  'medical imaging clinic',
+  'chiropractic clinic',
+  // Operations with repetitive document or data workflows
+  'import export company',
+  'logistics company',
+  'freight company',
+  'property management company',
+  'commercial real estate company',
 ];
 
 function parseArgs() {
@@ -126,12 +132,9 @@ async function scrapeWebsite(websiteUrl) {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AevonBot/1.0)' },
     });
     const $ = cheerio.load(res.data);
-
-    // Remove script/style noise
     $('script, style, noscript').remove();
     const text = $('body').text().replace(/\s+/g, ' ').slice(0, 3000);
 
-    // Find email
     let email = null;
     $('a[href^="mailto:"]').each((_, el) => {
       const href = $(el).attr('href');
@@ -163,38 +166,33 @@ async function geminiRateLimited(prompt) {
 }
 
 async function qualifyLead(business, websiteText) {
-  const prompt = `You are a strict lead qualifier for Aevon, a custom business software company in the Lower Mainland, BC. Your job is to filter out bad leads aggressively — it is better to miss a mediocre lead than to let a bad one through.
+  const prompt = `You are a strict lead qualifier for Aevon, a company that builds custom AI agents for businesses in the Lower Mainland, BC. Your job is to identify businesses with high-volume, repetitive knowledge work that an AI agent could automate — outreach, research, drafting, routing, intake, scheduling, or reporting.
 
-Aevon builds custom internal software for businesses. Clients pay a one-time build fee and own the software. Projects: workflow tools, scheduling systems, client portals, document management, field reporting, AI knowledge bases, outreach automation.
-
-The ideal client has real operational complexity, real staff, and real budget. They are frustrated by manual processes or software that doesn't fit how they work.
+The ideal AI agent client has real operational volume, real staff doing repetitive work, and real budget. They are not looking for a SaaS subscription — they want a custom agent that runs their specific process.
 
 SCORE 8-10 (strong fit — save these):
-- 15+ employees with clear internal ops complexity
-- Multiple staff roles coordinating work (dispatchers, coordinators, managers, field teams)
-- Industries where staff time is expensive: healthcare, professional services, distribution, logistics, corporate ops, finance, research
-- Evidence of budget: polished website, multiple service lines, named leadership team, established history
-- Actively managing clients, patients, properties, projects, or inventory at scale
-- Would obviously benefit from: scheduling automation, client portals, reporting dashboards, field reporting apps, document workflows
+- Active outbound BD teams: staffing agencies, recruiters, real estate teams, insurance brokers, mortgage brokers, business brokers doing ongoing prospecting and follow-up
+- Agencies generating lots of written output: marketing, PR, content, advertising — writing proposals, reports, pitches, client updates repeatedly
+- Professional services with high research/drafting volume: law firms doing research and document drafting, accountants generating reports, consultants writing proposals
+- High-volume intake or scheduling: clinics with large patient volumes, any business processing 50+ inbound inquiries or appointments per week
+- Import/export, logistics, or freight companies routing documents and communications daily
+- Evidence of budget: polished website, named staff, multiple service lines, established history
 
-SCORE 6-7 (acceptable — save only if clear pain is visible):
-- 8-15 employees with obvious manual workflow pain
-- Trades with dispatch/job coordination needs (HVAC, plumbing, electrical, inspection)
-- Smaller professional services firms with clear client management complexity
+SCORE 6-7 (acceptable — save only if clear agent fit is visible):
+- Smaller agencies or professional services firms with clear repetitive output needs
+- Clinics or practices with obvious scheduling or intake volume even if modest size
+- Property management companies with regular document and communication workflows
 
 SCORE 1-5 (reject — do not save):
-- Solo operators, owner-only businesses, or fewer than 5 staff
-- Residential-only services with no internal team (house cleaners, handymen)
-- Pure consumer retail (restaurants, cafes, salons, gyms, grocery)
-- Franchises of large chains — they use the franchisor's systems
-- Enterprise companies (100+ staff) — they have IT departments
-- No website or website is clearly a placeholder/dead
-- Nonprofits that are clearly volunteer-run with no operational complexity
-- Schools that are part of a public school district — they have centralized IT
-- Any business where the core product is already a well-served SaaS category (e.g. a software company, a SaaS startup)
-- Businesses with no evidence of internal coordination needs
+- Solo operators or owner-only businesses
+- Pure consumer retail, restaurants, cafes, salons, gyms — no repetitive knowledge work
+- Franchises of large chains — they use franchisor systems
+- Enterprise companies (100+ staff) — they have internal AI/IT teams
+- Businesses with no evidence of outbound, research, or document-heavy workflows
+- Companies where the core work is already fully productized (e.g. a SaaS startup)
+- No website or clearly a placeholder
 
-Be skeptical. A professional-looking website alone is not enough — look for evidence of operational complexity and team size. When in doubt, score low.
+Be skeptical. A professional website alone is not enough — look for evidence of real volume and repetitive knowledge tasks. When in doubt, score low.
 
 Business details:
 - Name: ${business.name}
@@ -207,7 +205,7 @@ ${websiteText || '(no website available — score conservatively)'}
 Respond with JSON only:
 {
   "score": <integer 1-10>,
-  "notes": "<one specific sentence explaining why this score — reference something concrete from the website or business type>"
+  "notes": "<one specific sentence explaining why — reference something concrete from the website or business type, and name the agent use case if score is 6+>"
 }`;
 
   try {
@@ -240,7 +238,6 @@ async function run() {
   const maxPages = args.pages || 1;
   const minScore = args.minScore;
 
-  // Load all existing leads once for in-memory dedup (avoids 2 DB queries per lead)
   console.log('Loading existing leads for dedup...');
   const { data: existingLeads, error: dedupErr } = await supabase
     .from('leads').select('business_name, website');
@@ -267,7 +264,6 @@ async function run() {
         pageToken = data.nextPageToken || null;
         page++;
 
-        // Filter dupes first (in-memory, instant)
         const fresh = places.filter(place => {
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
@@ -276,7 +272,6 @@ async function run() {
           return true;
         });
 
-        // Scrape all fresh leads in parallel (I/O bound — safe to parallelize)
         const scraped = await Promise.all(
           fresh.map(async place => {
             const { email, text } = await scrapeWebsite(place.websiteUri || null);
@@ -284,7 +279,6 @@ async function run() {
           })
         );
 
-        // Qualify with Gemini sequentially (rate-limited)
         for (const { place, email, text } of scraped) {
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
@@ -318,7 +312,6 @@ async function run() {
             qualification_notes: notes,
           });
 
-          // Add to in-memory dedup so later queries in this run don't re-add
           dedup.names.add(name.toLowerCase());
           if (website) dedup.sites.add(website.toLowerCase());
 

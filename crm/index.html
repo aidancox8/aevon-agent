@@ -1391,6 +1391,8 @@
   }
 
   // ── Outreach ──────────────────────────────────────────────────
+  window._outreachSort = { col: 'qualification_score', dir: 'desc' };
+
   async function renderOutreach() {
     const { data: leads } = await sb.from('leads')
       .select('id, business_name, industry, city, email, qualification_score, status, scheduled_send_at, email_subject')
@@ -1399,6 +1401,10 @@
     const queued = leads?.filter(l => l.status === 'queued').length || 0;
     const paused = leads?.filter(l => l.status === 'paused').length || 0;
     const sent   = leads?.filter(l => ['sent','replied'].includes(l.status)).length || 0;
+    const ready  = leads?.filter(l => l.email_subject).length || 0;
+
+    const uniqueIndustries = [...new Set((leads||[]).map(l=>l.industry).filter(Boolean))].sort();
+    const uniqueCities = [...new Set((leads||[]).map(l=>l.city).filter(Boolean))].sort();
 
     document.getElementById('main').innerHTML = `
       <div class="page-header">
@@ -1409,15 +1415,19 @@
         <div class="stat-card"><div class="stat-label">Queued</div><div class="stat-value">${queued}</div></div>
         <div class="stat-card"><div class="stat-label">Paused</div><div class="stat-value">${paused}</div></div>
         <div class="stat-card"><div class="stat-label">Sent</div><div class="stat-value">${sent}</div></div>
+        <div class="stat-card"><div class="stat-label">Email Ready</div><div class="stat-value">${ready}</div></div>
       </div>
-      <div id="bulk-bar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;margin-bottom:12px;font-size:13px">
+      <div id="bulk-bar" style="display:none;align-items:center;gap:8px;padding:10px 16px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;margin-bottom:12px;font-size:13px;flex-wrap:wrap">
         <span id="bulk-count" style="color:var(--text2);font-weight:600"></span>
         <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="bulkPause()">Pause</button>
-        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="bulkResume()">Resume (tomorrow 9am)</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="bulkScheduleToday()">Send Today</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="bulkScheduleTomorrow()">Send Tomorrow</button>
+        <input type="date" id="bulkDatePicker" class="filter-select" style="font-size:12px;padding:4px 8px" title="Schedule for specific date">
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="bulkScheduleDate()">Schedule →</button>
         <button style="font-size:12px;padding:5px 12px;background:rgba(239,68,68,0.12);color:#F87171;border:none;border-radius:7px;cursor:pointer;font-weight:600" onclick="bulkDelete()">Delete</button>
         <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px;margin-left:auto" onclick="clearSelection()">Clear</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
         <select class="filter-select" id="outreachFilter" onchange="filterOutreach()">
           <option value="">All statuses</option>
           <option value="queued">Queued</option>
@@ -1428,27 +1438,68 @@
         </select>
         <select class="filter-select" id="industryFilter" onchange="filterOutreach()">
           <option value="">All industries</option>
-          ${[...new Set((leads||[]).map(l=>l.industry).filter(Boolean))].sort().map(i=>`<option value="${i}">${i}</option>`).join('')}
+          ${uniqueIndustries.map(i=>`<option value="${i}">${i}</option>`).join('')}
         </select>
-        <input class="search-input" style="width:220px" id="outreachSearch" placeholder="Search business..." oninput="filterOutreach()">
+        <select class="filter-select" id="cityFilter" onchange="filterOutreach()">
+          <option value="">All cities</option>
+          ${uniqueCities.map(c=>`<option value="${c}">${c.replace(' BC','')}</option>`).join('')}
+        </select>
+        <select class="filter-select" id="scoreFilter" onchange="filterOutreach()">
+          <option value="">All scores</option>
+          <option value="10">Score 10</option>
+          <option value="9">Score 9</option>
+          <option value="8">Score 8</option>
+        </select>
+        <select class="filter-select" id="readyFilter" onchange="filterOutreach()">
+          <option value="">All leads</option>
+          <option value="ready">Email written</option>
+          <option value="notready">No email yet</option>
+        </select>
+        <input class="search-input" style="width:180px" id="outreachSearch" placeholder="Search..." oninput="filterOutreach()">
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="clearOutreachFilters()">Clear filters</button>
       </div>
       <div class="table-wrap">
         <table>
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="cursor:pointer"></th>
-            <th>Business</th>
+            <th onclick="sortOutreach('business_name')" style="cursor:pointer;user-select:none">Business <span id="sort-business_name"></span></th>
             <th>Industry</th>
-            <th>City</th>
-            <th>Score</th>
+            <th onclick="sortOutreach('city')" style="cursor:pointer;user-select:none">City <span id="sort-city"></span></th>
+            <th onclick="sortOutreach('qualification_score')" style="cursor:pointer;user-select:none">Score <span id="sort-qualification_score">▼</span></th>
             <th>Status</th>
-            <th>Scheduled</th>
+            <th onclick="sortOutreach('scheduled_send_at')" style="cursor:pointer;user-select:none">Scheduled <span id="sort-scheduled_send_at"></span></th>
             <th style="width:70px"></th>
           </tr></thead>
-          <tbody id="outreachBody">${renderOutreachRows(leads)}</tbody>
+          <tbody id="outreachBody">${renderOutreachRows(applyOutreachSort(leads||[]))}</tbody>
         </table>
       </div>
     `;
     window._outreachLeads = leads || [];
+  }
+
+  function applyOutreachSort(leads) {
+    const { col, dir } = window._outreachSort;
+    return [...leads].sort((a, b) => {
+      let av = a[col], bv = b[col];
+      if (av == null) av = dir === 'asc' ? Infinity : -Infinity;
+      if (bv == null) bv = dir === 'asc' ? Infinity : -Infinity;
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function sortOutreach(col) {
+    const s = window._outreachSort;
+    s.dir = s.col === col && s.dir === 'desc' ? 'asc' : 'desc';
+    s.col = col;
+    ['business_name','city','qualification_score','scheduled_send_at'].forEach(c => {
+      const el = document.getElementById('sort-' + c);
+      if (el) el.textContent = c === col ? (s.dir === 'asc' ? '▲' : '▼') : '';
+    });
+    filterOutreach();
   }
 
   function renderOutreachRows(leads) {
@@ -1461,9 +1512,10 @@
       const isPaused = l.status === 'paused';
       const canToggle = ['queued','paused'].includes(l.status);
       const nameEsc = l.business_name.replace(/"/g,'&quot;');
+      const hasEmail = l.email_subject ? '✓' : '';
       return `<tr>
         <td onclick="event.stopPropagation()"><input type="checkbox" class="lead-check" data-id="${l.id}" onchange="updateBulkBar()" style="cursor:pointer"></td>
-        <td style="cursor:pointer;color:var(--text);font-weight:500" onclick="openLeadProfile('${l.id}')">${l.business_name}</td>
+        <td style="cursor:pointer;color:var(--text);font-weight:500" onclick="openLeadProfile('${l.id}')">${l.business_name} ${hasEmail ? `<span style="font-size:10px;color:#4ADE80;margin-left:4px">✓</span>` : ''}</td>
         <td style="color:var(--text3);font-size:12px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.industry||''}</td>
         <td style="color:var(--text3);font-size:12px">${(l.city||'').replace(' BC','')}</td>
         <td>${l.qualification_score ? `<span class="score ${scoreClass}">${l.qualification_score}</span>` : ''}</td>
@@ -1478,17 +1530,33 @@
   }
 
   function filterOutreach() {
-    const status = document.getElementById('outreachFilter')?.value || '';
+    const status   = document.getElementById('outreachFilter')?.value || '';
     const industry = document.getElementById('industryFilter')?.value || '';
-    const q = (document.getElementById('outreachSearch')?.value || '').toLowerCase();
-    const leads = (window._outreachLeads || []).filter(l => {
-      if (status && l.status !== status) return false;
+    const city     = document.getElementById('cityFilter')?.value || '';
+    const score    = document.getElementById('scoreFilter')?.value || '';
+    const ready    = document.getElementById('readyFilter')?.value || '';
+    const q        = (document.getElementById('outreachSearch')?.value || '').toLowerCase();
+    let leads = (window._outreachLeads || []).filter(l => {
+      if (status   && l.status !== status) return false;
       if (industry && l.industry !== industry) return false;
+      if (city     && l.city !== city) return false;
+      if (score    && String(l.qualification_score) !== score) return false;
+      if (ready === 'ready'    && !l.email_subject) return false;
+      if (ready === 'notready' && l.email_subject)  return false;
       if (q && !l.business_name.toLowerCase().includes(q)) return false;
       return true;
     });
+    leads = applyOutreachSort(leads);
     const body = document.getElementById('outreachBody');
     if (body) body.innerHTML = renderOutreachRows(leads);
+  }
+
+  function clearOutreachFilters() {
+    ['outreachFilter','industryFilter','cityFilter','scoreFilter','readyFilter'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const s = document.getElementById('outreachSearch'); if (s) s.value = '';
+    filterOutreach();
   }
 
   function toggleSelectAll(cb) {
@@ -1571,6 +1639,43 @@
     tomorrow.setUTCHours(16, 0, 0, 0);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: tomorrow.toISOString() }).in('id', ids);
     if (error) { alert('Error: ' + error.message); return; }
+    renderOutreach();
+  }
+
+  async function bulkScheduleToday() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const sendAt = new Date();
+    sendAt.setUTCHours(16, 0, 0, 0);
+    if (sendAt < new Date()) sendAt.setTime(Date.now() + 2 * 60 * 1000);
+    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
+    if (error) { alert('Error: ' + error.message); return; }
+    clearSelection();
+    renderOutreach();
+  }
+
+  async function bulkScheduleTomorrow() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const sendAt = new Date();
+    sendAt.setDate(sendAt.getDate() + 1);
+    sendAt.setUTCHours(16, 0, 0, 0);
+    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
+    if (error) { alert('Error: ' + error.message); return; }
+    clearSelection();
+    renderOutreach();
+  }
+
+  async function bulkScheduleDate() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const picker = document.getElementById('bulkDatePicker');
+    if (!picker || !picker.value) { alert('Pick a date first.'); return; }
+    const [y, m, d] = picker.value.split('-').map(Number);
+    const sendAt = new Date(Date.UTC(y, m - 1, d, 16, 0, 0, 0));
+    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
+    if (error) { alert('Error: ' + error.message); return; }
+    clearSelection();
     renderOutreach();
   }
 

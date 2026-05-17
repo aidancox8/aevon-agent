@@ -62,14 +62,15 @@ function nextWeekdaySendSlot(existingSlots) {
 }
 
 function buildPrompt(lead, websiteContent) {
-  return `You are writing a cold outreach email on behalf of Aevon, a custom business software company based in the Lower Mainland, BC.
+  return `You are writing a cold outreach email on behalf of Aevon, a custom software company based in the Lower Mainland, BC.
 
 About Aevon:
-- Builds custom internal tools tailored exactly to how a business actually operates
+- Builds two things: custom apps (internal tools tailored to how a business operates) and AI agents (software that does recurring work automatically — research, outreach, routing, scheduling, drafting — without someone driving it)
 - Replaces the patchwork of SaaS tools and manual workarounds most growing teams rely on
 - Clients pay once and own the software outright — no seat-based pricing, no vendor lock-in
-- Typical projects: internal workflow tools, scheduling apps, document management, AI-powered knowledge bases
-- Target clients: 5-50 employee businesses in the Lower Mainland dealing with operational friction
+- Custom app examples: scheduling tools, client portals, document workflows, dashboards, field reporting
+- AI agent examples: outreach agents that research leads and write personalized emails, intake agents that qualify and route inbound inquiries, report agents that generate weekly summaries automatically
+- Target clients: 5-50 employee businesses in the Lower Mainland dealing with operational friction or high volumes of repetitive knowledge work
 
 Lead details:
 - Business name: ${lead.business_name}
@@ -80,27 +81,30 @@ ${lead.qualification_notes ? `- What we know about them: ${lead.qualification_no
 ${lead.lead_insights ? `- Their likely pain points: ${lead.lead_insights}` : ''}
 ${websiteContent ? `- Scraped from their website: ${websiteContent}` : ''}
 
+Decide first: is the better pitch a custom app OR an AI agent for this specific business? Use whichever is the stronger fit based on their industry and what you know about them. Reference the right thing in the email — do not mention both.
+
 Write TWO emails AND a lead insight:
 
 EMAIL 1 (initial outreach):
 - Subject line: short, specific, not salesy — reference something concrete about their business or industry
-- Body: 3 sentences max per paragraph, 2 paragraphs max total. One sentence to name the operational pain point. One to two sentences introducing Aevon. One clear CTA (15-min call). Sign off as "Aidan" from Aevon.
+- Body: 3 sentences max per paragraph, 2 paragraphs max total. One sentence to name the operational pain point. One to two sentences introducing Aevon and the right solution (app or agent). One clear CTA (15-min call). Sign off as "Aidan" from Aevon.
 - The whole email body should be under 80 words. Treat every word as earned.
 - Do NOT open with a compliment or flattery
 - Do NOT fabricate specific details (employee counts, property counts, revenue figures) — only use what is provided in the lead details above
-- Do NOT focus on software costs or savings — focus on the operational problem and what having the right tool makes possible
+- Do NOT focus on software costs or savings — focus on the operational problem and what having the right solution makes possible
 - Do NOT describe Aevon as a "shop" or "local shop" — refer to it as "Aevon" or "we"
-- Tone: direct, confident, conversational. No buzzwords, no em dashes, no filler phrases
+- Tone: direct, confident, conversational. Write like a person, not a vendor. No buzzwords, no em dashes, no filler phrases, no corporate language ("leverage", "streamline", "reconcile", "fragmentation", "administrative workflows", "off-the-shelf", "bridges the gap", "unified solution")
+- Example of good tone: "Most property management teams are running maintenance requests through one system, owner reports through another, and filling the gaps with spreadsheets." — specific, plain, human
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style
 - Body: 2 short paragraphs, under 60 words total. Friendly bump, one new angle or specific use case. Same CTA.
-- Tone: same as above
+- Tone: same — plain, human, no corporate language
 
 LEAD INSIGHT (2-3 sentences):
 - Why this business is a good fit for Aevon
 - What specific operational pain points they likely have based on their industry and size
-- What type of custom tool would most benefit them
+- Whether an app or an AI agent is the better pitch, and specifically what you would build for them
 
 Format your response as valid JSON only, no markdown, no explanation:
 {
