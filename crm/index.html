@@ -1646,7 +1646,7 @@
     const ids = getSelectedIds();
     if (!ids.length) return;
     const sendAt = new Date();
-    sendAt.setUTCHours(16, 0, 0, 0);
+    sendAt.setHours(9, 0, 0, 0);
     if (sendAt < new Date()) sendAt.setTime(Date.now() + 2 * 60 * 1000);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
     if (error) { alert('Error: ' + error.message); return; }
@@ -1659,7 +1659,7 @@
     if (!ids.length) return;
     const sendAt = new Date();
     sendAt.setDate(sendAt.getDate() + 1);
-    sendAt.setUTCHours(16, 0, 0, 0);
+    sendAt.setHours(9, 0, 0, 0);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
     if (error) { alert('Error: ' + error.message); return; }
     clearSelection();
@@ -1672,7 +1672,7 @@
     const picker = document.getElementById('bulkDatePicker');
     if (!picker || !picker.value) { alert('Pick a date first.'); return; }
     const [y, m, d] = picker.value.split('-').map(Number);
-    const sendAt = new Date(Date.UTC(y, m - 1, d, 16, 0, 0, 0));
+    const sendAt = new Date(y, m - 1, d, 9, 0, 0, 0);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
     if (error) { alert('Error: ' + error.message); return; }
     clearSelection();
