@@ -36,6 +36,9 @@
     .light .search-input, .light .filter-select, .light .form-input { background: #F9FAFB; color: var(--text); }
     .light .metric-bar-wrap { background: rgba(0,0,0,0.07); }
     .light tr:hover td { background: rgba(99,102,241,0.05); }
+    .status-picker { position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,0.35);min-width:110px; }
+    .status-opt { padding:5px 12px;cursor:pointer;border-radius:4px;margin-bottom:2px;display:block; }
+    .status-opt:hover { opacity:0.75; }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
 
     /* Layout */
@@ -602,6 +605,14 @@
         </table>
       </div>
 
+      <div class="analytics-card" style="margin-top:16px">
+        <div class="analytics-title">Notes</div>
+        <textarea class="reply-input" id="leadNotesInput" rows="3" placeholder="Add notes about this lead — conversation context, what they said, next steps..." style="width:100%">${lead.notes || ''}</textarea>
+        <div style="margin-top:8px">
+          <button id="saveNotesBtn" class="btn btn-ghost" style="font-size:12px" onclick="saveLeadNotes('${lead.id}')">Save Notes</button>
+        </div>
+      </div>
+
       ${lead.status !== 'replied' ? `
       <div class="analytics-card" style="margin-top:16px">
         <div class="analytics-title">Log a Reply</div>
@@ -1078,6 +1089,73 @@
     </div>`;
   }
 
+  function relativeDate(dateStr) {
+    if (!dateStr) return '<span style="opacity:0.3">—</span>';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.round((date - now) / 86400000);
+    if (diffDays === 0) return '<span style="color:var(--green);font-weight:600">Today</span>';
+    if (diffDays === 1) return '<span style="color:var(--yellow)">Tomorrow</span>';
+    if (diffDays === -1) return '<span style="color:var(--text3)">Yesterday</span>';
+    if (diffDays > 0) return `<span style="color:var(--text3)">in ${diffDays}d</span>`;
+    return `<span style="color:var(--red)">${Math.abs(diffDays)}d overdue</span>`;
+  }
+
+  function relativeAgo(dateStr) {
+    if (!dateStr) return '<span style="opacity:0.3">—</span>';
+    const diffDays = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+    if (diffDays === 0) return '<span style="color:var(--text2)">Today</span>';
+    if (diffDays === 1) return '1d ago';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    if (diffDays < 60) return '1mo ago';
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  }
+
+  function openStatusPicker(el, leadId, currentStatus) {
+    document.querySelectorAll('.status-picker').forEach(p => p.remove());
+    const statuses = ['queued','paused','sent','replied','bounced','converted'];
+    const picker = document.createElement('div');
+    picker.className = 'status-picker';
+    picker.innerHTML = statuses.map(s =>
+      `<div class="badge badge-${s} status-opt" onclick="selectLeadStatus('${leadId}','${s}')">${s}</div>`
+    ).join('');
+    const rect = el.getBoundingClientRect();
+    picker.style.left = rect.left + 'px';
+    picker.style.top = (rect.bottom + 4) + 'px';
+    document.body.appendChild(picker);
+    setTimeout(() => document.addEventListener('click', () => document.querySelectorAll('.status-picker').forEach(p => p.remove()), { once: true }), 0);
+  }
+
+  async function selectLeadStatus(leadId, newStatus) {
+    document.querySelectorAll('.status-picker').forEach(p => p.remove());
+    const lead = (window._outreachLeads || []).find(l => l.id === leadId);
+    if (lead) lead.status = newStatus;
+    await sb.from('leads').update({ status: newStatus }).eq('id', leadId);
+    filterOutreach();
+  }
+
+  function exportCSV() {
+    const leads = window._filteredLeads || window._outreachLeads || [];
+    if (!leads.length) { alert('No leads to export.'); return; }
+    const headers = ['business_name','industry','city','email','qualification_score','status','last_sent_at','scheduled_send_at','notes'];
+    const rows = leads.map(l => headers.map(h => {
+      const v = l[h] ?? '';
+      return `"${String(v).replace(/"/g, '""')}"`;
+    }).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `aevon-leads-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  async function saveLeadNotes(id) {
+    const notes = document.getElementById('leadNotesInput')?.value ?? '';
+    const { error } = await sb.from('leads').update({ notes }).eq('id', id);
+    const btn = document.getElementById('saveNotesBtn');
+    if (btn) { btn.textContent = error ? 'Error!' : 'Saved!'; setTimeout(() => { if (btn) btn.textContent = 'Save Notes'; }, 1500); }
+  }
+
   function renderEventRows(events) {
     if (!events || events.length === 0) return '<tr><td colspan="3" class="empty">No events yet.</td></tr>';
     return [...events].reverse().slice(0, 50).map(e => `<tr>
@@ -1395,7 +1473,7 @@
 
   async function renderOutreach() {
     const { data: leads } = await sb.from('leads')
-      .select('id, business_name, industry, city, email, qualification_score, status, scheduled_send_at, email_subject')
+      .select('id, business_name, industry, city, email, qualification_score, status, scheduled_send_at, last_sent_at, email_subject, notes')
       .order('qualification_score', { ascending: false });
 
     const queued = leads?.filter(l => l.status === 'queued').length || 0;
@@ -1409,7 +1487,10 @@
     document.getElementById('main').innerHTML = `
       <div class="page-header">
         <div class="page-title">Outreach</div>
-        <button class="btn btn-primary" onclick="showAddLeadModal()">+ Add Lead</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:12px">Export CSV</button>
+          <button class="btn btn-primary" onclick="showAddLeadModal()">+ Add Lead</button>
+        </div>
       </div>
       <div class="stats">
         <div class="stat-card"><div class="stat-label">Queued</div><div class="stat-value">${queued}</div></div>
@@ -1467,6 +1548,7 @@
             <th onclick="sortOutreach('city')" style="cursor:pointer;user-select:none">City <span id="sort-city"></span></th>
             <th onclick="sortOutreach('qualification_score')" style="cursor:pointer;user-select:none">Score <span id="sort-qualification_score">▼</span></th>
             <th onclick="sortOutreach('status')" style="cursor:pointer;user-select:none">Status <span id="sort-status"></span></th>
+            <th onclick="sortOutreach('last_sent_at')" style="cursor:pointer;user-select:none">Last Sent <span id="sort-last_sent_at"></span></th>
             <th onclick="sortOutreach('scheduled_send_at')" style="cursor:pointer;user-select:none">Scheduled <span id="sort-scheduled_send_at"></span></th>
             <th style="width:70px"></th>
           </tr></thead>
@@ -1502,7 +1584,7 @@
     const s = window._outreachSort;
     s.dir = s.col === col && s.dir === 'desc' ? 'asc' : 'desc';
     s.col = col;
-    ['business_name','industry','city','qualification_score','status','scheduled_send_at'].forEach(c => {
+    ['business_name','industry','city','qualification_score','status','last_sent_at','scheduled_send_at'].forEach(c => {
       const el = document.getElementById('sort-' + c);
       if (el) el.textContent = c === col ? (s.dir === 'asc' ? '▲' : '▼') : '';
     });
@@ -1510,27 +1592,25 @@
   }
 
   function renderOutreachRows(leads) {
-    if (!leads || !leads.length) return '<tr><td colspan="8" class="empty">No leads.</td></tr>';
+    if (!leads || !leads.length) return '<tr><td colspan="9" class="empty">No leads.</td></tr>';
     return leads.map(l => {
       const scoreClass = l.qualification_score >= 8 ? 'score-high' : l.qualification_score >= 6 ? 'score-mid' : 'score-low';
-      const scheduled = l.scheduled_send_at
-        ? new Date(l.scheduled_send_at).toLocaleDateString('en-CA')
-        : `<span style="opacity:0.35">none</span>`;
+      const nameEsc = l.business_name.replace(/"/g,'&quot;');
+      const hasEmail = l.email_subject ? '<span style="font-size:10px;color:#4ADE80;margin-left:4px">✓</span>' : '';
       const isPaused = l.status === 'paused';
       const canToggle = ['queued','paused'].includes(l.status);
-      const nameEsc = l.business_name.replace(/"/g,'&quot;');
-      const hasEmail = l.email_subject ? '✓' : '';
       return `<tr>
         <td onclick="event.stopPropagation()"><input type="checkbox" class="lead-check" data-id="${l.id}" onchange="updateBulkBar()" style="cursor:pointer"></td>
-        <td style="cursor:pointer;color:var(--text);font-weight:500" onclick="openLeadProfile('${l.id}')">${l.business_name} ${hasEmail ? `<span style="font-size:10px;color:#4ADE80;margin-left:4px">✓</span>` : ''}</td>
+        <td style="cursor:pointer;color:var(--text);font-weight:500" onclick="openLeadProfile('${l.id}')">${l.business_name}${hasEmail}</td>
         <td style="color:var(--text3);font-size:12px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.industry||''}</td>
         <td style="color:var(--text3);font-size:12px">${(l.city||'').replace(' BC','')}</td>
         <td>${l.qualification_score ? `<span class="score ${scoreClass}">${l.qualification_score}</span>` : ''}</td>
-        <td><span class="badge badge-${l.status}">${l.status}</span></td>
-        <td style="font-size:12px;color:var(--text3)">${scheduled}</td>
+        <td onclick="event.stopPropagation()"><span class="badge badge-${l.status}" style="cursor:pointer" onclick="openStatusPicker(this,'${l.id}','${l.status}')">${l.status}</span></td>
+        <td style="font-size:12px;color:var(--text3)">${relativeAgo(l.last_sent_at)}</td>
+        <td style="font-size:12px">${relativeDate(l.scheduled_send_at)}</td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap;text-align:right">
-          ${canToggle ? `<button data-id="${l.id}" data-status="${l.status}" onclick="togglePauseBtn(this)" title="${isPaused?'Resume':'Pause'}" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);padding:3px 5px;border-radius:4px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">${isPaused?'▶':'⏸'}</button>` : ''}
-          <button data-id="${l.id}" data-name="${nameEsc}" onclick="deleteLeadBtn(this)" title="Delete" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);padding:3px 5px;border-radius:4px" onmouseover="this.style.color='#F87171';this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.color='var(--text3)';this.style.background='none'">&#128465;</button>
+          ${canToggle ? `<button data-id="${l.id}" data-status="${l.status}" onclick="togglePauseBtn(this)" title="${isPaused?'Resume':'Pause'}" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);padding:3px 5px;border-radius:4px">${isPaused?'▶':'⏸'}</button>` : ''}
+          <button data-id="${l.id}" data-name="${nameEsc}" onclick="deleteLeadBtn(this)" title="Delete" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);padding:3px 5px;border-radius:4px" onmouseover="this.style.color='#F87171'" onmouseout="this.style.color='var(--text3)'">&#128465;</button>
         </td>
       </tr>`;
     }).join('');
@@ -1554,6 +1634,7 @@
       return true;
     });
     leads = applyOutreachSort(leads);
+    window._filteredLeads = leads;
     const body = document.getElementById('outreachBody');
     if (body) body.innerHTML = renderOutreachRows(leads);
   }
@@ -1567,7 +1648,10 @@
   }
 
   function toggleSelectAll(cb) {
-    document.querySelectorAll('.lead-check').forEach(c => c.checked = cb.checked);
+    document.querySelectorAll('.lead-check').forEach(c => {
+      const row = c.closest('tr');
+      if (row && row.style.display !== 'none') c.checked = cb.checked;
+    });
     updateBulkBar();
   }
 
