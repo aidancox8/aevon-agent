@@ -1463,10 +1463,10 @@
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="cursor:pointer"></th>
             <th onclick="sortOutreach('business_name')" style="cursor:pointer;user-select:none">Business <span id="sort-business_name"></span></th>
-            <th>Industry</th>
+            <th onclick="sortOutreach('industry')" style="cursor:pointer;user-select:none">Industry <span id="sort-industry"></span></th>
             <th onclick="sortOutreach('city')" style="cursor:pointer;user-select:none">City <span id="sort-city"></span></th>
             <th onclick="sortOutreach('qualification_score')" style="cursor:pointer;user-select:none">Score <span id="sort-qualification_score">▼</span></th>
-            <th>Status</th>
+            <th onclick="sortOutreach('status')" style="cursor:pointer;user-select:none">Status <span id="sort-status"></span></th>
             <th onclick="sortOutreach('scheduled_send_at')" style="cursor:pointer;user-select:none">Scheduled <span id="sort-scheduled_send_at"></span></th>
             <th style="width:70px"></th>
           </tr></thead>
@@ -1495,7 +1495,7 @@
     const s = window._outreachSort;
     s.dir = s.col === col && s.dir === 'desc' ? 'asc' : 'desc';
     s.col = col;
-    ['business_name','city','qualification_score','scheduled_send_at'].forEach(c => {
+    ['business_name','industry','city','qualification_score','status','scheduled_send_at'].forEach(c => {
       const el = document.getElementById('sort-' + c);
       if (el) el.textContent = c === col ? (s.dir === 'asc' ? '▲' : '▼') : '';
     });
