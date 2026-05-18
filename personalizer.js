@@ -28,37 +28,30 @@ async function scrapeWebsite(url) {
   }
 }
 
-// Spread sends across Mon-Fri 9am-4pm PT (UTC-7 = UTC+0 offset of 16-23)
-// scheduled_send_at stored in UTC
-const SEND_HOURS_UTC = [16, 17, 18, 19, 20, 21, 22, 23]; // 9am-4pm PT
+const DAILY_LIMIT = 20; // max emails per weekday
+const SEND_HOUR_UTC = 16; // 9am PT
 
-function nextWeekdaySendSlot(existingSlots) {
-  const now = new Date();
-
-  // Start from tomorrow
-  const candidate = new Date(now);
+// Returns the next weekday send date that hasn't hit DAILY_LIMIT yet.
+// Multiple leads can share the same day — sender.js handles per-send pacing.
+function nextWeekdaySendSlot(dayCounts) {
+  const candidate = new Date();
   candidate.setUTCDate(candidate.getUTCDate() + 1);
-  candidate.setUTCMinutes(0);
-  candidate.setUTCSeconds(0);
-  candidate.setUTCMilliseconds(0);
+  candidate.setUTCHours(SEND_HOUR_UTC, 0, 0, 0);
 
-  // Walk forward until we land on a weekday send slot not already taken
-  for (let day = 0; day < 14; day++) {
-    const dow = candidate.getUTCDay(); // 0=Sun, 6=Sat
+  for (let i = 0; i < 90; i++) {
+    const dow = candidate.getUTCDay();
     if (dow >= 1 && dow <= 5) {
-      for (const hour of SEND_HOURS_UTC) {
-        candidate.setUTCHours(hour);
-        const iso = candidate.toISOString();
-        if (!existingSlots.has(iso)) {
-          existingSlots.add(iso);
-          return iso;
-        }
+      const key = candidate.toISOString().slice(0, 10);
+      const count = dayCounts.get(key) || 0;
+      if (count < DAILY_LIMIT) {
+        dayCounts.set(key, count + 1);
+        return candidate.toISOString();
       }
     }
     candidate.setUTCDate(candidate.getUTCDate() + 1);
   }
 
-  throw new Error('Could not find an open send slot in the next 14 days');
+  throw new Error('Could not find an open send slot in the next 90 days');
 }
 
 function buildPrompt(lead, websiteContent) {
@@ -134,13 +127,17 @@ async function run() {
 
   console.log(`Personalizing ${leads.length} leads...\n`);
 
-  // Load existing scheduled slots to avoid collisions
+  // Count existing scheduled sends per day to respect daily limit
   const { data: scheduled } = await supabase
     .from('leads')
     .select('scheduled_send_at')
     .not('scheduled_send_at', 'is', null);
 
-  const existingSlots = new Set((scheduled || []).map(r => new Date(r.scheduled_send_at).toISOString()));
+  const dayCounts = new Map();
+  (scheduled || []).forEach(r => {
+    const key = r.scheduled_send_at.slice(0, 10);
+    dayCounts.set(key, (dayCounts.get(key) || 0) + 1);
+  });
 
   let success = 0;
   let failed = 0;
@@ -163,7 +160,7 @@ async function run() {
         throw new Error('Missing required fields in Gemini response');
       }
 
-      const sendAt = nextWeekdaySendSlot(existingSlots);
+      const sendAt = nextWeekdaySendSlot(dayCounts);
 
       const { error: updateError } = await supabase
         .from('leads')
