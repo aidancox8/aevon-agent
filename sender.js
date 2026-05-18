@@ -14,6 +14,84 @@ const FROM = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'Aidan from Aevon';
 const FOLLOWUP_DELAY_DAYS = 5;
 
+// ── Send-day guard ────────────────────────────────────────────────
+
+function getVancouverDate() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Vancouver',
+    year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short',
+  }).formatToParts(new Date());
+  const get = type => parts.find(p => p.type === type).value;
+  return {
+    y: parseInt(get('year')),
+    m: parseInt(get('month')),
+    d: parseInt(get('day')),
+    weekday: get('weekday'), // 'Sun','Mon',...,'Sat'
+  };
+}
+
+function getEaster(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m2 = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m2 + 114) / 31);
+  const day = ((h + l - 7 * m2 + 114) % 31) + 1;
+  return { m: month, d: day };
+}
+
+function firstMonday(y, m) {
+  const date = new Date(y, m - 1, 1);
+  while (date.getDay() !== 1) date.setDate(date.getDate() + 1);
+  return date.getDate();
+}
+
+function isBCHoliday({ y, m, d }) {
+  // Fixed
+  if (m === 1  && d === 1)  return true; // New Year's Day
+  if (m === 7  && d === 1)  return true; // Canada Day
+  if (m === 9  && d === 30) return true; // National Day for Truth and Reconciliation
+  if (m === 11 && d === 11) return true; // Remembrance Day
+  if (m === 12 && d === 25) return true; // Christmas Day
+  if (m === 12 && d === 26) return true; // Boxing Day
+
+  // Family Day: 3rd Monday of February
+  if (m === 2 && d === firstMonday(y, 2) + 14) return true;
+
+  // Good Friday: 2 days before Easter
+  const easter = getEaster(y);
+  const gfDate = new Date(y, easter.m - 1, easter.d - 2);
+  if (m === gfDate.getMonth() + 1 && d === gfDate.getDate()) return true;
+
+  // Victoria Day: last Monday before May 25
+  if (m === 5) {
+    const may25 = new Date(y, 4, 25);
+    while (may25.getDay() !== 1) may25.setDate(may25.getDate() - 1);
+    if (d === may25.getDate()) return true;
+  }
+
+  // BC Day: 1st Monday of August
+  if (m === 8  && d === firstMonday(y, 8))  return true;
+
+  // Labour Day: 1st Monday of September
+  if (m === 9  && d === firstMonday(y, 9))  return true;
+
+  // Thanksgiving: 2nd Monday of October
+  if (m === 10 && d === firstMonday(y, 10) + 7) return true;
+
+  return false;
+}
+
+function isSendableDay() {
+  const van = getVancouverDate();
+  if (van.weekday === 'Sat' || van.weekday === 'Sun') return { ok: false, reason: 'weekend' };
+  if (isBCHoliday(van)) return { ok: false, reason: 'BC statutory holiday' };
+  return { ok: true };
+}
+
 function toHtml(text) {
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -57,6 +135,12 @@ function toHtml(text) {
 }
 
 async function run() {
+  const sendable = isSendableDay();
+  if (!sendable.ok) {
+    console.log(`Skipping — today is a ${sendable.reason}.`);
+    return;
+  }
+
   const now = new Date().toISOString();
 
   const { data: due, error } = await supabase
