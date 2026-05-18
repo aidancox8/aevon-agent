@@ -114,15 +114,17 @@ function toHtml(text) {
           ${paragraphs}
           <table cellpadding="0" cellspacing="0" style="margin-top:28px;padding-top:20px;border-top:1px solid #e5e5e5;width:100%">
             <tr>
-              <td style="padding-right:12px;vertical-align:middle;width:40px">
-                <img src="https://aevon.ca/logo.svg" width="36" height="36" alt="Aevon" style="display:block;border-radius:8px">
+              <td style="padding-right:14px;vertical-align:middle;width:44px">
+                <img src="https://aevon.ca/logo.svg" width="40" height="40" alt="Aevon" style="display:block;border-radius:9px">
               </td>
               <td style="vertical-align:middle">
-                <p style="margin:0;font-size:14px;font-weight:600;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Aidan Cox</p>
-                <p style="margin:2px 0 0;font-size:13px;color:#6366F1;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Aevon &middot; <a href="https://aevon.ca" style="color:#6366F1;text-decoration:none">aevon.ca</a></p>
-              </td>
-              <td style="vertical-align:middle;text-align:right">
-                <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="display:inline-block;background:#6366F1;color:#ffffff;font-size:13px;font-weight:500;padding:9px 18px;border-radius:6px;text-decoration:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Book a 15-min call</a>
+                <p style="margin:0;font-size:14px;font-weight:700;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Aidan Cox</p>
+                <p style="margin:2px 0 0;font-size:12px;color:#6366F1;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Founder, <a href="https://aevon.ca" style="color:#6366F1;text-decoration:none">Aevon</a></p>
+                <p style="margin:4px 0 0;font-size:12px;color:#666666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+                  <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
+                  &nbsp;&middot;&nbsp;
+                  <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#666666;text-decoration:none">Book a call</a>
+                </p>
               </td>
             </tr>
           </table>
