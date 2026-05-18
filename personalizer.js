@@ -83,7 +83,7 @@ EMAIL 1 (initial outreach):
   * One sentence introducing Aevon as a company that builds custom apps and AI agents for businesses dealing with manual, repetitive work — keep it broad, do not name a specific product category
   * One sentence that shows you understand their world — reference something specific about their industry or what you found on their website
   * One open question asking what the most manual or time-consuming part of their workflow is right now
-  * Sign off as "Aidan" — no company name in the sign-off, it's in the signature
+  * No sign-off — the signature block handles that
 - Do NOT propose any solution in this email
 - Do NOT open with a compliment or flattery
 - Do NOT fabricate specific details — only use what is provided above
