@@ -578,15 +578,41 @@
       ${lead.email_subject ? `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
         <div class="analytics-card">
-          <div class="analytics-title">Initial Email</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">${lead.email_subject}</div>
-          <div class="email-preview">${lead.email_body || ''}</div>
+          <div class="analytics-title" style="display:flex;align-items:center;justify-content:space-between">
+            Initial Email
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleEmailEdit('initial')">Edit</button>
+          </div>
+          <div id="initial-view">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">${lead.email_subject}</div>
+            <div class="email-preview">${lead.email_body || ''}</div>
+          </div>
+          <div id="initial-edit" style="display:none">
+            <input id="edit-email-subject" class="form-input" style="margin-bottom:8px;font-weight:600" value="${(lead.email_subject||'').replace(/"/g,'&quot;')}">
+            <textarea id="edit-email-body" class="reply-input" rows="6" style="width:100%">${lead.email_body || ''}</textarea>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button class="btn btn-primary" style="font-size:12px" onclick="saveEmailEdit('${lead.id}','initial')">Save</button>
+              <button class="btn btn-ghost" style="font-size:12px" onclick="toggleEmailEdit('initial')">Cancel</button>
+            </div>
+          </div>
         </div>
         ${lead.followup_subject ? `
         <div class="analytics-card">
-          <div class="analytics-title">Follow-up Email</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">${lead.followup_subject}</div>
-          <div class="email-preview">${lead.followup_body || ''}</div>
+          <div class="analytics-title" style="display:flex;align-items:center;justify-content:space-between">
+            Follow-up Email
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleEmailEdit('followup')">Edit</button>
+          </div>
+          <div id="followup-view">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">${lead.followup_subject}</div>
+            <div class="email-preview">${lead.followup_body || ''}</div>
+          </div>
+          <div id="followup-edit" style="display:none">
+            <input id="edit-followup-subject" class="form-input" style="margin-bottom:8px;font-weight:600" value="${(lead.followup_subject||'').replace(/"/g,'&quot;')}">
+            <textarea id="edit-followup-body" class="reply-input" rows="6" style="width:100%">${lead.followup_body || ''}</textarea>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button class="btn btn-primary" style="font-size:12px" onclick="saveEmailEdit('${lead.id}','followup')">Save</button>
+              <button class="btn btn-ghost" style="font-size:12px" onclick="toggleEmailEdit('followup')">Cancel</button>
+            </div>
+          </div>
         </div>` : '<div></div>'}
       </div>` : ''}
 
@@ -1147,6 +1173,33 @@
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `aevon-leads-${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
+  }
+
+  function toggleEmailEdit(type) {
+    const view = document.getElementById(type + '-view');
+    const edit = document.getElementById(type + '-edit');
+    if (!view || !edit) return;
+    const isEditing = edit.style.display !== 'none';
+    view.style.display = isEditing ? '' : 'none';
+    edit.style.display = isEditing ? 'none' : '';
+  }
+
+  async function saveEmailEdit(leadId, type) {
+    const subject = document.getElementById(`edit-${type}-subject`)?.value.trim();
+    const body    = document.getElementById(`edit-${type}-body`)?.value.trim();
+    if (!subject || !body) { alert('Subject and body are required.'); return; }
+    const field = type === 'initial'
+      ? { email_subject: subject, email_body: body }
+      : { followup_subject: subject, followup_body: body };
+    const { error } = await sb.from('leads').update(field).eq('id', leadId);
+    if (error) { alert('Save failed: ' + error.message); return; }
+    // Update view without full reload
+    const viewEl = document.getElementById(type + '-view');
+    if (viewEl) {
+      viewEl.querySelector('div').textContent = subject;
+      viewEl.querySelector('.email-preview').textContent = body;
+    }
+    toggleEmailEdit(type);
   }
 
   async function saveLeadNotes(id) {
