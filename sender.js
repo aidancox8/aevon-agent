@@ -119,7 +119,6 @@ function toHtml(text) {
               </td>
               <td style="vertical-align:middle">
                 <p style="margin:0;font-size:14px;font-weight:700;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Aidan Cox</p>
-                <p style="margin:2px 0 0;font-size:12px;color:#6366F1;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Founder, <a href="https://aevon.ca" style="color:#6366F1;text-decoration:none">Aevon</a></p>
                 <p style="margin:4px 0 0;font-size:12px;color:#666666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
                   <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
                   &nbsp;&middot;&nbsp;
