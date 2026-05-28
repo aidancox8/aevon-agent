@@ -129,6 +129,14 @@ const migrations = [
     sql: `alter table leads add column if not exists lead_insights text;`,
   },
   {
+    name: '009_email_unique',
+    sql: `
+      CREATE UNIQUE INDEX IF NOT EXISTS leads_email_unique
+        ON leads (email)
+        WHERE email IS NOT NULL;
+    `,
+  },
+  {
     name: '008_rls',
     sql: `
       alter table leads enable row level security;

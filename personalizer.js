@@ -10,7 +10,10 @@ require('dotenv').config();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const supabase = require('./lib/supabase');
-const { generate } = require('./lib/gemini');
+const { createGenerate } = require('./lib/gemini');
+
+// Own instance — separate cooldown state from lead finders
+const generate = createGenerate(process.env.GEMINI_API_KEY);
 
 async function scrapeWebsite(url) {
   if (!url) return null;
@@ -26,6 +29,16 @@ async function scrapeWebsite(url) {
   } catch {
     return null;
   }
+}
+
+const GEMINI_MIN_GAP = 4200;
+let lastCallAt = 0;
+
+async function rateLimitedGenerate(prompt) {
+  const gap = Date.now() - lastCallAt;
+  if (gap < GEMINI_MIN_GAP) await new Promise(r => setTimeout(r, GEMINI_MIN_GAP - gap));
+  lastCallAt = Date.now();
+  return generate(prompt);
 }
 
 const DAILY_LIMIT = 20; // max emails per weekday
@@ -182,7 +195,7 @@ async function run() {
       const websiteContent = await scrapeWebsite(lead.website);
       if (websiteContent) process.stdout.write(`(scraped) `);
       const prompt = buildPrompt(lead, websiteContent);
-      const raw = await generate(prompt);
+      const raw = await rateLimitedGenerate(prompt);
 
       // Extract JSON - handle markdown fences and stray text
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -212,10 +225,7 @@ async function run() {
       console.log(`scheduled ${new Date(sendAt).toLocaleString('en-CA', { timeZone: 'America/Vancouver' })}`);
       success++;
 
-      // Respect Gemini rate limit (primary model: 15 RPM)
-      await new Promise(r => setTimeout(r, 4500));
-
-    } catch (err) {
+} catch (err) {
       console.log(`FAILED: ${err.message}`);
       failed++;
     }

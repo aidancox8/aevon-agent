@@ -177,6 +177,7 @@ async function run() {
     try {
       const { data: sendData, error: sendError } = await resend.emails.send({
         from: `${FROM_NAME} <${FROM}>`,
+        reply_to: 'aidan@aevon.ca',
         to: lead.email,
         subject,
         text: body,

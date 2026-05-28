@@ -990,6 +990,7 @@
 
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
+    console.log('[analytics] v2');
     const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.all([
       sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at').limit(5000),
       sb.from('email_events').select('event_type, created_at, lead_id').order('created_at', { ascending: false }).limit(2000),
@@ -1066,7 +1067,6 @@
     document.getElementById('main').innerHTML = `
       <div class="page-header"><div class="page-title">Analytics</div></div>
 
-      <!-- Top metrics -->
       <div class="stats" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
         <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${total}</div><div class="stat-sub">${hasEmail} have email</div></div>
         <div class="stat-card"><div class="stat-label">Personalized</div><div class="stat-value">${personalized}</div><div class="stat-sub">${queuedCount} queued · ${paused} paused</div></div>
@@ -1077,99 +1077,95 @@
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <!-- Send volume -->
         <div class="analytics-card">
           <div class="analytics-title">Send Volume <span style="font-weight:400;color:var(--text3)">(last 20 send days)</span></div>
-          ${sendDays.length === 0
-            ? `<div style="color:var(--text3);font-size:13px">No sends yet.</div>`
-            : sendDays.map(([d, n]) => `
-              <div class="metric-row">
-                <span class="metric-label" style="font-size:11px;width:48px">${fmtDay(d)}</span>
-                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(n/maxSendDay*100)}%;background:#6366F1"></div></div>
-                <span class="metric-val">${n}</span>
-              </div>`).join('')}
+          ${colChart(sendDays.map(([d, n]) => ({ l: fmtDay(d), v: n })), '#6366F1')}
         </div>
-
-        <!-- Forward pipeline -->
         <div class="analytics-card">
-          <div class="analytics-title">Send Pipeline <span style="font-weight:400;color:var(--text3)">(next 14 scheduled days)</span></div>
-          ${pipelineDays.length === 0
-            ? `<div style="color:var(--text3);font-size:13px">No emails scheduled.</div>`
-            : pipelineDays.map(([d, n]) => `
-              <div class="metric-row">
-                <span class="metric-label" style="font-size:11px;width:48px">${fmtDay(d)}</span>
-                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(n/maxPipe*100)}%;background:#7C3AED"></div></div>
-                <span class="metric-val">${n}</span>
-              </div>`).join('')}
+          <div class="analytics-title">Send Pipeline <span style="font-weight:400;color:var(--text3)">(next 14 days)</span></div>
+          ${colChart(pipelineDays.map(([d, n]) => ({ l: fmtDay(d), v: n })), '#7C3AED')}
         </div>
       </div>
 
-      <div class="analytics-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <!-- By industry -->
-        <div class="analytics-card">
-          <div class="analytics-title">Leads by Industry <span style="font-weight:400;color:var(--text3)">(top 12)</span></div>
-          ${topIndustries.map(([ind, count]) => `
-            <div class="metric-row">
-              <span class="metric-label" style="width:160px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ind}">${ind}</span>
-              <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(count/maxInd*100)}%;background:#6366F1"></div></div>
-              <span class="metric-val">${count}</span>
-            </div>`).join('')}
-        </div>
-
-        <!-- By city + score -->
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div class="analytics-card">
-            <div class="analytics-title">Leads by City</div>
-            ${topCities.map(([city, count]) => `
-              <div class="metric-row">
-                <span class="metric-label" style="font-size:11.5px">${city.replace(' BC','')}</span>
-                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(count/maxCity*100)}%;background:#7C3AED"></div></div>
-                <span class="metric-val">${count}</span>
-              </div>`).join('')}
-          </div>
-          <div class="analytics-card">
-            <div class="analytics-title">Score Distribution</div>
-            ${Object.entries(scoreBuckets).map(([label, count]) => `
-              <div class="metric-row">
-                <span class="metric-label" style="font-size:11.5px">Score ${label}</span>
-                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(count/maxScore*100)}%;background:${label==='10'?'#4ADE80':label==='9'?'#6366F1':label==='8'?'#818CF8':label==='7'?'#EAB308':'#EF4444'}"></div></div>
-                <span class="metric-val">${count}</span>
-              </div>`).join('')}
-          </div>
+      <div class="analytics-card" style="margin-bottom:16px">
+        <div class="analytics-title">Campaign Funnel</div>
+        <div style="display:flex;gap:10px">
+          ${funnelStep('Contacted', uniqueLeadsSent, total, '#6366F1')}
+          ${funnelStep('Opened', opened, uniqueLeadsSent || 1, '#22C55E')}
+          ${funnelStep('Clicked', clicked, uniqueLeadsSent || 1, '#FB923C')}
+          ${funnelStep('Replied', replied, uniqueLeadsSent || 1, '#F59E0B')}
+          ${funnelStep('Bounced', bounced, uniqueLeadsSent || 1, '#EF4444')}
         </div>
       </div>
 
-      <!-- Campaign funnel + recent events -->
-      <div class="analytics-grid" style="grid-template-columns:1fr 1fr;gap:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
         <div class="analytics-card">
-          <div class="analytics-title">Campaign Funnel</div>
-          ${bar('Contacted', uniqueLeadsSent, total, '#6366F1')}
-          ${bar('Opened', opened, uniqueLeadsSent || 1, '#22C55E')}
-          ${bar('Clicked', clicked, uniqueLeadsSent || 1, '#FB923C')}
-          ${bar('Replied', replied, uniqueLeadsSent || 1, '#F59E0B')}
-          ${bar('Bounced', bounced, uniqueLeadsSent || 1, '#EF4444')}
+          <div class="analytics-title">Score Distribution</div>
+          ${colChart(Object.entries(scoreBuckets).map(([l, v]) => ({ l: 'Sc ' + l, v })), '#818CF8', 90)}
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-title">Leads by City</div>
+          ${rankRows(topCities, total, '#7C3AED')}
         </div>
         <div class="analytics-card">
           <div class="analytics-title">Recent Email Events</div>
           ${E.length === 0
             ? `<div style="color:var(--text3);font-size:13px;padding:8px 0">No events yet.</div>`
-            : E.slice(0,12).map(e => `
-                <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-                  <span style="color:var(--text3);width:76px;flex-shrink:0">${new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' })}</span>
+            : E.slice(0, 14).map(e => `
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+                  <span style="color:var(--text3);width:72px;flex-shrink:0;font-size:11px">${new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' })}</span>
                   <span class="badge badge-${e.event_type}" style="font-size:10px;padding:2px 7px">${e.event_type}</span>
                 </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <div class="analytics-title">Leads by Industry <span style="font-weight:400;color:var(--text3)">(top 12)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+          ${rankRows(topIndustries, total, '#6366F1')}
         </div>
       </div>
     `;
   }
 
-  function bar(label, val, total, color) {
-    const pct = total ? Math.round(val / total * 100) : 0;
-    return `<div class="metric-row">
-      <span class="metric-label">${label}</span>
-      <div class="metric-bar-wrap"><div class="metric-bar" style="width:${pct}%;background:${color}"></div></div>
-      <span class="metric-val">${pct}%</span>
-    </div>`;
+  function colChart(items, color = '#6366F1', height = 100) {
+    if (!items.length) return '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No data yet.</div>';
+    const max = Math.max(...items.map(d => d.v), 1);
+    const n = items.length;
+    const slotW = Math.max(12, Math.floor(440 / n));
+    const barW = Math.max(5, Math.min(20, slotW - 4));
+    const W = n * slotW + 20;
+    const bars = items.map((d, i) => {
+      const bh = Math.max(d.v > 0 ? 2 : 0, Math.round(d.v / max * height));
+      const x = 10 + i * slotW + (slotW - barW) / 2;
+      const y = height - bh;
+      return `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="${color}" rx="2" opacity="0.85"/>` +
+        `<text x="${x + barW / 2}" y="${height + 13}" text-anchor="middle" fill="#64748b" font-size="9" font-family="inherit">${d.l}</text>` +
+        (d.v ? `<text x="${x + barW / 2}" y="${y - 4}" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="inherit">${d.v}</text>` : '');
+    }).join('');
+    return `<svg width="100%" viewBox="0 0 ${W} ${height + 22}" style="display:block;overflow:visible;margin-top:8px">${bars}</svg>`;
+  }
+
+  function funnelStep(label, val, base, color) {
+    const pct = base ? Math.round(val / base * 100) : 0;
+    return `<div style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 10px;text-align:center">` +
+      `<div style="font-size:22px;font-weight:700;color:${color}">${val}</div>` +
+      `<div style="font-size:10px;color:var(--text3);margin-top:3px">${label}</div>` +
+      `<div style="font-size:11px;color:var(--text2);margin-top:5px;font-weight:600">${pct}%</div>` +
+      `</div>`;
+  }
+
+  function rankRows(items, total, color) {
+    return items.map(([label, count], i) => {
+      const pct = total ? Math.round(count / total * 100) : 0;
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px">` +
+        `<span style="color:var(--text3);width:14px;flex-shrink:0;font-size:10px">${i + 1}</span>` +
+        `<span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${label}">${label}</span>` +
+        `<div style="width:60px;background:rgba(255,255,255,0.05);border-radius:3px;height:4px;flex-shrink:0">` +
+        `<div style="width:${pct}%;height:4px;border-radius:3px;background:${color}"></div></div>` +
+        `<span style="color:var(--text3);width:28px;text-align:right;flex-shrink:0">${count}</span>` +
+        `</div>`;
+    }).join('');
   }
 
   function relativeDate(dateStr) {
