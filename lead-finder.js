@@ -174,21 +174,24 @@ Aevon builds custom internal software for businesses. Clients pay a one-time bui
 
 The ideal client has real operational complexity, real staff, and real budget. They are frustrated by manual processes or software that doesn't fit how they work.
 
+IMPORTANT — healthcare clinics: Using JaneApp, an EMR, or any standard booking tool does NOT disqualify a clinic. Those tools only handle scheduling and clinical notes — they do nothing for ICBC/WCB billing workflows, insurance pre-authorization, waitlist management, intake form routing, multi-practitioner coordination, or monthly insurer reporting. Multi-disciplinary clinics (physio + massage + chiro + kinesiology + OT, etc.) with multiple practitioners are strong targets because their coordination overhead is high and poorly served by generic tools.
+
 SCORE 8-10 (strong fit — save these):
+- Multi-disciplinary health clinics with 3+ practitioners or 2+ locations (high coordination and billing complexity)
+- ICBC or WCB billing — notoriously manual, strong signal for automation need
 - 15+ employees with clear internal ops complexity
 - Multiple staff roles coordinating work (dispatchers, coordinators, managers, field teams)
 - Industries where staff time is expensive: healthcare, professional services, distribution, logistics, corporate ops, finance, research
 - Evidence of budget: polished website, multiple service lines, named leadership team, established history
 - Actively managing clients, patients, properties, projects, or inventory at scale
-- Would obviously benefit from: scheduling automation, client portals, reporting dashboards, field reporting apps, document workflows
 
 SCORE 6-7 (acceptable — save only if clear pain is visible):
-- 8-15 employees with obvious manual workflow pain
+- 5-15 employee clinic or professional services firm with obvious manual workflow needs
 - Trades with dispatch/job coordination needs (HVAC, plumbing, electrical, inspection)
 - Smaller professional services firms with clear client management complexity
 
 SCORE 1-5 (reject — do not save):
-- Solo operators, owner-only businesses, or fewer than 5 staff
+- Solo operators or owner-only businesses with no staff
 - Residential-only services with no internal team (house cleaners, handymen)
 - Pure consumer retail (restaurants, cafes, salons, gyms, grocery)
 - Franchises of large chains — they use the franchisor's systems
@@ -196,10 +199,10 @@ SCORE 1-5 (reject — do not save):
 - No website or website is clearly a placeholder/dead
 - Nonprofits that are clearly volunteer-run with no operational complexity
 - Schools that are part of a public school district — they have centralized IT
-- Any business where the core product is already a well-served SaaS category (e.g. a software company, a SaaS startup)
+- Pure software companies or SaaS startups — their core product IS software
 - Businesses with no evidence of internal coordination needs
 
-Be skeptical. A professional-looking website alone is not enough — look for evidence of operational complexity and team size. When in doubt, score low.
+A professional-looking website alone is not enough — look for evidence of operational complexity and team size. For clinics, look for multiple modalities, multiple practitioners, ICBC/WCB mentions, or multiple locations as strong positive signals.
 
 Business details:
 - Name: ${business.name}

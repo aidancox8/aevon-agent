@@ -175,21 +175,24 @@ async function qualifyLead(business, websiteText) {
 
 The ideal AI agent client has real operational volume, real staff doing repetitive work, and real budget. They are not looking for a SaaS subscription — they want a custom agent that runs their specific process.
 
+IMPORTANT — healthcare clinics: Using JaneApp, an EMR, or a standard booking tool does NOT disqualify a clinic. Those tools only handle scheduling and clinical notes. Multi-disciplinary clinics (physio + massage + chiro + kinesiology + OT, etc.) still do ICBC/WCB billing, insurance pre-authorization, waitlist management, intake routing, and insurer reporting manually. These are exactly the workflows an AI agent automates. Multiple practitioners or locations = strong signal.
+
 SCORE 8-10 (strong fit — save these):
 - Active outbound BD teams: staffing agencies, recruiters, real estate teams, insurance brokers, mortgage brokers, business brokers doing ongoing prospecting and follow-up
 - Agencies generating lots of written output: marketing, PR, content, advertising — writing proposals, reports, pitches, client updates repeatedly
 - Professional services with high research/drafting volume: law firms doing research and document drafting, accountants generating reports, consultants writing proposals
-- High-volume intake or scheduling: clinics with large patient volumes, any business processing 50+ inbound inquiries or appointments per week
+- Multi-disciplinary health clinics with 3+ practitioners or 2+ locations — ICBC/WCB billing and multi-practitioner coordination are prime agent targets
+- High-volume intake or scheduling: any business processing 30+ inbound inquiries or appointments per week
 - Import/export, logistics, or freight companies routing documents and communications daily
 - Evidence of budget: polished website, named staff, multiple service lines, established history
 
 SCORE 6-7 (acceptable — save only if clear agent fit is visible):
 - Smaller agencies or professional services firms with clear repetitive output needs
-- Clinics or practices with obvious scheduling or intake volume even if modest size
+- Clinics with multiple practitioners or ICBC/WCB mentions even if modest size
 - Property management companies with regular document and communication workflows
 
 SCORE 1-5 (reject — do not save):
-- Solo operators or owner-only businesses
+- Solo operators or owner-only businesses with no staff
 - Pure consumer retail, restaurants, cafes, salons, gyms — no repetitive knowledge work
 - Franchises of large chains — they use franchisor systems
 - Enterprise companies (100+ staff) — they have internal AI/IT teams
@@ -197,7 +200,7 @@ SCORE 1-5 (reject — do not save):
 - Companies where the core work is already fully productized (e.g. a SaaS startup)
 - No website or clearly a placeholder
 
-Be skeptical. A professional website alone is not enough — look for evidence of real volume and repetitive knowledge tasks. When in doubt, score low.
+A professional website alone is not enough — look for evidence of real volume and repetitive knowledge tasks. For clinics, ICBC/WCB billing, multiple modalities, or multiple locations are strong positive signals even if the business looks small.
 
 Business details:
 - Name: ${business.name}
