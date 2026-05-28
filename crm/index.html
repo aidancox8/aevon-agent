@@ -990,8 +990,7 @@
 
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
-    console.log('[analytics] v2');
-    const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.all([
+const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.all([
       sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at').limit(5000),
       sb.from('email_events').select('event_type, created_at, lead_id').order('created_at', { ascending: false }).limit(2000),
       sb.from('leads').select('scheduled_send_at').eq('status','queued').not('scheduled_send_at','is',null).not('email_subject','is',null),
