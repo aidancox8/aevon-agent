@@ -66,11 +66,11 @@ function isBCHoliday({ y, m, d }) {
   const gfDate = new Date(y, easter.m - 1, easter.d - 2);
   if (m === gfDate.getMonth() + 1 && d === gfDate.getDate()) return true;
 
-  // Victoria Day: last Monday before May 25
+  // Victoria Day: last Monday on or before May 24
   if (m === 5) {
-    const may25 = new Date(y, 4, 25);
-    while (may25.getDay() !== 1) may25.setDate(may25.getDate() - 1);
-    if (d === may25.getDate()) return true;
+    const may24 = new Date(y, 4, 24);
+    while (may24.getDay() !== 1) may24.setDate(may24.getDate() - 1);
+    if (d === may24.getDate()) return true;
   }
 
   // BC Day: 1st Monday of August

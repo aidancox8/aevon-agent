@@ -83,6 +83,11 @@ const SEARCH_QUERIES = [
   'mental health clinic',
   'rehabilitation clinic',
   'medical imaging clinic',
+  'multidisciplinary health clinic',
+  'sports medicine clinic',
+  'occupational therapy clinic',
+  'ICBC physiotherapy clinic',
+  'kinesiology clinic',
 ];
 
 function parseArgs() {
@@ -235,7 +240,7 @@ function isDuplicate({ names, sites }, businessName, website) {
 
 async function run() {
   const args = parseArgs();
-  const queries = args.query ? [args.query] : SEARCH_QUERIES;
+  const queries = args.query ? [args.query] : SEARCH_QUERIES.slice().sort(() => Math.random() - 0.5);
   const cities = args.city ? [args.city] : CITIES;
   const maxPages = args.pages || 1;
   const minScore = args.minScore;

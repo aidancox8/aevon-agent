@@ -989,22 +989,51 @@
 
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
-    const [{ data: leads }, { data: events }] = await Promise.all([
-      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step'),
-      sb.from('email_events').select('event_type, created_at, resend_email_id'),
+    const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.all([
+      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at'),
+      sb.from('email_events').select('event_type, created_at, lead_id').order('created_at', { ascending: false }).limit(500),
+      sb.from('leads').select('scheduled_send_at').eq('status','queued').not('scheduled_send_at','is',null).not('email_subject','is',null),
     ]);
 
     const L = leads || [];
+    const E = events || [];
     const total = L.length;
     const hasEmail = L.filter(l => l.email).length;
     const personalized = L.filter(l => l.email_subject).length;
-    const queued = L.filter(l => l.status === 'queued').length;
+    const queuedCount = L.filter(l => l.status === 'queued').length;
     const paused = L.filter(l => l.status === 'paused').length;
-    const sent = L.filter(l => ['sent','replied','converted'].includes(l.status)).length;
     const replied = L.filter(l => l.status === 'replied').length;
     const bounced = L.filter(l => l.status === 'bounced').length;
     const opened = L.filter(l => l.opened_at).length;
     const clicked = L.filter(l => l.clicked_at).length;
+
+    // Use email_events for accurate send counts
+    const sentEvents = E.filter(e => e.event_type === 'sent');
+    const emailsSent = sentEvents.length;
+    const uniqueLeadsSent = new Set(sentEvents.map(e => e.lead_id)).size;
+
+    const openRate = emailsSent ? Math.round(opened / uniqueLeadsSent * 100) : 0;
+    const clickRate = emailsSent ? Math.round(clicked / uniqueLeadsSent * 100) : 0;
+    const bounceRate = emailsSent ? Math.round(bounced / uniqueLeadsSent * 100) : 0;
+    const replyRate = emailsSent ? Math.round(replied / uniqueLeadsSent * 100) : 0;
+
+    // Daily send volume (last 30 days from email_events)
+    const sendsByDay = {};
+    sentEvents.forEach(e => {
+      const d = new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' });
+      sendsByDay[d] = (sendsByDay[d] || 0) + 1;
+    });
+    const sendDays = Object.entries(sendsByDay).sort((a,b) => a[0].localeCompare(b[0])).slice(-20);
+    const maxSendDay = Math.max(...sendDays.map(d => d[1]), 1);
+
+    // Forward pipeline: scheduled sends per day
+    const pipeline = {};
+    (scheduled || []).forEach(l => {
+      const d = new Date(l.scheduled_send_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' });
+      pipeline[d] = (pipeline[d] || 0) + 1;
+    });
+    const pipelineDays = Object.entries(pipeline).sort((a,b) => a[0].localeCompare(b[0])).slice(0, 14);
+    const maxPipe = Math.max(...pipelineDays.map(d => d[1]), 1);
 
     // By industry — top 12
     const byIndustry = {};
@@ -1015,7 +1044,7 @@
     // By city
     const byCity = {};
     L.forEach(l => { if (l.city) byCity[l.city] = (byCity[l.city] || 0) + 1; });
-    const topCities = Object.entries(byCity).sort((a,b) => b[1]-a[1]);
+    const topCities = Object.entries(byCity).sort((a,b) => b[1]-a[1]).slice(0, 10);
     const maxCity = topCities[0]?.[1] || 1;
 
     // Score distribution
@@ -1031,24 +1060,50 @@
     });
     const maxScore = Math.max(...Object.values(scoreBuckets), 1);
 
-    const openRate = sent ? Math.round(opened / sent * 100) : 0;
-    const replyRate = sent ? Math.round(replied / sent * 100) : 0;
-    const bounceRate = sent ? Math.round(bounced / sent * 100) : 0;
+    const fmtDay = d => { const [y,m,day] = d.split('-'); return `${parseInt(m)}/${parseInt(day)}`; };
 
     document.getElementById('main').innerHTML = `
       <div class="page-header"><div class="page-title">Analytics</div></div>
 
-      <!-- Readiness funnel -->
-      <div class="stats" style="grid-template-columns:repeat(5,1fr)">
-        <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${total}</div></div>
-        <div class="stat-card"><div class="stat-label">Have Email</div><div class="stat-value">${hasEmail}</div><div class="stat-sub">${total ? Math.round(hasEmail/total*100) : 0}% of total</div></div>
-        <div class="stat-card"><div class="stat-label">Personalized</div><div class="stat-value">${personalized}</div><div class="stat-sub">${hasEmail ? Math.round(personalized/hasEmail*100) : 0}% of emailable</div></div>
-        <div class="stat-card"><div class="stat-label">Queued</div><div class="stat-value">${queued}</div><div class="stat-sub">${paused} paused</div></div>
-        <div class="stat-card"><div class="stat-label">Sent</div><div class="stat-value">${sent}</div><div class="stat-sub">${replied} replied · ${bounced} bounced</div></div>
+      <!-- Top metrics -->
+      <div class="stats" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
+        <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${total}</div><div class="stat-sub">${hasEmail} have email</div></div>
+        <div class="stat-card"><div class="stat-label">Personalized</div><div class="stat-value">${personalized}</div><div class="stat-sub">${queuedCount} queued · ${paused} paused</div></div>
+        <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value">${emailsSent}</div><div class="stat-sub">${uniqueLeadsSent} unique leads</div></div>
+        <div class="stat-card"><div class="stat-label">Open Rate</div><div class="stat-value" style="color:${openRate>20?'var(--green)':openRate>10?'var(--yellow)':'var(--text)'}">${openRate}%</div><div class="stat-sub">${opened} opened</div></div>
+        <div class="stat-card"><div class="stat-label">Reply Rate</div><div class="stat-value" style="color:${replyRate>5?'var(--green)':'var(--text)'}">${replyRate}%</div><div class="stat-sub">${replied} replied</div></div>
+        <div class="stat-card"><div class="stat-label">Bounce Rate</div><div class="stat-value" style="color:${bounceRate>5?'var(--red)':'var(--text)'}">${bounceRate}%</div><div class="stat-sub">${bounced} bounced</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Send volume -->
+        <div class="analytics-card">
+          <div class="analytics-title">Send Volume <span style="font-weight:400;color:var(--text3)">(last 20 send days)</span></div>
+          ${sendDays.length === 0
+            ? `<div style="color:var(--text3);font-size:13px">No sends yet.</div>`
+            : sendDays.map(([d, n]) => `
+              <div class="metric-row">
+                <span class="metric-label" style="font-size:11px;width:48px">${fmtDay(d)}</span>
+                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(n/maxSendDay*100)}%;background:#6366F1"></div></div>
+                <span class="metric-val">${n}</span>
+              </div>`).join('')}
+        </div>
+
+        <!-- Forward pipeline -->
+        <div class="analytics-card">
+          <div class="analytics-title">Send Pipeline <span style="font-weight:400;color:var(--text3)">(next 14 scheduled days)</span></div>
+          ${pipelineDays.length === 0
+            ? `<div style="color:var(--text3);font-size:13px">No emails scheduled.</div>`
+            : pipelineDays.map(([d, n]) => `
+              <div class="metric-row">
+                <span class="metric-label" style="font-size:11px;width:48px">${fmtDay(d)}</span>
+                <div class="metric-bar-wrap"><div class="metric-bar" style="width:${Math.round(n/maxPipe*100)}%;background:#7C3AED"></div></div>
+                <span class="metric-val">${n}</span>
+              </div>`).join('')}
+        </div>
       </div>
 
       <div class="analytics-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-
         <!-- By industry -->
         <div class="analytics-card">
           <div class="analytics-title">Leads by Industry <span style="font-weight:400;color:var(--text3)">(top 12)</span></div>
@@ -1083,23 +1138,24 @@
         </div>
       </div>
 
-      <!-- Email funnel (populates once sending starts) -->
+      <!-- Campaign funnel + recent events -->
       <div class="analytics-grid" style="grid-template-columns:1fr 1fr;gap:16px">
         <div class="analytics-card">
-          <div class="analytics-title">Email Campaign Funnel</div>
-          ${bar('Sent', sent, total, '#6366F1')}
-          ${bar('Opened', opened, sent || 1, '#22C55E')}
-          ${bar('Replied', replied, sent || 1, '#FB923C')}
-          ${bar('Bounced', bounced, sent || 1, '#EF4444')}
+          <div class="analytics-title">Campaign Funnel</div>
+          ${bar('Contacted', uniqueLeadsSent, total, '#6366F1')}
+          ${bar('Opened', opened, uniqueLeadsSent || 1, '#22C55E')}
+          ${bar('Clicked', clicked, uniqueLeadsSent || 1, '#FB923C')}
+          ${bar('Replied', replied, uniqueLeadsSent || 1, '#F59E0B')}
+          ${bar('Bounced', bounced, uniqueLeadsSent || 1, '#EF4444')}
         </div>
         <div class="analytics-card">
           <div class="analytics-title">Recent Email Events</div>
-          ${(events||[]).length === 0
-            ? `<div style="color:var(--text3);font-size:13px;padding:8px 0">No events yet — starts once emails go out.</div>`
-            : [...(events||[])].reverse().slice(0,8).map(e => `
-                <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-                  <span style="color:var(--text3);width:100px;flex-shrink:0">${new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' })}</span>
-                  <span class="badge badge-${e.event_type}">${e.event_type}</span>
+          ${E.length === 0
+            ? `<div style="color:var(--text3);font-size:13px;padding:8px 0">No events yet.</div>`
+            : E.slice(0,12).map(e => `
+                <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+                  <span style="color:var(--text3);width:76px;flex-shrink:0">${new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' })}</span>
+                  <span class="badge badge-${e.event_type}" style="font-size:10px;padding:2px 7px">${e.event_type}</span>
                 </div>`).join('')}
         </div>
       </div>
