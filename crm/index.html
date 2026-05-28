@@ -441,8 +441,8 @@
   // ── Pipeline ─────────────────────────────────────────────────
   async function renderPipeline() {
     const [{ data: leads }, { data: events }] = await Promise.all([
-      sb.from('leads').select('*').order('scheduled_send_at', { ascending: true, nullsFirst: false }),
-      sb.from('email_events').select('lead_id, event_type'),
+      sb.from('leads').select('*').order('scheduled_send_at', { ascending: true, nullsFirst: false }).limit(5000),
+      sb.from('email_events').select('lead_id, event_type').limit(5000),
     ]);
 
     const eventMap = {};
@@ -991,8 +991,8 @@
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
     const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.all([
-      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at'),
-      sb.from('email_events').select('event_type, created_at, lead_id').order('created_at', { ascending: false }).limit(500),
+      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at').limit(5000),
+      sb.from('email_events').select('event_type, created_at, lead_id').order('created_at', { ascending: false }).limit(2000),
       sb.from('leads').select('scheduled_send_at').eq('status','queued').not('scheduled_send_at','is',null).not('email_subject','is',null),
     ]);
 
