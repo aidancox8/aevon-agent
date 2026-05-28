@@ -193,7 +193,7 @@ async function run() {
       const update = {
         sequence_step: nextStep,
         last_sent_at: now,
-        status: isLastStep ? 'sent' : 'queued',
+        status: isLastStep ? 'dont_contact' : 'queued',
         scheduled_send_at: isLastStep
           ? null
           : new Date(Date.now() + FOLLOWUP_DELAY_DAYS * 24 * 60 * 60 * 1000).toISOString(),

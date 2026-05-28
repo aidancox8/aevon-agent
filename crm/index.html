@@ -89,6 +89,7 @@
     .badge-sent { background: rgba(34,197,94,0.15); color: #4ADE80; }
     .badge-replied { background: rgba(34,197,94,0.25); color: #22C55E; }
     .badge-bounced { background: rgba(239,68,68,0.15); color: #F87171; }
+    .badge-dont_contact { background: rgba(100,116,139,0.15); color: #64748b; }
     .badge-complained { background: rgba(239,68,68,0.2); color: #EF4444; }
     .badge-converted { background: rgba(99,102,241,0.3); color: #6366F1; }
     .badge-prospect { background: rgba(234,179,8,0.15); color: #FCD34D; }
@@ -1191,7 +1192,7 @@ const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.a
 
   function openStatusPicker(el, leadId, currentStatus) {
     document.querySelectorAll('.status-picker').forEach(p => p.remove());
-    const statuses = ['queued','paused','sent','replied','bounced','converted'];
+    const statuses = ['queued','paused','sent','replied','bounced','converted','dont_contact'];
     const picker = document.createElement('div');
     picker.className = 'status-picker';
     picker.innerHTML = statuses.map(s =>
@@ -1621,6 +1622,7 @@ const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.a
           <option value="sent">Sent</option>
           <option value="replied">Replied</option>
           <option value="bounced">Bounced</option>
+          <option value="dont_contact">Don't Contact</option>
         </select>
         <select class="filter-select" id="industryFilter" onchange="filterOutreach()">
           <option value="">All industries</option>
