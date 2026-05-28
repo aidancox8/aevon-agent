@@ -171,36 +171,33 @@ async function geminiRateLimited(prompt) {
 }
 
 async function qualifyLead(business, websiteText) {
-  const prompt = `You are a strict lead qualifier for Aevon, a company that builds custom AI agents for businesses in the Lower Mainland, BC. Your job is to identify businesses with high-volume, repetitive knowledge work that an AI agent could automate — outreach, research, drafting, routing, intake, scheduling, or reporting.
+  const prompt = `You are a lead qualifier for Aevon, a company that builds custom AI agents for businesses in the Lower Mainland, BC. Score this business based on how much repetitive, high-volume knowledge work their staff does — not based on their industry.
 
-The ideal AI agent client has real operational volume, real staff doing repetitive work, and real budget. They are not looking for a SaaS subscription — they want a custom agent that runs their specific process.
+AI agents automate work that recurs on a predictable pattern: outreach sequences, document drafting, intake routing, report generation, data extraction, scheduling coordination. The question is whether this business's staff is clearly doing a lot of that kind of work manually.
 
-IMPORTANT — healthcare clinics: Using JaneApp, an EMR, or a standard booking tool does NOT disqualify a clinic. Those tools only handle scheduling and clinical notes. Multi-disciplinary clinics (physio + massage + chiro + kinesiology + OT, etc.) still do ICBC/WCB billing, insurance pre-authorization, waitlist management, intake routing, and insurer reporting manually. These are exactly the workflows an AI agent automates. Multiple practitioners or locations = strong signal.
+IMPORTANT: Having a CRM, booking tool, EMR, or any standard SaaS does NOT disqualify a business. Those tools handle the core product — the repetitive coordination and knowledge work around them is what agents automate.
 
-SCORE 8-10 (strong fit — save these):
-- Active outbound BD teams: staffing agencies, recruiters, real estate teams, insurance brokers, mortgage brokers, business brokers doing ongoing prospecting and follow-up
-- Agencies generating lots of written output: marketing, PR, content, advertising — writing proposals, reports, pitches, client updates repeatedly
-- Professional services with high research/drafting volume: law firms doing research and document drafting, accountants generating reports, consultants writing proposals
-- Multi-disciplinary health clinics with 3+ practitioners or 2+ locations — ICBC/WCB billing and multi-practitioner coordination are prime agent targets
-- High-volume intake or scheduling: any business processing 30+ inbound inquiries or appointments per week
-- Import/export, logistics, or freight companies routing documents and communications daily
-- Evidence of budget: polished website, named staff, multiple service lines, established history
+Score based on these observable signals:
 
-SCORE 6-7 (acceptable — save only if clear agent fit is visible):
-- Smaller agencies or professional services firms with clear repetitive output needs
-- Clinics with multiple practitioners or ICBC/WCB mentions even if modest size
-- Property management companies with regular document and communication workflows
+SCORE 8-10 (strong fit):
+- Staff clearly doing high-volume repetitive outreach or follow-up: prospecting, lead nurturing, client communication at scale
+- Staff producing the same type of written output repeatedly: proposals, reports, briefs, assessments, summaries, claims
+- High inbound volume that requires routing, qualification, or response: inquiries, applications, referrals, service requests
+- Multiple people coordinating the same recurring process across clients, patients, or cases
+- Established business with budget signals: polished website, named team, 5+ years operating, multiple service lines
 
-SCORE 1-5 (reject — do not save):
-- Solo operators or owner-only businesses with no staff
-- Pure consumer retail, restaurants, cafes, salons, gyms — no repetitive knowledge work
-- Franchises of large chains — they use franchisor systems
-- Enterprise companies (100+ staff) — they have internal AI/IT teams
-- Businesses with no evidence of outbound, research, or document-heavy workflows
-- Companies where the core work is already fully productized (e.g. a SaaS startup)
+SCORE 6-7 (acceptable if repetitive knowledge work is clearly visible):
+- Smaller but evidence of a recurring outbound, drafting, or intake process
+- Staff who clearly spend time on research, writing, or data entry that repeats
+
+SCORE 1-5 (reject):
+- Sole operator with no staff doing repetitive knowledge work
+- Pure consumer service with no outbound, intake, or document workflows
+- Franchise or chain location — uses parent company systems
+- 100+ employees — has internal AI/IT team
 - No website or clearly a placeholder
-
-A professional website alone is not enough — look for evidence of real volume and repetitive knowledge tasks. For clinics, ICBC/WCB billing, multiple modalities, or multiple locations are strong positive signals even if the business looks small.
+- Software or SaaS company — builds their own tools
+- No observable evidence of repetitive knowledge work
 
 Business details:
 - Name: ${business.name}

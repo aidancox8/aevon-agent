@@ -54,16 +54,48 @@ function nextWeekdaySendSlot(dayCounts) {
   throw new Error('Could not find an open send slot in the next 90 days');
 }
 
+function getIndustryContext(industry) {
+  const i = (industry || '').toLowerCase();
+  if (/physio|chiro|kinesio|rehab|sport.*med|occupational|multidisciplin|icbc|health clinic|medical|dental|optom|mental health|veterinar/.test(i))
+    return 'Clinics with multiple practitioners or service types typically deal with a high volume of manual administrative work — intake forms, insurance billing, scheduling coordination across staff, and referral tracking.';
+  if (/staffing|recruit|executive search/.test(i))
+    return 'Staffing and recruitment firms run large volumes of outreach, candidate screening, and client communication that repeat across every placement cycle.';
+  if (/real estate/.test(i))
+    return 'Real estate teams often spend significant time manually following up with leads, preparing market reports, and coordinating listings and showings across multiple clients.';
+  if (/mortgage|lending/.test(i))
+    return 'Mortgage brokers handle a high volume of applications, document collection, and client follow-up that repeats across every deal.';
+  if (/insurance/.test(i))
+    return 'Insurance brokerages process a steady stream of quote requests, policy renewals, and document routing between clients and insurers — most of it handled manually over email.';
+  if (/law firm|legal/.test(i))
+    return 'Law firms spend significant staff time on document drafting, client intake coordination, and research that follows a similar pattern across many matters.';
+  if (/account|bookkeep/.test(i))
+    return 'Accounting firms collect documents from clients, generate reports, and manage deadlines across many files simultaneously — a lot of which is manual and repetitive.';
+  if (/marketing|advertising|pr |public relation|seo|content|media buy/.test(i))
+    return 'Marketing and creative agencies repeatedly produce the same types of deliverables — proposals, reports, campaign briefs, client updates — across many clients at once.';
+  if (/hvac|plumb|electr.*contract|general contractor|field service|inspection|mechanical/.test(i))
+    return 'Trades and field service companies coordinate dispatching, job tracking, and reporting across multiple crews or jobs running simultaneously.';
+  if (/logistics|freight|import|export|warehouse|distribution|courier/.test(i))
+    return 'Logistics and distribution companies route a high volume of shipping documents, supplier communications, and status updates across many shipments daily.';
+  if (/property manag/.test(i))
+    return 'Property management companies handle recurring communication with tenants, maintenance coordination, and owner reporting across a large portfolio.';
+  if (/engineer|architect|survey|environment.*consult/.test(i))
+    return 'Engineering and technical consulting firms produce recurring deliverables — field reports, assessments, project updates — across many active projects at once.';
+  if (/consult/.test(i))
+    return 'Consulting firms repeatedly produce proposals, status reports, and client deliverables across many engagements, much of it written from scratch each time.';
+  return 'Growing businesses in the Lower Mainland often reach a point where their team is spending significant time on manual, repetitive internal work that holds them back.';
+}
+
 function buildPrompt(lead, websiteContent) {
+  const industryContext = getIndustryContext(lead.industry);
   return `You are writing a cold outreach email on behalf of Aevon, a custom software company based in the Lower Mainland, BC.
 
 About Aevon:
-- Builds two things: custom apps (internal tools tailored to how a business operates) and AI agents (software that does recurring work automatically — research, outreach, routing, scheduling, drafting — without someone driving it)
-- Replaces the patchwork of SaaS tools and manual workarounds most growing teams rely on
-- Clients pay once and own the software outright — no seat-based pricing, no vendor lock-in
-- Custom app examples: scheduling tools, client portals, document workflows, dashboards, field reporting
-- AI agent examples: outreach agents that research leads and write personalized emails, intake agents that qualify and route inbound inquiries, report agents that generate weekly summaries automatically
-- Target clients: 5-50 employee businesses in the Lower Mainland dealing with operational friction or high volumes of repetitive knowledge work
+- Builds custom apps and AI agents for businesses dealing with manual, repetitive internal work
+- Clients pay once and own the software outright — no subscriptions, no vendor lock-in
+- Target clients: 5-50 employee businesses in the Lower Mainland
+
+Industry context (general knowledge about this type of business — use only to inform tone and question, do not repeat verbatim or state as fact about this specific business):
+${industryContext}
 
 Lead details:
 - Business name: ${lead.business_name}

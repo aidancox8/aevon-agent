@@ -45,14 +45,26 @@ const SEARCH_QUERIES = [
   'recruitment agency',
   'surveying company',
   'inspection company',
+  'law firm',
+  'accounting firm',
+  'marketing agency',
+  'digital marketing agency',
+  'property management company',
+  'interior design firm',
+  'event management company',
   // Trades & field service
   'HVAC company',
   'plumbing company',
   'electrical contractor',
+  'general contractor',
+  'building inspection company',
+  'home inspection company',
   'equipment rental company',
   'moving company',
   'courier company',
   'field service company',
+  'security company',
+  'commercial landscaping company',
   // Corporate & distribution
   'trading company',
   'import export company',
@@ -69,6 +81,7 @@ const SEARCH_QUERIES = [
   'private school',
   // Sales & financial
   'real estate brokerage',
+  'real estate team',
   'mortgage broker',
   'business broker',
   'financial planning firm',
@@ -168,41 +181,35 @@ async function geminiRateLimited(prompt) {
 }
 
 async function qualifyLead(business, websiteText) {
-  const prompt = `You are a strict lead qualifier for Aevon, a custom business software company in the Lower Mainland, BC. Your job is to filter out bad leads aggressively — it is better to miss a mediocre lead than to let a bad one through.
+  const prompt = `You are a lead qualifier for Aevon, a custom software company in the Lower Mainland, BC that builds internal tools and workflow software for businesses. Score this business based on how much operational complexity they have — not based on their industry.
 
-Aevon builds custom internal software for businesses. Clients pay a one-time build fee and own the software. Projects: workflow tools, scheduling systems, client portals, document management, field reporting, AI knowledge bases, outreach automation.
+Aevon builds custom apps and workflow tools for businesses. Clients pay a one-time fee and own the software outright. The goal is to find businesses that are clearly dealing with manual, repetitive internal processes that off-the-shelf software doesn't fully solve.
 
-The ideal client has real operational complexity, real staff, and real budget. They are frustrated by manual processes or software that doesn't fit how they work.
+IMPORTANT: Having industry-standard software (booking tools, EMRs, CRMs, accounting tools) does NOT disqualify a business. Those tools handle the core product — they don't automate the coordination, reporting, billing workflows, and internal processes around it.
 
-IMPORTANT — healthcare clinics: Using JaneApp, an EMR, or any standard booking tool does NOT disqualify a clinic. Those tools only handle scheduling and clinical notes — they do nothing for ICBC/WCB billing workflows, insurance pre-authorization, waitlist management, intake form routing, multi-practitioner coordination, or monthly insurer reporting. Multi-disciplinary clinics (physio + massage + chiro + kinesiology + OT, etc.) with multiple practitioners are strong targets because their coordination overhead is high and poorly served by generic tools.
+Score based on these observable signals:
 
-SCORE 8-10 (strong fit — save these):
-- Multi-disciplinary health clinics with 3+ practitioners or 2+ locations (high coordination and billing complexity)
-- ICBC or WCB billing — notoriously manual, strong signal for automation need
-- 15+ employees with clear internal ops complexity
-- Multiple staff roles coordinating work (dispatchers, coordinators, managers, field teams)
-- Industries where staff time is expensive: healthcare, professional services, distribution, logistics, corporate ops, finance, research
-- Evidence of budget: polished website, multiple service lines, named leadership team, established history
-- Actively managing clients, patients, properties, projects, or inventory at scale
+SCORE 8-10 (strong fit):
+- Multiple staff roles that need to coordinate (not just one person doing everything)
+- Evidence of high transaction or case volume: many clients, patients, jobs, properties, or orders managed simultaneously
+- Repetitive document or reporting work visible: proposals, invoices, insurance claims, compliance reports, field reports generated repeatedly
+- Multiple locations or teams sharing the same operational process
+- Established business with budget signals: polished website, named team, 5+ years operating, multiple service lines
+- Time-sensitive coordination where delays cost money: dispatching, intake routing, scheduling across staff
 
-SCORE 6-7 (acceptable — save only if clear pain is visible):
-- 5-15 employee clinic or professional services firm with obvious manual workflow needs
-- Trades with dispatch/job coordination needs (HVAC, plumbing, electrical, inspection)
-- Smaller professional services firms with clear client management complexity
+SCORE 6-7 (acceptable if clear friction is visible):
+- Smaller operation but obvious manual workflow pain visible on their website
+- Some staff coordination evident even if lean
+- Clear growth trajectory suggesting increasing operational load
 
-SCORE 1-5 (reject — do not save):
-- Solo operators or owner-only businesses with no staff
-- Residential-only services with no internal team (house cleaners, handymen)
-- Pure consumer retail (restaurants, cafes, salons, gyms, grocery)
-- Franchises of large chains — they use the franchisor's systems
-- Enterprise companies (100+ staff) — they have IT departments
-- No website or website is clearly a placeholder/dead
-- Nonprofits that are clearly volunteer-run with no operational complexity
-- Schools that are part of a public school district — they have centralized IT
-- Pure software companies or SaaS startups — their core product IS software
-- Businesses with no evidence of internal coordination needs
-
-A professional-looking website alone is not enough — look for evidence of operational complexity and team size. For clinics, look for multiple modalities, multiple practitioners, ICBC/WCB mentions, or multiple locations as strong positive signals.
+SCORE 1-5 (reject):
+- Sole operator with no staff and no coordination needs
+- Pure walk-in consumer service with no internal workflow complexity
+- Franchise or chain location — uses parent company systems
+- 100+ employees — has internal IT
+- No website or clearly a placeholder
+- Software or SaaS company — builds their own tools
+- No observable evidence of coordination, volume, or repetitive internal work
 
 Business details:
 - Name: ${business.name}
