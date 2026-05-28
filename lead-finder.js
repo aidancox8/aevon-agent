@@ -29,6 +29,11 @@ const CITIES = [
   'Abbotsford BC',
   'North Vancouver BC',
   'New Westminster BC',
+  'Delta BC',
+  'Port Coquitlam BC',
+  'West Vancouver BC',
+  'Maple Ridge BC',
+  'White Rock BC',
 ];
 
 const SEARCH_QUERIES = [
@@ -255,13 +260,21 @@ async function run() {
   const maxPages = args.pages || 1;
   const minScore = args.minScore;
 
-  // Load all existing leads once for in-memory dedup (avoids 2 DB queries per lead)
   console.log('Loading existing leads for dedup...');
   const { data: existingLeads, error: dedupErr } = await supabase
     .from('leads').select('business_name, website');
   if (dedupErr) throw new Error(`Failed to load existing leads: ${dedupErr.message}`);
   const dedup = buildDedupSets(existingLeads);
   console.log(`  ${existingLeads?.length || 0} existing leads loaded.\n`);
+
+  let savedSinceRefresh = 0;
+  async function refreshDedup() {
+    const { data } = await supabase.from('leads').select('business_name, website');
+    const fresh = buildDedupSets(data);
+    dedup.names = fresh.names;
+    dedup.sites = fresh.sites;
+    savedSinceRefresh = 0;
+  }
 
   let totalFound = 0;
   let totalQualified = 0;
@@ -319,7 +332,7 @@ async function run() {
           totalQualified++;
           console.log(`score ${score}/10 | ${email || 'no email'}`);
 
-          await supabase.from('leads').insert({
+          const { error: insertErr } = await supabase.from('leads').insert({
             business_name: name,
             address: place.formattedAddress || null,
             phone: place.internationalPhoneNumber || null,
@@ -333,11 +346,16 @@ async function run() {
             qualification_notes: notes,
           });
 
-          // Add to in-memory dedup so later queries in this run don't re-add
+          if (insertErr) {
+            console.log(`  (skipped duplicate in DB)`);
+            continue;
+          }
+
           dedup.names.add(name.toLowerCase());
           if (website) dedup.sites.add(website.toLowerCase());
-
           totalSaved++;
+          savedSinceRefresh++;
+          if (savedSinceRefresh >= 20) await refreshDedup();
         }
       } while (pageToken && page < maxPages);
     }

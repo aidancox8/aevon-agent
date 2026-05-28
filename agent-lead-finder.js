@@ -14,26 +14,13 @@ require('dotenv').config();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const supabase = require('./lib/supabase');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { createGenerate } = require('./lib/gemini');
 
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-// Separate Gemini instance so agent-lead-finder uses its own API key and quota
-const _genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
-const _primary = _genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
-const _fallback = _genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+// Own quota pool via GEMINI_API_KEY_AGENT — full cooldown + OpenRouter fallback chain
+const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
 
-async function generate(prompt) {
-  try {
-    return (await _primary.generateContent(prompt)).response.text().trim();
-  } catch (err) {
-    if (err.message.includes('429') || err.message.includes('503')) {
-      console.warn(`Primary unavailable, falling back...`);
-      return (await _fallback.generateContent(prompt)).response.text().trim();
-    }
-    throw err;
-  }
-}
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 
 const CITIES = [
@@ -46,6 +33,11 @@ const CITIES = [
   'Abbotsford BC',
   'North Vancouver BC',
   'New Westminster BC',
+  'Delta BC',
+  'Port Coquitlam BC',
+  'West Vancouver BC',
+  'Maple Ridge BC',
+  'White Rock BC',
 ];
 
 // Companies with high-volume repetitive knowledge work: outreach, research,
@@ -250,6 +242,15 @@ async function run() {
   const dedup = buildDedupSets(existingLeads);
   console.log(`  ${existingLeads?.length || 0} existing leads loaded.\n`);
 
+  let savedSinceRefresh = 0;
+  async function refreshDedup() {
+    const { data } = await supabase.from('leads').select('business_name, website');
+    const fresh = buildDedupSets(data);
+    dedup.names = fresh.names;
+    dedup.sites = fresh.sites;
+    savedSinceRefresh = 0;
+  }
+
   let totalFound = 0;
   let totalQualified = 0;
   let totalSaved = 0;
@@ -303,7 +304,7 @@ async function run() {
           totalQualified++;
           console.log(`score ${score}/10 | ${email || 'no email'}`);
 
-          await supabase.from('leads').insert({
+          const { error: insertErr } = await supabase.from('leads').insert({
             business_name: name,
             address: place.formattedAddress || null,
             phone: place.internationalPhoneNumber || null,
@@ -317,10 +318,16 @@ async function run() {
             qualification_notes: notes,
           });
 
+          if (insertErr) {
+            console.log(`  (skipped duplicate in DB)`);
+            continue;
+          }
+
           dedup.names.add(name.toLowerCase());
           if (website) dedup.sites.add(website.toLowerCase());
-
           totalSaved++;
+          savedSinceRefresh++;
+          if (savedSinceRefresh >= 20) await refreshDedup();
         }
       } while (pageToken && page < maxPages);
     }
