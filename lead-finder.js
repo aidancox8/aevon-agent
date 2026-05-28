@@ -105,7 +105,7 @@ const SEARCH_QUERIES = [
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const result = { minScore: 8 };
+  const result = { minScore: 7 };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--query') result.query = args[++i];
     if (args[i] === '--city') result.city = args[++i];
