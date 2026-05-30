@@ -550,6 +550,7 @@
           ${lead.status === 'queued' ? `<button class="btn btn-ghost" onclick="pauseLead('${lead.id}')">Pause</button>` : ''}
           ${lead.status === 'paused' || (lead.email_subject && !lead.scheduled_send_at && lead.status !== 'sent' && lead.status !== 'replied' && lead.status !== 'converted') ? `<button class="btn btn-ghost" onclick="showQueuePicker('${lead.id}')">Queue</button>` : ''}
           ${lead.status !== 'replied' && lead.status !== 'converted' ? `<button class="btn btn-ghost" onclick="markReplied('${lead.id}')">Mark Replied</button>` : ''}
+          ${lead.status !== 'converted' && lead.status !== 'dont_contact' ? `<button class="btn btn-ghost" onclick="if(confirm('Mark not interested? This removes them from all sequences.'))markReplied('${lead.id}','not_interested')">Not Interested</button>` : ''}
           ${lead.status !== 'converted' ? `<button class="btn btn-primary" onclick="convertToCustomer(${JSON.stringify(lead).replace(/"/g, '&quot;')})">Convert to Customer</button>` : ''}
         </div>
       </div>
@@ -647,6 +648,7 @@
         <textarea class="reply-input" id="replyNote" rows="2" placeholder="Optional note about the reply..."></textarea>
         <div style="margin-top:10px">
           <button class="btn btn-primary" onclick="markReplied('${lead.id}')">Mark as Replied</button>
+          <button class="btn btn-ghost" onclick="if(confirm('Mark not interested? This removes them from all sequences.'))markReplied('${lead.id}','not_interested')">Not Interested</button>
         </div>
       </div>` : ''}
     `;
@@ -938,11 +940,24 @@
     renderLeadProfile(leadId);
   }
 
-  async function markReplied(leadId) {
+  async function markReplied(leadId, outcome = 'replied') {
     const note = document.getElementById('replyNote')?.value.trim() || null;
-    const { error } = await sb.from('leads').update({ status: 'replied' }).eq('id', leadId);
+    const { data: lead } = await sb.from('leads').select('sequence_step, last_sent_at').eq('id', leadId).single();
+    // not_interested pulls them out of all sequences; replied keeps the thread live
+    const newStatus = outcome === 'not_interested' ? 'dont_contact' : 'replied';
+    const { error } = await sb.from('leads').update({ status: newStatus, scheduled_send_at: null }).eq('id', leadId);
     if (error) { alert('Failed to update lead status.'); return; }
-    await sb.from('email_events').insert({ lead_id: leadId, event_type: 'replied', metadata: { manual: true, note } });
+    await sb.from('email_events').insert({
+      lead_id: leadId,
+      event_type: 'replied',
+      metadata: {
+        manual: true,
+        note,
+        outcome,
+        replied_at_step: lead?.sequence_step ?? null,
+        days_to_reply: lead?.last_sent_at ? Math.round((Date.now() - new Date(lead.last_sent_at)) / 86400000) : null,
+      },
+    });
     closeDrawer();
     if (currentView === 'lead-profile') {
       renderLeadProfile(leadId);
