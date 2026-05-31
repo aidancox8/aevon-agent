@@ -1006,188 +1006,347 @@
 
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
-const [{ data: leads }, { data: events }, { data: scheduled }] = await Promise.all([
-      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at').limit(5000),
-      sb.from('email_events').select('event_type, created_at, lead_id').order('created_at', { ascending: false }).limit(2000),
-      sb.from('leads').select('scheduled_send_at').eq('status','queued').not('scheduled_send_at','is',null).not('email_subject','is',null),
+    const [{ data: leads }, { data: events }, { data: customers }, { data: invoices }] = await Promise.all([
+      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at, scheduled_send_at, created_at, source').limit(5000),
+      sb.from('email_events').select('event_type, created_at, lead_id, metadata').order('created_at', { ascending: false }).limit(5000),
+      sb.from('customers').select('id, status, created_at').limit(2000),
+      sb.from('invoices').select('amount, status, paid_date, created_at').limit(2000),
     ]);
 
     const L = leads || [];
     const E = events || [];
+    const C = customers || [];
+    const INV = invoices || [];
     const total = L.length;
+
+    // ---- status + coverage ----
+    const byStatus = {};
+    L.forEach(l => { byStatus[l.status] = (byStatus[l.status] || 0) + 1; });
+    const queued = byStatus['queued'] || 0;
+    const paused = byStatus['paused'] || 0;
+    const dontContact = byStatus['dont_contact'] || 0;
+    const bounced = byStatus['bounced'] || 0;
+    const convertedStatus = byStatus['converted'] || 0;
     const hasEmail = L.filter(l => l.email).length;
     const personalized = L.filter(l => l.email_subject).length;
-    const queuedCount = L.filter(l => l.status === 'queued').length;
-    const paused = L.filter(l => l.status === 'paused').length;
-    const replied = L.filter(l => l.status === 'replied').length;
-    const bounced = L.filter(l => l.status === 'bounced').length;
-    const opened = L.filter(l => l.opened_at).length;
-    const clicked = L.filter(l => l.clicked_at).length;
 
-    // Use email_events for accurate send counts
+    // ---- outreach (events authoritative) ----
     const sentEvents = E.filter(e => e.event_type === 'sent');
-    const emailsSent = sentEvents.length;
-    const uniqueLeadsSent = new Set(sentEvents.map(e => e.lead_id)).size;
+    const uniqueSent = new Set(sentEvents.map(e => e.lead_id)).size;
+    const contacted = L.filter(l => l.sequence_step > 0 || l.last_sent_at).length;
+    const openedLeads = L.filter(l => l.opened_at).length;
+    const clickedLeads = L.filter(l => l.clicked_at).length;
 
-    const openRate = emailsSent ? Math.round(opened / uniqueLeadsSent * 100) : 0;
-    const clickRate = emailsSent ? Math.round(clicked / uniqueLeadsSent * 100) : 0;
-    const bounceRate = emailsSent ? Math.round(bounced / uniqueLeadsSent * 100) : 0;
-    const replyRate = emailsSent ? Math.round(replied / uniqueLeadsSent * 100) : 0;
-
-    // Daily send volume (last 30 days from email_events)
-    const sendsByDay = {};
-    sentEvents.forEach(e => {
-      const d = new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' });
-      sendsByDay[d] = (sendsByDay[d] || 0) + 1;
+    // ---- replies + intent (latest event per lead) ----
+    const replyEvents = E.filter(e => e.event_type === 'replied');
+    const repliedLeadIds = new Set(replyEvents.map(e => e.lead_id));
+    L.forEach(l => { if (l.status === 'replied' || l.status === 'converted') repliedLeadIds.add(l.id); });
+    const repliedCount = repliedLeadIds.size;
+    const intentCounts = {};
+    const seenIntent = new Set();
+    replyEvents.forEach(e => {
+      if (seenIntent.has(e.lead_id)) return;
+      seenIntent.add(e.lead_id);
+      const m = e.metadata || {};
+      const intent = m.intent || m.outcome || 'replied';
+      intentCounts[intent] = (intentCounts[intent] || 0) + 1;
     });
-    const sendDays = Object.entries(sendsByDay).sort((a,b) => a[0].localeCompare(b[0])).slice(-20);
-    const maxSendDay = Math.max(...sendDays.map(d => d[1]), 1);
+    const interested = intentCounts['interested'] || 0;
+    const dtrs = replyEvents.map(e => e.metadata && e.metadata.days_to_reply).filter(v => typeof v === 'number' && v >= 0);
+    const avgDtr = dtrs.length ? (dtrs.reduce((a, b) => a + b, 0) / dtrs.length) : null;
 
-    // Forward pipeline: scheduled sends per day
-    const pipeline = {};
-    (scheduled || []).forEach(l => {
-      const d = new Date(l.scheduled_send_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' });
-      pipeline[d] = (pipeline[d] || 0) + 1;
-    });
-    const pipelineDays = Object.entries(pipeline).sort((a,b) => a[0].localeCompare(b[0])).slice(0, 14);
-    const maxPipe = Math.max(...pipelineDays.map(d => d[1]), 1);
+    // ---- rates ----
+    const base = uniqueSent || 1;
+    const pctOf = (n, d) => d ? Math.round(n / d * 100) : 0;
+    const replyRate = pctOf(repliedCount, base);
+    const bounceRate = pctOf(bounced, base);
+    const openRate = pctOf(openedLeads, base);
+    const clickRate = pctOf(clickedLeads, base);
+    const scored = L.filter(l => l.qualification_score);
+    const avgScore = scored.length ? (scored.reduce((s, l) => s + l.qualification_score, 0) / scored.length) : 0;
 
-    // By industry — top 12
-    const byIndustry = {};
-    L.forEach(l => { if (l.industry) byIndustry[l.industry] = (byIndustry[l.industry] || 0) + 1; });
-    const topIndustries = Object.entries(byIndustry).sort((a,b) => b[1]-a[1]).slice(0, 12);
-    const maxInd = topIndustries[0]?.[1] || 1;
+    // ---- pipeline runway ----
+    const DAILY = 30; // matches personalizer DAILY_LIMIT
+    const readyQueued = L.filter(l => l.status === 'queued' && l.scheduled_send_at && l.email_subject).length;
+    const runwayDays = Math.ceil(readyQueued / DAILY);
 
-    // By city
-    const byCity = {};
-    L.forEach(l => { if (l.city) byCity[l.city] = (byCity[l.city] || 0) + 1; });
-    const topCities = Object.entries(byCity).sort((a,b) => b[1]-a[1]).slice(0, 10);
-    const maxCity = topCities[0]?.[1] || 1;
+    // ---- time series (last 30 days, gap-filled) ----
+    const days = [];
+    for (let i = 29; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
+    const sentByDay = {}, replyByDay = {};
+    sentEvents.forEach(e => { const k = (e.created_at || '').slice(0, 10); if (k) sentByDay[k] = (sentByDay[k] || 0) + 1; });
+    replyEvents.forEach(e => { const k = (e.created_at || '').slice(0, 10); if (k) replyByDay[k] = (replyByDay[k] || 0) + 1; });
+    const sentSeries = days.map(d => sentByDay[d] || 0);
+    const replySeries = days.map(d => replyByDay[d] || 0);
+    const dayLabels = days.map(d => { const p = d.split('-'); return `${parseInt(p[1])}/${parseInt(p[2])}`; });
 
-    // Score distribution
-    const scoreBuckets = { '10': 0, '9': 0, '8': 0, '7': 0, '≤6': 0 };
+    // ---- industry / city with reply rate ----
+    const indStats = {};
     L.forEach(l => {
-      const s = l.qualification_score;
-      if (!s) return;
-      if (s >= 10) scoreBuckets['10']++;
-      else if (s === 9) scoreBuckets['9']++;
-      else if (s === 8) scoreBuckets['8']++;
-      else if (s === 7) scoreBuckets['7']++;
-      else scoreBuckets['≤6']++;
+      const k = l.industry || 'unknown';
+      indStats[k] = indStats[k] || { total: 0, contacted: 0, replied: 0 };
+      indStats[k].total++;
+      if (l.sequence_step > 0 || l.last_sent_at) indStats[k].contacted++;
+      if (repliedLeadIds.has(l.id)) indStats[k].replied++;
     });
-    const maxScore = Math.max(...Object.values(scoreBuckets), 1);
+    const topIndustries = Object.entries(indStats).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+    const cityStats = {};
+    L.forEach(l => {
+      const k = l.city || 'unknown';
+      cityStats[k] = cityStats[k] || { total: 0, replied: 0 };
+      cityStats[k].total++;
+      if (repliedLeadIds.has(l.id)) cityStats[k].replied++;
+    });
+    const topCities = Object.entries(cityStats).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
 
-    const fmtDay = d => { const [y,m,day] = d.split('-'); return `${parseInt(m)}/${parseInt(day)}`; };
+    // ---- score distribution ----
+    const scoreOrder = ['10', '9', '8', '7', '≤6'];
+    const scoreStats = {};
+    scoreOrder.forEach(s => scoreStats[s] = 0);
+    L.forEach(l => {
+      const s = l.qualification_score; if (!s) return;
+      const k = s >= 10 ? '10' : s === 9 ? '9' : s === 8 ? '8' : s === 7 ? '7' : '≤6';
+      scoreStats[k]++;
+    });
+
+    // ---- revenue ----
+    const invoiced = INV.reduce((s, i) => s + Number(i.amount || 0), 0);
+    const paid = INV.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
+    const outstanding = invoiced - paid;
+    const activeCustomers = C.filter(c => c.status === 'active').length;
+    const prospects = C.filter(c => c.status === 'prospect').length;
+    const money = n => '$' + Math.round(n).toLocaleString();
+
+    // status colours
+    const STC = { queued: '#818CF8', paused: '#94A3B8', dont_contact: '#64748B', bounced: '#F87171', replied: '#22C55E', converted: '#6366F1', sent: '#4ADE80' };
+    const statusSegments = Object.entries(byStatus).map(([k, v]) => ({ label: k.replace('_', ' '), value: v, color: STC[k] || '#6366F1' }));
+
+    // intent colours
+    const ITC = { interested: '#22C55E', question: '#FB923C', referral: '#818CF8', not_interested: '#94A3B8', auto_reply: '#475569', replied: '#6366F1', other: '#64748B' };
+    const intentSegments = Object.entries(intentCounts).map(([k, v]) => ({ label: k.replace('_', ' '), value: v, color: ITC[k] || '#6366F1' }));
 
     document.getElementById('main').innerHTML = `
-      <div class="page-header"><div class="page-title">Analytics</div></div>
+      <div class="page-header"><div class="page-title">Analytics</div>
+        <div style="font-size:12px;color:var(--text3)">${total.toLocaleString()} leads &middot; ${uniqueSent} contacted &middot; updated ${new Date().toLocaleDateString('en-CA')}</div>
+      </div>
 
-      <div class="stats" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
-        <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-value">${total}</div><div class="stat-sub">${hasEmail} have email</div></div>
-        <div class="stat-card"><div class="stat-label">Personalized</div><div class="stat-value">${personalized}</div><div class="stat-sub">${queuedCount} queued · ${paused} paused</div></div>
-        <div class="stat-card"><div class="stat-label">Emails Sent</div><div class="stat-value">${emailsSent}</div><div class="stat-sub">${uniqueLeadsSent} unique leads</div></div>
-        <div class="stat-card"><div class="stat-label">Open Rate</div><div class="stat-value" style="color:${openRate>20?'var(--green)':openRate>10?'var(--yellow)':'var(--text)'}">${openRate}%</div><div class="stat-sub">${opened} opened</div></div>
-        <div class="stat-card"><div class="stat-label">Reply Rate</div><div class="stat-value" style="color:${replyRate>5?'var(--green)':'var(--text)'}">${replyRate}%</div><div class="stat-sub">${replied} replied</div></div>
-        <div class="stat-card"><div class="stat-label">Bounce Rate</div><div class="stat-value" style="color:${bounceRate>5?'var(--red)':'var(--text)'}">${bounceRate}%</div><div class="stat-sub">${bounced} bounced</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:16px">
+        ${kpiCard('Total Leads', total.toLocaleString(), `${hasEmail.toLocaleString()} contactable (${pctOf(hasEmail, total)}%)`, { accent: '#6366F1' })}
+        ${kpiCard('Emails Sent', uniqueSent.toLocaleString(), `${personalized.toLocaleString()} personalized`, { accent: '#818CF8' })}
+        ${kpiCard('Reply Rate', replyRate + '%', `${repliedCount} ${repliedCount === 1 ? 'reply' : 'replies'} &middot; ${interested} interested`, { accent: '#22C55E', tone: replyRate >= 3 ? 'good' : '' })}
+        ${kpiCard('Bounce Rate', bounceRate + '%', `${bounced} bounced${bounceRate >= 5 ? ' &middot; too high' : ' &middot; healthy'}`, { accent: '#EF4444', tone: bounceRate >= 5 ? 'warn' : 'good' })}
+        ${kpiCard('Avg Lead Score', avgScore.toFixed(1), `of 10 &middot; ${scored.length} scored`, { accent: '#7C3AED' })}
+        ${kpiCard('Runway', runwayDays + 'd', `${readyQueued.toLocaleString()} queued at ${DAILY}/day`, { accent: '#FB923C', tone: runwayDays <= 3 ? 'warn' : '' })}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="analytics-card">
+          <div class="analytics-title">Conversion Funnel</div>
+          ${funnelBars([
+            { label: 'Total leads', value: total, color: '#6366F1' },
+            { label: 'Contactable', value: hasEmail, color: '#7C7CF0' },
+            { label: 'Contacted', value: uniqueSent, color: '#818CF8' },
+            { label: 'Replied', value: repliedCount, color: '#22C55E' },
+            { label: 'Interested', value: interested, color: '#16A34A' },
+            { label: 'Converted', value: convertedStatus, color: '#A855F7' },
+          ])}
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-title">Reply Intent</div>
+          ${donut(intentSegments, { centerValue: repliedCount, centerLabel: 'replies' })}
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)">
+            Avg response time: <span style="color:var(--text);font-weight:600">${avgDtr === null ? '—' : avgDtr.toFixed(1) + ' days'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="analytics-card">
+          <div class="analytics-title">Sends &amp; Replies <span style="font-weight:400;color:var(--text3)">(last 30 days)</span></div>
+          ${lineArea([
+            { name: 'Sends', color: '#6366F1', data: sentSeries },
+            { name: 'Replies', color: '#22C55E', data: replySeries },
+          ], dayLabels)}
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-title">Pipeline Status</div>
+          ${donut(statusSegments, { centerValue: total.toLocaleString(), centerLabel: 'leads' })}
+        </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div class="analytics-card">
-          <div class="analytics-title">Send Volume <span style="font-weight:400;color:var(--text3)">(last 20 send days)</span></div>
-          ${colChart(sendDays.map(([d, n]) => ({ l: fmtDay(d), v: n })), '#6366F1')}
+          <div class="analytics-title">Lead Score Distribution</div>
+          ${histogram(scoreOrder.map(s => ({ l: s, v: scoreStats[s] })), '#818CF8')}
+          <div style="margin-top:10px;font-size:11.5px;color:var(--text3)">Scores cluster at 7-9 — the qualifier rarely rejects, so treat score as a weak signal for now.</div>
         </div>
         <div class="analytics-card">
-          <div class="analytics-title">Send Pipeline <span style="font-weight:400;color:var(--text3)">(next 14 days)</span></div>
-          ${colChart(pipelineDays.map(([d, n]) => ({ l: fmtDay(d), v: n })), '#7C3AED')}
+          <div class="analytics-title">Engagement <span style="font-weight:400;color:var(--text3)">(tracking enabled May 31)</span></div>
+          <div style="display:flex;gap:14px;margin-top:4px">
+            ${miniStat('Open rate', openRate + '%', openedLeads + ' opened', '#22C55E')}
+            ${miniStat('Click rate', clickRate + '%', clickedLeads + ' clicked', '#FB923C')}
+            ${miniStat('Delivered', pctOf(L.filter(l=>l.last_sent_at).length - bounced, base) + '%', (uniqueSent - bounced) + ' inboxed', '#818CF8')}
+          </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3)">
+            Opens read low because tracking was off until May 31, and Outlook recipients block the pixel. Reply rate is the reliable signal.
+          </div>
         </div>
       </div>
 
-      <div class="analytics-card" style="margin-bottom:16px">
-        <div class="analytics-title">Campaign Funnel</div>
-        <div style="display:flex;gap:10px">
-          ${funnelStep('Contacted', uniqueLeadsSent, total, '#6366F1')}
-          ${funnelStep('Opened', opened, uniqueLeadsSent || 1, '#22C55E')}
-          ${funnelStep('Clicked', clicked, uniqueLeadsSent || 1, '#FB923C')}
-          ${funnelStep('Replied', replied, uniqueLeadsSent || 1, '#F59E0B')}
-          ${funnelStep('Bounced', bounced, uniqueLeadsSent || 1, '#EF4444')}
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div class="analytics-card">
-          <div class="analytics-title">Score Distribution</div>
-          ${colChart(Object.entries(scoreBuckets).map(([l, v]) => ({ l: 'Sc ' + l, v })), '#818CF8', 90)}
+          <div class="analytics-title">Top Industries <span style="font-weight:400;color:var(--text3)">(volume &middot; reply rate)</span></div>
+          ${rankTable(topIndustries.map(([label, s]) => ({
+            label, value: s.total,
+            rate: s.contacted ? s.replied / s.contacted : 0,
+            rateLabel: s.contacted ? Math.round(s.replied / s.contacted * 100) + '%' : '—',
+          })), { color: '#6366F1', showRate: true })}
         </div>
         <div class="analytics-card">
-          <div class="analytics-title">Leads by City</div>
-          ${rankRows(topCities, total, '#7C3AED')}
-        </div>
-        <div class="analytics-card">
-          <div class="analytics-title">Recent Email Events</div>
-          ${E.length === 0
-            ? `<div style="color:var(--text3);font-size:13px;padding:8px 0">No events yet.</div>`
-            : E.slice(0, 14).map(e => `
-                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
-                  <span style="color:var(--text3);width:72px;flex-shrink:0;font-size:11px">${new Date(e.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' })}</span>
-                  <span class="badge badge-${e.event_type}" style="font-size:10px;padding:2px 7px">${e.event_type}</span>
-                </div>`).join('')}
+          <div class="analytics-title">Top Cities <span style="font-weight:400;color:var(--text3)">(volume &middot; reply rate)</span></div>
+          ${rankTable(topCities.map(([label, s]) => ({
+            label, value: s.total,
+            rate: s.total ? s.replied / s.total : 0,
+            rateLabel: s.replied ? Math.round(s.replied / s.total * 100) + '%' : '—',
+          })), { color: '#7C3AED', showRate: true })}
         </div>
       </div>
 
       <div class="analytics-card">
-        <div class="analytics-title">Leads by Industry <span style="font-weight:400;color:var(--text3)">(top 12)</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
-          ${rankRows(topIndustries, total, '#6366F1')}
+        <div class="analytics-title">Clients &amp; Revenue</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          ${miniStat('Customers', C.length, `${activeCustomers} active &middot; ${prospects} prospect`, '#6366F1')}
+          ${miniStat('Invoiced', money(invoiced), INV.length + ' invoices', '#818CF8')}
+          ${miniStat('Collected', money(paid), pctOf(paid, invoiced || 1) + '% of invoiced', '#22C55E')}
+          ${miniStat('Outstanding', money(outstanding), outstanding > 0 ? 'awaiting payment' : 'all settled', outstanding > 0 ? '#FB923C' : '#22C55E')}
         </div>
+        ${INV.length === 0 ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3)">No invoices yet. Revenue metrics populate once you add projects and invoices under a customer.</div>` : ''}
       </div>
     `;
   }
 
-  function colChart(items, color = '#6366F1', height = 100) {
+  // ── Chart toolkit ─────────────────────────────────────────────
+  function kpiCard(label, value, sub, opts) {
+    opts = opts || {};
+    const accent = opts.accent || '#6366F1';
+    const subStyle = opts.tone === 'warn' ? 'color:var(--red);font-weight:600' : opts.tone === 'good' ? 'color:var(--green);font-weight:600' : 'color:var(--text3)';
+    return `<div class="analytics-card" style="padding:18px 20px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${accent}"></div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px">${label}</div>
+      <div style="font-size:28px;font-weight:700;letter-spacing:-0.03em;line-height:1">${value}</div>
+      <div style="font-size:11.5px;margin-top:7px;${subStyle}">${sub || ''}</div>
+    </div>`;
+  }
+
+  function miniStat(label, value, sub, color) {
+    return `<div style="flex:1;min-width:110px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:6px">${label}</div>
+      <div style="font-size:21px;font-weight:700;letter-spacing:-0.02em;color:${color || 'var(--text)'};line-height:1">${value}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px">${sub || ''}</div>
+    </div>`;
+  }
+
+  function donut(segments, opts) {
+    opts = opts || {};
+    const data = (segments || []).filter(s => s.value > 0);
+    const totalV = data.reduce((s, d) => s + d.value, 0);
+    if (!totalV) return '<div style="color:var(--text3);font-size:13px;padding:34px 0;text-align:center">No data yet.</div>';
+    const size = 150, stroke = 24, r = (size - stroke) / 2, cx = size / 2, cy = size / 2, circ = 2 * Math.PI * r;
+    let offset = 0;
+    const arcs = data.map(d => {
+      const frac = d.value / totalV;
+      const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${stroke}" stroke-dasharray="${frac * circ} ${circ}" stroke-dashoffset="${-offset * circ}" transform="rotate(-90 ${cx} ${cy})"/>`;
+      offset += frac; return seg;
+    }).join('');
+    const center = `<text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="23" font-weight="700" fill="var(--text)">${opts.centerValue !== undefined ? opts.centerValue : totalV}</text><text x="${cx}" y="${cy + 15}" text-anchor="middle" font-size="9" fill="var(--text3)" style="text-transform:uppercase;letter-spacing:0.06em">${opts.centerLabel || ''}</text>`;
+    const legend = data.map(d => `<div style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:6px">
+      <span style="width:10px;height:10px;border-radius:3px;background:${d.color};flex-shrink:0"></span>
+      <span style="flex:1;color:var(--text2);text-transform:capitalize">${d.label}</span>
+      <span style="color:var(--text);font-weight:600">${d.value}</span>
+      <span style="color:var(--text3);width:38px;text-align:right">${Math.round(d.value / totalV * 100)}%</span>
+    </div>`).join('');
+    return `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0">${arcs}${center}</svg>
+      <div style="flex:1;min-width:150px">${legend}</div>
+    </div>`;
+  }
+
+  function lineArea(series, labels) {
+    const W = 540, H = 170, padL = 30, padB = 22, padT = 12, padR = 10;
+    const n = labels.length;
+    const allVals = series.flatMap(s => s.data);
+    const max = Math.max(...allVals, 1);
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const x = i => padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW);
+    const y = v => padT + plotH - (v / max) * plotH;
+    let grid = '';
+    for (let g = 0; g <= 4; g++) { const gy = padT + plotH - (g / 4) * plotH; const gv = Math.round(max * g / 4); grid += `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="rgba(148,163,184,0.12)" stroke-width="1"/><text x="${padL - 5}" y="${gy + 3}" text-anchor="end" font-size="8" fill="var(--text3)">${gv}</text>`; }
+    const paths = series.map(s => {
+      const gid = 'la' + Math.random().toString(36).slice(2, 7);
+      const pts = s.data.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const area = `${padL},${(padT + plotH).toFixed(1)} ${pts} ${x(n - 1).toFixed(1)},${(padT + plotH).toFixed(1)}`;
+      return `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s.color}" stop-opacity="0.32"/><stop offset="100%" stop-color="${s.color}" stop-opacity="0"/></linearGradient></defs><polygon points="${area}" fill="url(#${gid})"/><polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }).join('');
+    let xl = ''; const step = Math.max(1, Math.floor(n / 6));
+    for (let i = 0; i < n; i += step) { xl += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="8" fill="var(--text3)">${labels[i]}</text>`; }
+    const legend = series.map(s => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);margin-right:14px"><span style="width:12px;height:3px;background:${s.color};border-radius:2px"></span>${s.name}</span>`).join('');
+    return `<div><div style="margin-bottom:4px">${legend}</div><svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block">${grid}${paths}${xl}</svg></div>`;
+  }
+
+  function histogram(items, color, height) {
+    color = color || '#818CF8'; height = height || 110;
     if (!items.length) return '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No data yet.</div>';
     const max = Math.max(...items.map(d => d.v), 1);
     const n = items.length;
-    const slotW = Math.max(12, Math.floor(440 / n));
-    const barW = Math.max(5, Math.min(22, slotW - 4));
+    const slotW = Math.max(28, Math.floor(440 / n));
+    const barW = Math.min(60, slotW - 14);
     const W = n * slotW + 20;
-    const gid = 'cg' + Math.random().toString(36).slice(2, 7);
-    const defs = `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="1"/><stop offset="100%" stop-color="${color}" stop-opacity="0.3"/></linearGradient></defs>`;
-    const baseline = `<line x1="8" y1="${height}" x2="${W - 8}" y2="${height}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    const gid = 'hg' + Math.random().toString(36).slice(2, 7);
+    const defs = `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="1"/><stop offset="100%" stop-color="${color}" stop-opacity="0.35"/></linearGradient></defs>`;
+    const baseline = `<line x1="8" y1="${height}" x2="${W - 8}" y2="${height}" stroke="rgba(148,163,184,0.15)" stroke-width="1"/>`;
     const bars = items.map((d, i) => {
       const bh = Math.max(d.v > 0 ? 3 : 0, Math.round(d.v / max * height));
-      const x = 10 + i * slotW + (slotW - barW) / 2;
-      const y = height - bh;
-      return `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="url(#${gid})" rx="3"/>` +
-        `<text x="${x + barW / 2}" y="${height + 14}" text-anchor="middle" fill="#4B5563" font-size="9" font-family="inherit">${d.l}</text>` +
-        (d.v ? `<text x="${x + barW / 2}" y="${y - 5}" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="inherit">${d.v}</text>` : '');
+      const cx = 10 + i * slotW + slotW / 2;
+      const xx = cx - barW / 2;
+      const yy = height - bh;
+      return `<rect x="${xx}" y="${yy}" width="${barW}" height="${bh}" fill="url(#${gid})" rx="4"/>` +
+        `<text x="${cx}" y="${height + 15}" text-anchor="middle" fill="var(--text3)" font-size="10" font-family="inherit">${d.l}</text>` +
+        (d.v ? `<text x="${cx}" y="${yy - 5}" text-anchor="middle" fill="var(--text2)" font-size="10" font-weight="600" font-family="inherit">${d.v}</text>` : '');
     }).join('');
     return `<svg width="100%" viewBox="0 0 ${W} ${height + 24}" style="display:block;overflow:visible;margin-top:8px">${defs}${baseline}${bars}</svg>`;
   }
 
-  function funnelStep(label, val, base, color) {
-    const pct = base ? Math.round(val / base * 100) : 0;
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-    return `<div style="flex:1;background:rgba(${r},${g},${b},0.06);border:1px solid rgba(${r},${g},${b},0.2);border-top:3px solid ${color};border-radius:10px;padding:16px 10px;text-align:center">` +
-      `<div style="font-size:28px;font-weight:700;color:${color};letter-spacing:-0.03em;line-height:1">${val}</div>` +
-      `<div style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(${r},${g},${b},0.7);margin-top:5px">${label}</div>` +
-      `<div style="font-size:12px;color:var(--text2);margin-top:6px;font-weight:600">${pct}%</div>` +
-      `</div>`;
+  function funnelBars(steps) {
+    const max = steps[0] && steps[0].value ? steps[0].value : 1;
+    return `<div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">` + steps.map((s, i) => {
+      const w = Math.max(3, Math.round(s.value / max * 100));
+      const prev = i > 0 ? steps[i - 1].value : null;
+      const note = i === 0 ? Math.round(s.value / max * 100) + '% of all'
+        : (prev ? Math.round(s.value / prev * 100) + '% of prev' : '—');
+      return `<div style="display:flex;align-items:center;gap:12px">
+        <div style="width:88px;flex-shrink:0;font-size:12px;color:var(--text2);text-align:right">${s.label}</div>
+        <div style="flex:1;background:rgba(148,163,184,0.08);border-radius:6px;height:30px;overflow:hidden">
+          <div style="width:${w}%;height:100%;background:linear-gradient(90deg,${s.color},${s.color}99);border-radius:6px;display:flex;align-items:center;padding-left:10px;min-width:34px">
+            <span style="font-size:12px;font-weight:700;color:#fff">${s.value.toLocaleString()}</span>
+          </div>
+        </div>
+        <div style="width:84px;flex-shrink:0;font-size:11px;color:var(--text3)">${note}</div>
+      </div>`;
+    }).join('') + `</div>`;
   }
 
-  function rankRows(items, total, color) {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-    return items.map(([label, count], i) => {
-      const pct = total ? Math.round(count / total * 100) : 0;
-      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px">` +
-        `<span style="color:var(--text3);width:14px;flex-shrink:0;font-size:10px;font-weight:600">${i + 1}</span>` +
-        `<span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${label}">${label}</span>` +
-        `<div style="width:70px;background:rgba(${r},${g},${b},0.12);border-radius:4px;height:5px;flex-shrink:0">` +
-        `<div style="width:${pct}%;height:5px;border-radius:4px;background:${color}"></div></div>` +
-        `<span style="color:var(--text3);width:28px;text-align:right;flex-shrink:0;font-weight:600">${count}</span>` +
-        `</div>`;
-    }).join('');
+  function rankTable(rows, opts) {
+    opts = opts || {};
+    const color = opts.color || '#6366F1';
+    const max = Math.max(...rows.map(r => r.value), 1);
+    if (!rows.length) return '<div style="color:var(--text3);font-size:13px;padding:14px 0">No data yet.</div>';
+    return rows.map((r, i) => `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:12px">
+      <span style="color:var(--text3);width:14px;font-size:10px;font-weight:600;flex-shrink:0">${i + 1}</span>
+      <span style="width:118px;flex-shrink:0;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize" title="${r.label}">${r.label}</span>
+      <div style="flex:1;background:rgba(148,163,184,0.1);border-radius:4px;height:6px"><div style="width:${Math.round(r.value / max * 100)}%;height:6px;border-radius:4px;background:${color}"></div></div>
+      <span style="width:34px;text-align:right;color:var(--text);font-weight:600;flex-shrink:0">${r.value}</span>
+      ${opts.showRate ? `<span style="width:42px;text-align:right;flex-shrink:0;font-size:11px;color:${r.rate > 0 ? 'var(--green)' : 'var(--text3)'}">${r.rateLabel}</span>` : ''}
+    </div>`).join('');
   }
 
   function relativeDate(dateStr) {
