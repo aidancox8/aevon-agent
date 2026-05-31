@@ -41,7 +41,7 @@ async function rateLimitedGenerate(prompt) {
   return generate(prompt);
 }
 
-const DAILY_LIMIT = 40; // max emails per weekday
+const DAILY_LIMIT = 30; // max emails per weekday (domain still young - keep conservative until ~6-8 weeks old)
 const SEND_HOUR_UTC = 16; // 9am PT
 
 // Returns the next weekday send date that hasn't hit DAILY_LIMIT yet.
