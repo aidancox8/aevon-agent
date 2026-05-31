@@ -648,6 +648,7 @@
         <textarea class="reply-input" id="replyNote" rows="2" placeholder="Optional note about the reply..."></textarea>
         <div style="margin-top:10px">
           <button class="btn btn-primary" onclick="markReplied('${lead.id}')">Mark as Replied</button>
+          <button class="btn btn-ghost" onclick="if(confirm('Mark not interested? This removes them from all sequences.'))markReplied('${lead.id}','not_interested')">Not Interested</button>
         </div>
       </div>` : ''}
     `;
