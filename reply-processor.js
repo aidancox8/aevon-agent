@@ -1,20 +1,23 @@
 /**
  * reply-processor.js
- * Reads inbound replies from Gmail over IMAP, matches each message to a lead,
- * classifies the reply intent with Gemini, updates CRM state (status + queue),
- * logs an email_event, and drafts a suggested response into Gmail Drafts for review.
+ * Reads inbound replies from Gmail via the Gmail API (OAuth refresh token),
+ * matches each message to a lead, classifies the reply intent with Gemini,
+ * updates CRM state (status + queue), logs an email_event, and drafts a
+ * suggested response into Gmail Drafts for review.
  *
- * Nothing is ever sent automatically — drafts wait in your Gmail for you to approve.
+ * Nothing is ever sent automatically — drafts wait in Gmail for you to approve.
  *
  * Required env:
- *   GMAIL_USER           your full Google Workspace address (aidan@aevon.ca)
- *   GMAIL_APP_PASSWORD   a Google app password (Account > Security > App passwords)
+ *   GMAIL_USER                  the mailbox address (aidan@aevon.ca)
+ *   GMAIL_OAUTH_CLIENT_ID
+ *   GMAIL_OAUTH_CLIENT_SECRET
+ *   GMAIL_OAUTH_REFRESH_TOKEN   from get-gmail-token.js
  *
  * Usage: node reply-processor.js
  */
 
 require('dotenv').config();
-const { ImapFlow } = require('imapflow');
+const { google } = require('googleapis');
 const { simpleParser } = require('mailparser');
 const MailComposer = require('nodemailer/lib/mail-composer');
 const supabase = require('./lib/supabase');
@@ -23,8 +26,18 @@ const { createGenerate } = require('./lib/gemini');
 const generate = createGenerate(process.env.GEMINI_API_KEY);
 
 const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 const LOOKBACK_DAYS = 14;
+
+// ── Gmail client ──────────────────────────────────────────────────
+
+function gmailClient() {
+  const oauth2 = new google.auth.OAuth2(
+    process.env.GMAIL_OAUTH_CLIENT_ID,
+    process.env.GMAIL_OAUTH_CLIENT_SECRET
+  );
+  oauth2.setCredentials({ refresh_token: process.env.GMAIL_OAUTH_REFRESH_TOKEN });
+  return google.gmail({ version: 'v1', auth: oauth2 });
+}
 
 // ── Matching helpers ──────────────────────────────────────────────
 
@@ -48,7 +61,7 @@ function buildLeadIndex(leads) {
   for (const l of leads) {
     if (l.email) byEmail.set(l.email.toLowerCase(), l);
     const d = domainOf(l.email);
-    // Only index a domain if it is unique to one lead — otherwise it is ambiguous.
+    // Only index a domain if it is unique to one lead — otherwise ambiguous.
     if (d) {
       if (byDomain.has(d)) byDomain.set(d, null);
       else byDomain.set(d, l);
@@ -83,7 +96,7 @@ The reply came from this business:
 - Name: ${lead.business_name}
 - Industry: ${lead.industry || 'unknown'}
 
-Their reply (most recent message only, ignore quoted history below the first separator):
+Their reply (most recent message only, ignore any quoted history):
 """
 ${replyText.slice(0, 1500)}
 """
@@ -100,7 +113,7 @@ Then write a short, human suggested reply (only if intent is interested, questio
 - Be 2-4 sentences, plain and direct, no buzzwords, no em dashes
 - Move toward understanding their workflow or booking a short call
 - Not over-promise or invent specifics about their business
-- Not include a sign-off or signature (that is added separately)
+- Not include a sign-off or signature (added separately)
 
 Respond with JSON only:
 {
@@ -132,36 +145,47 @@ function statusForIntent(intent) {
   }
 }
 
-// ── Gmail draft creation ──────────────────────────────────────────
+// ── Message parsing ───────────────────────────────────────────────
+
+function header(payload, name) {
+  const h = (payload.headers || []).find(x => x.name.toLowerCase() === name.toLowerCase());
+  return h ? h.value : null;
+}
+
+function addressOf(headerValue) {
+  if (!headerValue) return '';
+  const m = headerValue.match(/<([^>]+)>/);
+  return (m ? m[1] : headerValue).trim().toLowerCase();
+}
+
+// ── Draft creation ────────────────────────────────────────────────
 
 const SIGNATURE = `\n\nAidan Cox\naidan@aevon.ca\nhttps://calendar.app.google/7R7srDKzWrvmLQg37`;
 
-async function buildDraftMime(original, suggestedReply) {
-  const to = original.from.value[0].address;
-  const subject = /^re:/i.test(original.subject || '') ? original.subject : `Re: ${original.subject || ''}`;
-  const inReplyTo = original.messageId;
-  const references = [original.references, original.messageId].flat().filter(Boolean).join(' ');
-
+async function buildRawDraft({ to, subject, inReplyTo, references, body }) {
+  const replySubject = /^re:/i.test(subject || '') ? subject : `Re: ${subject || ''}`;
   const mail = new MailComposer({
     from: GMAIL_USER,
     to,
-    subject,
-    text: suggestedReply + SIGNATURE,
+    subject: replySubject,
+    text: body + SIGNATURE,
     inReplyTo,
-    references,
+    references: [references, inReplyTo].filter(Boolean).join(' '),
   });
-
-  return new Promise((resolve, reject) => {
+  const built = await new Promise((resolve, reject) => {
     mail.compile().build((err, msg) => (err ? reject(err) : resolve(msg)));
   });
+  return built.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // ── Main ──────────────────────────────────────────────────────────
 
 async function run() {
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    throw new Error('GMAIL_USER and GMAIL_APP_PASSWORD must be set in the environment.');
+  if (!process.env.GMAIL_OAUTH_REFRESH_TOKEN) {
+    throw new Error('GMAIL_OAUTH_REFRESH_TOKEN missing. Run: node get-gmail-token.js');
   }
+
+  const gmail = gmailClient();
 
   // Leads we have actually emailed (have a subject) — the only ones a reply can match.
   const { data: leads, error } = await supabase
@@ -177,101 +201,92 @@ async function run() {
     .select('metadata')
     .eq('event_type', 'replied');
   const processed = new Set(
-    (priorEvents || [])
-      .map(e => e.metadata?.inbound_message_id)
-      .filter(Boolean)
+    (priorEvents || []).map(e => e.metadata?.inbound_message_id).filter(Boolean)
   );
 
-  const client = new ImapFlow({
-    host: 'imap.gmail.com',
-    port: 993,
-    secure: true,
-    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-    logger: false,
-  });
-
-  await client.connect();
-  console.log('Connected to Gmail.\n');
+  // List candidate inbound messages.
+  const query = `in:inbox newer_than:${LOOKBACK_DAYS}d -from:${GMAIL_USER}`;
+  const list = await gmail.users.messages.list({ userId: 'me', q: query, maxResults: 100 });
+  const ids = (list.data.messages || []).map(m => m.id);
+  console.log(`Found ${ids.length} candidate inbound message(s).\n`);
 
   let matched = 0, unmatched = 0, skipped = 0, drafted = 0;
 
-  const lock = await client.getMailboxLock('INBOX');
-  try {
-    const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-    const uids = await client.search({ since }, { uid: true });
+  for (const id of ids) {
+    const full = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
+    const payload = full.data.payload || {};
+    const rfcMessageId = header(payload, 'Message-ID');
+    if (!rfcMessageId || processed.has(rfcMessageId)) { skipped++; continue; }
 
-    for (const uid of uids) {
-      const msg = await client.fetchOne(uid, { source: true }, { uid: true });
-      if (!msg || !msg.source) continue;
+    const fromEmail = addressOf(header(payload, 'From'));
+    if (fromEmail === GMAIL_USER.toLowerCase()) { skipped++; continue; }
 
-      const parsed = await simpleParser(msg.source);
-      const messageId = parsed.messageId;
-      if (!messageId || processed.has(messageId)) { skipped++; continue; }
-
-      const fromEmail = parsed.from?.value?.[0]?.address || '';
-      // Skip anything we sent ourselves.
-      if (fromEmail.toLowerCase() === GMAIL_USER.toLowerCase()) { skipped++; continue; }
-
-      const { lead, via } = matchLead(index, fromEmail, parsed.subject);
-      if (!lead) {
-        unmatched++;
-        console.log(`  [no match] ${fromEmail} — "${parsed.subject || ''}"`);
-        continue;
-      }
-
-      const replyText = parsed.text || parsed.html?.replace(/<[^>]+>/g, ' ') || '';
-      const { intent, reason, suggested_reply } = await classifyReply(lead, replyText);
-
-      const newStatus = statusForIntent(intent);
-      const update = {};
-      if (newStatus) {
-        update.status = newStatus;
-        update.scheduled_send_at = null; // pull out of the send queue
-      }
-      if (Object.keys(update).length) {
-        await supabase.from('leads').update(update).eq('id', lead.id);
-      }
-
-      await supabase.from('email_events').insert({
-        lead_id: lead.id,
-        event_type: 'replied',
-        metadata: {
-          source: 'reply-processor',
-          inbound_message_id: messageId,
-          matched_via: via,
-          intent,
-          reason,
-          from: fromEmail,
-          subject: parsed.subject || null,
-          suggested_reply: suggested_reply || null,
-          days_to_reply: lead.last_sent_at
-            ? Math.round((Date.now() - new Date(lead.last_sent_at)) / 86400000)
-            : null,
-        },
-      });
-
-      matched++;
-      console.log(`  [${intent}] ${lead.business_name} (via ${via}) — ${reason}`);
-
-      // Draft a reply into Gmail for the intents worth answering.
-      if (suggested_reply && ['interested', 'question', 'referral'].includes(intent)) {
-        try {
-          const mime = await buildDraftMime(parsed, suggested_reply);
-          await client.append('[Gmail]/Drafts', mime, ['\\Draft']);
-          drafted++;
-          console.log(`      draft saved to Gmail Drafts`);
-        } catch (err) {
-          console.log(`      (draft failed: ${err.message})`);
-        }
-      }
-
-      processed.add(messageId);
+    const subject = header(payload, 'Subject');
+    const { lead, via } = matchLead(index, fromEmail, subject);
+    if (!lead) {
+      unmatched++;
+      console.log(`  [no match] ${fromEmail} — "${subject || ''}"`);
+      continue;
     }
-  } finally {
-    lock.release();
+
+    // Get plaintext body via mailparser on the raw message (robust to MIME nesting).
+    const raw = await gmail.users.messages.get({ userId: 'me', id, format: 'raw' });
+    const parsed = await simpleParser(Buffer.from(raw.data.raw, 'base64'));
+    const replyText = parsed.text || (parsed.html ? parsed.html.replace(/<[^>]+>/g, ' ') : '') || full.data.snippet || '';
+
+    const { intent, reason, suggested_reply } = await classifyReply(lead, replyText);
+
+    const newStatus = statusForIntent(intent);
+    if (newStatus) {
+      await supabase.from('leads')
+        .update({ status: newStatus, scheduled_send_at: null })
+        .eq('id', lead.id);
+    }
+
+    await supabase.from('email_events').insert({
+      lead_id: lead.id,
+      event_type: 'replied',
+      metadata: {
+        source: 'reply-processor',
+        inbound_message_id: rfcMessageId,
+        matched_via: via,
+        intent,
+        reason,
+        from: fromEmail,
+        subject: subject || null,
+        suggested_reply: suggested_reply || null,
+        days_to_reply: lead.last_sent_at
+          ? Math.round((Date.now() - new Date(lead.last_sent_at)) / 86400000)
+          : null,
+      },
+    });
+
+    matched++;
+    console.log(`  [${intent}] ${lead.business_name} (via ${via}) — ${reason}`);
+
+    if (suggested_reply && ['interested', 'question', 'referral'].includes(intent)) {
+      try {
+        const rawDraft = await buildRawDraft({
+          to: fromEmail,
+          subject,
+          inReplyTo: rfcMessageId,
+          references: header(payload, 'References'),
+          body: suggested_reply,
+        });
+        await gmail.users.drafts.create({
+          userId: 'me',
+          requestBody: { message: { raw: rawDraft, threadId: full.data.threadId } },
+        });
+        drafted++;
+        console.log(`      draft saved to Gmail Drafts`);
+      } catch (err) {
+        console.log(`      (draft failed: ${err.message})`);
+      }
+    }
+
+    processed.add(rfcMessageId);
   }
 
-  await client.logout();
   console.log(`\nDone. Matched: ${matched} | Drafts: ${drafted} | Unmatched: ${unmatched} | Skipped: ${skipped}`);
 }
 

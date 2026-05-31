@@ -1,2 +1,4 @@
 node_modules/
 .env
+gmail-service-account.json
+*.service-account.json
