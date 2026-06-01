@@ -138,9 +138,21 @@ function toHtml(text) {
 <body style="margin:0;padding:0">
   <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.5;color:#222222">
     ${paragraphs}
-    <p style="margin:14px 0 0 0">Aidan Cox<br>
-    Aevon<br>
-    <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#1155cc">Book a call</a></p>
+    <table cellpadding="0" cellspacing="0" style="margin-top:18px">
+      <tr>
+        <td style="padding-right:12px;vertical-align:middle">
+          <img src="https://aevon.ca/logo.svg" width="38" height="38" alt="Aevon" style="display:block;border-radius:8px">
+        </td>
+        <td style="vertical-align:middle">
+          <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan Cox</div>
+          <div style="font-size:12px;color:#666666;margin-top:2px">
+            <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
+            &nbsp;&middot;&nbsp;
+            <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#666666;text-decoration:none">Book a call</a>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
 </body>
 </html>`;

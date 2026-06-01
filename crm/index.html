@@ -233,6 +233,9 @@
     <div class="nav-item" onclick="showView('replies', event)">
       <span>&#8617;</span> Replies <span id="replies-badge" style="margin-left:auto;font-size:10px;font-weight:700;background:var(--green);color:#06240f;border-radius:10px;padding:1px 7px;display:none"></span>
     </div>
+    <div class="nav-item" onclick="showView('followups', event)">
+      <span>&#9200;</span> Follow-ups <span id="followups-badge" style="margin-left:auto;font-size:10px;font-weight:700;background:var(--yellow);color:#3a2c00;border-radius:10px;padding:1px 7px;display:none"></span>
+    </div>
     <div class="nav-item" onclick="showView('analytics', event)">
       <span>&#9641;</span> Analytics
     </div>
@@ -466,6 +469,7 @@
     else if (view === 'pipeline') await renderPipeline();
     else if (view === 'outreach') await renderOutreach();
     else if (view === 'replies') await renderReplies();
+    else if (view === 'followups') await renderFollowups();
     else if (view === 'analytics') await renderAnalytics();
     else if (view === 'activity') await renderActivity();
     else if (view === 'customers') await renderCustomers();
@@ -691,6 +695,17 @@
         <div style="margin-top:8px">
           <button id="saveNotesBtn" class="btn btn-ghost" style="font-size:12px" onclick="saveLeadNotes('${lead.id}')">Save Notes</button>
         </div>
+      </div>
+
+      <div class="analytics-card" style="margin-top:16px">
+        <div class="analytics-title">Follow-up Reminder ${lead.followup_due ? `<span class="badge badge-followup" style="font-size:10px">due ${lead.followup_due}</span>` : ''}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="date" id="followupDue" class="form-input" style="width:160px" value="${lead.followup_due || ''}">
+          <input id="followupNote" class="form-input" style="flex:1;min-width:180px" placeholder="What to follow up on..." value="${(lead.followup_note||'').replace(/"/g,'&quot;')}">
+          <button class="btn btn-primary" style="font-size:12px" onclick="saveFollowup('${lead.id}')">Set Reminder</button>
+          ${lead.followup_due ? `<button class="btn btn-ghost" style="font-size:12px" onclick="clearFollowup('${lead.id}')">Clear</button>` : ''}
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3)">Shows in the Follow-ups tab on its due date. e.g. set Jean for Tuesday.</div>
       </div>
 
       ${lead.status !== 'replied' ? `
@@ -924,6 +939,83 @@
     t.textContent = msg;
     wrap.appendChild(t);
     setTimeout(() => { t.classList.add('fade'); setTimeout(() => t.remove(), 300); }, 2600);
+  }
+
+  // ── Follow-ups ────────────────────────────────────────────────
+  // Manual reminders: set a "follow up by" date + note on any lead (e.g. Jean
+  // on Tuesday), and see everything owed in one place, overdue first.
+  async function renderFollowups() {
+    const { data: leads } = await sb.from('leads')
+      .select('id, business_name, industry, city, email, status, followup_due, followup_note, last_sent_at')
+      .not('followup_due', 'is', null)
+      .order('followup_due', { ascending: true })
+      .limit(500);
+
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const rows = (leads || []).map(l => {
+      const due = l.followup_due;
+      const overdue = due < todayStr;
+      const isToday = due === todayStr;
+      const when = overdue ? `<span style="color:var(--red);font-weight:600">${relativeDate(due + 'T12:00:00')}</span>`
+        : isToday ? `<span style="color:var(--green);font-weight:600">Today</span>`
+        : relativeDate(due + 'T12:00:00');
+      return `<tr style="cursor:pointer" onclick="openLeadProfile('${l.id}')">
+        <td>${when}</td>
+        <td style="color:var(--text);font-weight:500">${l.business_name}</td>
+        <td style="color:var(--text3);font-size:12px">${[l.industry, (l.city||'').replace(' BC','')].filter(Boolean).join(' · ')}</td>
+        <td><span class="badge badge-${l.status}">${l.status.replace('_',' ')}</span></td>
+        <td style="color:var(--text2);font-size:12px">${l.followup_note || ''}</td>
+        <td onclick="event.stopPropagation()"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="clearFollowup('${l.id}')">Done</button></td>
+      </tr>`;
+    }).join('');
+
+    const overdueCount = (leads || []).filter(l => l.followup_due < todayStr).length;
+    const dueTodayCount = (leads || []).filter(l => l.followup_due === todayStr).length;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Follow-ups</div>
+        <div style="font-size:12px;color:var(--text3)">${(leads||[]).length} scheduled · ${overdueCount} overdue · ${dueTodayCount} today</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:110px">When</th><th>Business</th><th>Detail</th><th>Status</th><th>Note</th><th style="width:60px"></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="empty">No follow-ups scheduled. Open any lead and set a reminder date.</td></tr>'}</tbody>
+        </table>
+      </div>
+    `;
+    updateFollowupsBadge(overdueCount + dueTodayCount);
+  }
+
+  async function clearFollowup(id) {
+    const { error } = await sb.from('leads').update({ followup_due: null, followup_note: null }).eq('id', id);
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
+    toast('Follow-up cleared', 'success');
+    if (currentView === 'followups') renderFollowups();
+    else if (currentView === 'lead-profile') renderLeadProfile(window._profileId);
+  }
+
+  async function saveFollowup(id) {
+    const due = document.getElementById('followupDue')?.value || null;
+    const note = document.getElementById('followupNote')?.value.trim() || null;
+    if (!due) { toast('Pick a date first', 'error'); return; }
+    const { error } = await sb.from('leads').update({ followup_due: due, followup_note: note }).eq('id', id);
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
+    toast('Follow-up set for ' + due, 'success');
+    refreshFollowupsBadge();
+    renderLeadProfile(id);
+  }
+
+  function updateFollowupsBadge(n) {
+    const b = document.getElementById('followups-badge');
+    if (!b) return;
+    if (n > 0) { b.textContent = n; b.style.display = 'inline-block'; } else b.style.display = 'none';
+  }
+
+  async function refreshFollowupsBadge() {
+    const today = new Date().toLocaleDateString('en-CA');
+    const { data } = await sb.from('leads').select('followup_due').not('followup_due', 'is', null).lte('followup_due', today).limit(500);
+    updateFollowupsBadge((data || []).length);
   }
 
   // ── Replies Inbox ─────────────────────────────────────────────
@@ -2465,6 +2557,7 @@
   // ── Init ─────────────────────────────────────────────────────
   renderView('home');
   refreshRepliesBadge();
+  refreshFollowupsBadge();
 </script>
 
 <!-- Add Lead Modal -->
