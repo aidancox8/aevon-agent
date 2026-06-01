@@ -107,31 +107,35 @@ ${lead.qualification_notes ? `- What we know about them: ${lead.qualification_no
 ${lead.lead_insights ? `- Their likely pain points: ${lead.lead_insights}` : ''}
 ${websiteContent ? `- Scraped from their website: ${websiteContent}` : ''}
 
-Write TWO emails AND a lead insight:
+Write TWO emails, a lead insight, and a personalization basis.
 
 EMAIL 1 (initial outreach):
-- Goal: get a reply where they describe their workflow problems. Do NOT pitch a specific solution — that comes after they respond.
-- Subject line: short, curiosity-driven, specific to their industry or business. Not salesy.
-- Body structure (under 60 words total):
-  * One sentence introducing Aevon as a company that builds custom apps and AI agents for businesses dealing with manual, repetitive work — keep it broad, do not name a specific product category
-  * One sentence that shows you understand their world — reference something specific about their industry or what you found on their website
-  * One open question asking what the most manual or time-consuming part of their workflow is right now
-  * No sign-off — the signature block handles that
-- Do NOT propose any solution in this email
-- Do NOT open with a compliment or flattery
-- Do NOT fabricate specific details — only use what is provided above
-- Do NOT describe Aevon as a "shop" or "local shop"
-- Tone: direct, human, curious. Write like a person reaching out, not a vendor pitching. No buzzwords, no em dashes, no filler ("leverage", "streamline", "fragmentation", "off-the-shelf", "bridges the gap", "unified solution")
+- Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
+- Subject line: lowercase, short (2-5 words), curiosity-driven, hints at a specific pain. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos. Good examples: "the report grind", "the part that doesn't scale", "before the analysis even starts".
+- Body structure (under 65 words total):
+  1. FIRST sentence: name a specific, repetitive operational pain that a business like theirs realistically lives with. Describe the grind concretely (the manual re-keying, the rebuilding-the-same-thing, the chasing). Make them think "that's me." Do NOT mention Aevon yet.
+  2. SECOND sentence: one short clause on what you do, framed as relief for THAT pain ("I build small tools that take that kind of work off a team's plate"). Aevon as a verb for them, not a company intro.
+  3. THIRD: a specific yes/no-style hypothesis question that is easy to answer in 5 seconds — "Is that a real time-sink for you, or something you've already handled?" NOT the open-ended "what is the most time-consuming part of your workflow" (that asks them to do unpaid homework).
+  - No sign-off — the signature block handles that.
+
+CRITICAL anti-fabrication rules (read carefully):
+- You may ONLY state a concrete fact about THIS specific business (a named service, a recent project, a stated specialty, team size, locations, awards) if it appears verbatim in the "Scraped from their website" text above. If it is not in the scrape, you do NOT know it.
+- NEVER write "I noticed...", "I saw...", "Given your high volume of...", "congrats on..." about something you cannot see in the scrape. That fake-specificity reads as a bot and destroys trust.
+- If you have no real scraped detail, describe the pain at the INDUSTRY level honestly (no false "I noticed"). A plainly true general email beats a fake-specific one.
+- Never invent metrics, client names, contract wins, headcounts, or events.
+
+Other rules:
+- Do NOT pitch a specific solution or product category. Do NOT open with flattery. Do NOT call Aevon a "shop".
+- Tone: direct, human, a little casual. Like a person who actually understands their business, not a vendor. No buzzwords, no em dashes, no filler ("leverage", "streamline", "fragmentation", "off-the-shelf", "bridges the gap", "unified solution", "high volume of").
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
-- Subject line: brief, reply-thread style
-- Body: under 40 words. Friendly bump. Restate the question in a slightly different way. No pitch.
-- Tone: same — plain, human
+- Subject line: brief, reply-thread style.
+- Body: under 40 words. Friendly bump from a different angle than email 1 — do not just repeat it. Offer something small ("want me to send a 2-minute example of what I mean?") rather than re-asking the same question. No pitch.
+- Tone: same plain, human voice.
 
-LEAD INSIGHT (2-3 sentences):
-- Why this business is a good fit for Aevon
-- What specific workflow problems they likely have based on their industry and website
-- Whether a custom app or an AI agent would be the better solution, and specifically what you would propose building if they reply
+LEAD INSIGHT (2-3 sentences): why this business fits Aevon, what workflow problems they likely have, and what specifically you would propose building if they reply.
+
+PERSONALIZATION BASIS (one short line): state exactly what the email's opening pain was based on. If it used a real detail from the scrape, name it (e.g. "site lists custom syndicated reports"). If it was industry-level only, say "industry-level, no specific scrape detail". This is for the human to audit for hallucination.
 
 Format your response as valid JSON only, no markdown, no explanation:
 {
@@ -139,7 +143,8 @@ Format your response as valid JSON only, no markdown, no explanation:
   "email_body": "...",
   "followup_subject": "...",
   "followup_body": "...",
-  "lead_insights": "..."
+  "lead_insights": "...",
+  "personalization_basis": "..."
 }`;
 }
 
@@ -192,6 +197,7 @@ async function run() {
           followup_subject: content.followup_subject,
           followup_body: content.followup_body,
           lead_insights: content.lead_insights || null,
+          personalization_basis: content.personalization_basis || null,
           scheduled_send_at: sendAt,
         })
         .eq('id', lead.id);
