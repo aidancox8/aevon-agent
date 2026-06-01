@@ -92,6 +92,9 @@ function isSendableDay() {
   return { ok: true };
 }
 
+// Plain, left-aligned personal email. No card/wrapper/hero image — a marketing
+// template look is the #1 "this was sent by a bot" tell. Mirrors how a person
+// actually types a 1:1 email, with a simple text signature.
 function toHtml(text) {
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -100,37 +103,19 @@ function toHtml(text) {
 
   const paragraphs = escaped
     .split(/\n\n+/)
-    .map(p => `<p style="margin:0 0 16px 0;line-height:1.6">${p.replace(/\n/g, '<br>')}</p>`)
+    .map(p => `<p style="margin:0 0 14px 0">${p.replace(/\n/g, '<br>')}</p>`)
     .join('');
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;padding:40px;max-width:600px">
-        <tr><td style="font-size:15px;color:#1a1a1a">
-          ${paragraphs}
-          <table cellpadding="0" cellspacing="0" style="margin-top:28px;padding-top:20px;border-top:1px solid #e5e5e5;width:100%">
-            <tr>
-              <td style="padding-right:14px;vertical-align:middle;width:44px">
-                <img src="https://aevon.ca/logo.svg" width="40" height="40" alt="Aevon" style="display:block;border-radius:9px">
-              </td>
-              <td style="vertical-align:middle">
-                <p style="margin:0;font-size:14px;font-weight:700;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Aidan Cox</p>
-                <p style="margin:4px 0 0;font-size:12px;color:#666666;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-                  <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
-                  &nbsp;&middot;&nbsp;
-                  <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#666666;text-decoration:none">Book a call</a>
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
+<body style="margin:0;padding:0">
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.5;color:#222222">
+    ${paragraphs}
+    <p style="margin:14px 0 0 0">Aidan Cox<br>
+    Aevon<br>
+    <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#1155cc">Book a call</a></p>
+  </div>
 </body>
 </html>`;
 }
