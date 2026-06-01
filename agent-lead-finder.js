@@ -84,8 +84,16 @@ const SEARCH_QUERIES = [
   'import export company',
   'logistics company',
   'freight company',
+  'customs broker',
+  'freight forwarder',
   'property management company',
   'commercial real estate company',
+  // Document-heavy intake / coordination, rarely have in-house devs
+  'immigration consultant',
+  'notary public',
+  'bookkeeping firm',
+  'restoration company',
+  'home care agency',
 ];
 
 function parseArgs() {
