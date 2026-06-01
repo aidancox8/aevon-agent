@@ -143,6 +143,26 @@
     .dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
 
+    /* Toasts */
+    .toast-wrap { position: fixed; bottom: 22px; right: 22px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+    .toast { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--text); box-shadow: 0 10px 30px rgba(0,0,0,0.35); min-width: 220px; max-width: 360px; animation: toastIn 0.22s ease; }
+    .toast.success { border-left-color: var(--green); }
+    .toast.error { border-left-color: var(--red); }
+    .toast.fade { animation: toastOut 0.3s ease forwards; }
+    @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes toastOut { to{opacity:0;transform:translateX(20px)} }
+
+    /* Intent + reply badges */
+    .badge-interested { background: rgba(34,197,94,0.18); color: #4ADE80; }
+    .badge-not_interested { background: rgba(148,163,184,0.15); color: #94A3B8; }
+    .badge-question { background: rgba(251,146,60,0.15); color: #FB923C; }
+    .badge-referral { background: rgba(129,140,248,0.18); color: #A5B4FC; }
+    .badge-auto_reply { background: rgba(71,85,105,0.2); color: #94A3B8; }
+    .badge-other { background: rgba(100,116,139,0.15); color: #94A3B8; }
+    .reply-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+    .reply-card.interested { border-left: 3px solid var(--green); }
+    .reply-suggested { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; margin-top: 8px; }
+
     /* Drawer */
     .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; }
     .drawer-overlay.open { display: block; }
@@ -198,6 +218,9 @@
     </div>
     <div class="nav-item" onclick="showView('outreach', event)">
       <span>&#9993;</span> Outreach
+    </div>
+    <div class="nav-item" onclick="showView('replies', event)">
+      <span>&#8617;</span> Replies <span id="replies-badge" style="margin-left:auto;font-size:10px;font-weight:700;background:var(--green);color:#06240f;border-radius:10px;padding:1px 7px;display:none"></span>
     </div>
     <div class="nav-item" onclick="showView('analytics', event)">
       <span>&#9641;</span> Analytics
@@ -430,6 +453,7 @@
     main.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
     if (view === 'pipeline') await renderPipeline();
     else if (view === 'outreach') await renderOutreach();
+    else if (view === 'replies') await renderReplies();
     else if (view === 'analytics') await renderAnalytics();
     else if (view === 'activity') await renderActivity();
     else if (view === 'customers') await renderCustomers();
@@ -537,6 +561,18 @@
     const { data: events } = await sb.from('email_events').select('*').eq('lead_id', id).order('created_at', { ascending: true });
     const scoreClass = lead.qualification_score >= 8 ? 'score-high' : lead.qualification_score >= 6 ? 'score-mid' : 'score-low';
 
+    // Latest reply event with agent classification, if any
+    const replyEvt = [...(events || [])].reverse().find(e => e.event_type === 'replied' && e.metadata && (e.metadata.intent || e.metadata.suggested_reply));
+    const rm = replyEvt ? replyEvt.metadata : null;
+    const replyAgentCard = rm ? `
+      <div class="analytics-card" style="margin-bottom:24px;border-left:3px solid ${rm.intent === 'interested' ? 'var(--green)' : 'var(--accent)'}">
+        <div class="analytics-title" style="display:flex;align-items:center;gap:8px">Reply Agent ${rm.intent ? `<span class="badge badge-${rm.intent}">${String(rm.intent).replace('_',' ')}</span>` : ''}</div>
+        ${rm.reason ? `<div style="font-size:13px;color:var(--text2);margin-bottom:6px"><span style="color:var(--text3)">Why:</span> ${rm.reason}</div>` : ''}
+        ${typeof rm.days_to_reply === 'number' ? `<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Responded ${rm.days_to_reply} day(s) after last send</div>` : ''}
+        ${rm.suggested_reply ? `<div class="reply-suggested">${rm.suggested_reply}</div>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin-top:8px" onclick="copyReply(this)" data-reply="${(rm.suggested_reply||'').replace(/"/g,'&quot;')}">Copy reply</button>` : ''}
+      </div>` : '';
+
     document.getElementById('main').innerHTML = `
       <div class="page-header">
         <div style="display:flex;align-items:center;gap:12px">
@@ -618,6 +654,8 @@
           </div>
         </div>` : '<div></div>'}
       </div>` : ''}
+
+      ${replyAgentCard}
 
       <div class="table-wrap">
         <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text2)">Email Events</div>
@@ -748,6 +786,122 @@
     await sb.from('customers').update({ notes }).eq('id', id);
     const btn = document.querySelector('[onclick*="saveCustomerNotes"]');
     if (btn) { btn.textContent = 'Saved!'; setTimeout(() => btn.textContent = 'Save Notes', 1500); }
+  }
+
+  // ── Toasts ────────────────────────────────────────────────────
+  function toast(msg, type) {
+    let wrap = document.getElementById('toast-wrap');
+    if (!wrap) { wrap = document.createElement('div'); wrap.id = 'toast-wrap'; wrap.className = 'toast-wrap'; document.body.appendChild(wrap); }
+    const t = document.createElement('div');
+    t.className = 'toast' + (type ? ' ' + type : '');
+    t.textContent = msg;
+    wrap.appendChild(t);
+    setTimeout(() => { t.classList.add('fade'); setTimeout(() => t.remove(), 300); }, 2600);
+  }
+
+  // ── Replies Inbox ─────────────────────────────────────────────
+  async function renderReplies() {
+    const { data: events } = await sb.from('email_events')
+      .select('*, leads(id, business_name, industry, city, email, status)')
+      .eq('event_type', 'replied')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    // De-dupe to latest reply per lead
+    const seen = new Set();
+    const replies = [];
+    (events || []).forEach(e => {
+      const lid = e.lead_id;
+      if (!lid || seen.has(lid)) return;
+      seen.add(lid);
+      replies.push(e);
+    });
+
+    const intentOf = e => (e.metadata && (e.metadata.intent || e.metadata.outcome)) || 'replied';
+    const order = { interested: 0, question: 1, referral: 2, replied: 3, other: 4, not_interested: 5, auto_reply: 6 };
+    replies.sort((a, b) => (order[intentOf(a)] ?? 9) - (order[intentOf(b)] ?? 9) || new Date(b.created_at) - new Date(a.created_at));
+
+    const counts = {};
+    replies.forEach(e => { const i = intentOf(e); counts[i] = (counts[i] || 0) + 1; });
+    const interested = counts['interested'] || 0;
+    const needsAction = (counts['interested'] || 0) + (counts['question'] || 0) + (counts['referral'] || 0);
+
+    const chip = (label, n, color) => n ? `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin-right:14px"><span style="width:9px;height:9px;border-radius:3px;background:${color}"></span>${label} <b style="color:var(--text)">${n}</b></span>` : '';
+
+    const cards = replies.length ? replies.map(e => {
+      const l = e.leads || {};
+      const m = e.metadata || {};
+      const intent = intentOf(e);
+      const when = new Date(e.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+      const dtr = typeof m.days_to_reply === 'number' ? ` · ${m.days_to_reply}d to reply` : '';
+      const sugg = m.suggested_reply;
+      const needsReply = ['interested', 'question', 'referral'].includes(intent);
+      return `<div class="reply-card ${intent === 'interested' ? 'interested' : ''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-weight:600;color:var(--text);cursor:pointer" onclick="openLeadProfile('${l.id}')">${l.business_name || 'Unknown'}</span>
+              <span class="badge badge-${intent}">${intent.replace('_', ' ')}</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:3px">${[l.industry, (l.city||'').replace(' BC','')].filter(Boolean).join(' · ')} · ${when}${dtr}</div>
+          </div>
+          <div style="flex-shrink:0;display:flex;gap:6px">
+            ${needsReply && sugg ? `<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="copyReply(this)" data-reply="${(sugg||'').replace(/"/g,'&quot;')}">Copy reply</button>` : ''}
+            ${l.email ? `<a class="btn btn-ghost" style="font-size:11px;padding:4px 10px;text-decoration:none" href="https://mail.google.com/mail/u/0/#search/from%3A${encodeURIComponent(l.email)}" target="_blank">Open in Gmail</a>` : ''}
+          </div>
+        </div>
+        ${m.reason ? `<div style="font-size:12px;color:var(--text2);margin-top:8px"><span style="color:var(--text3)">Why:</span> ${m.reason}</div>` : ''}
+        ${m.note ? `<div style="font-size:12px;color:var(--text2);margin-top:6px"><span style="color:var(--text3)">Note:</span> ${m.note}</div>` : ''}
+        ${sugg ? `<div class="reply-suggested"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin-bottom:5px">Suggested reply (also in Gmail Drafts)</div>${sugg}</div>` : ''}
+      </div>`;
+    }).join('') : `<div class="analytics-card" style="text-align:center;padding:40px;color:var(--text3)">No replies captured yet. The reply agent runs hourly on weekdays and will populate this automatically.</div>`;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Replies</div>
+        <div style="font-size:12px;color:var(--text3)">${replies.length} total · ${needsAction} need a response</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;margin-bottom:18px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        ${chip('Interested', counts['interested'], '#22C55E')}
+        ${chip('Question', counts['question'], '#FB923C')}
+        ${chip('Referral', counts['referral'], '#818CF8')}
+        ${chip('Replied', counts['replied'], '#6366F1')}
+        ${chip('Not interested', counts['not_interested'], '#94A3B8')}
+        ${chip('Auto-reply', counts['auto_reply'], '#475569')}
+        ${replies.length === 0 ? '<span style="font-size:12px;color:var(--text3)">Nothing yet</span>' : ''}
+      </div>
+      ${cards}
+    `;
+    updateRepliesBadge(needsAction);
+  }
+
+  function copyReply(btn) {
+    const text = btn.dataset.reply || '';
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      toast('Reply copied to clipboard', 'success');
+      setTimeout(() => btn.textContent = orig, 1500);
+    }).catch(() => toast('Could not copy', 'error'));
+  }
+
+  function updateRepliesBadge(n) {
+    const b = document.getElementById('replies-badge');
+    if (!b) return;
+    if (n > 0) { b.textContent = n; b.style.display = 'inline-block'; }
+    else b.style.display = 'none';
+  }
+
+  async function refreshRepliesBadge() {
+    const { data } = await sb.from('email_events').select('lead_id, metadata').eq('event_type', 'replied').limit(500);
+    const seen = new Set(); let n = 0;
+    (data || []).forEach(e => {
+      if (!e.lead_id || seen.has(e.lead_id)) return;
+      seen.add(e.lead_id);
+      const intent = (e.metadata && (e.metadata.intent || e.metadata.outcome)) || 'replied';
+      if (['interested', 'question', 'referral'].includes(intent)) n++;
+    });
+    updateRepliesBadge(n);
   }
 
   // ── Activity Feed ─────────────────────────────────────────────
@@ -909,7 +1063,7 @@
 
   async function pauseLead(leadId) {
     const { error } = await sb.from('leads').update({ status: 'paused', scheduled_send_at: null }).eq('id', leadId);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderLeadProfile(leadId);
   }
 
@@ -936,7 +1090,7 @@
     if (!dt) { alert('Pick a date first.'); return; }
     const utcIso = new Date(dt).toISOString();
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: utcIso }).eq('id', leadId);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderLeadProfile(leadId);
   }
 
@@ -1973,7 +2127,7 @@
 
     btn.disabled = true;
     const { error } = await sb.from('leads').update(update).eq('id', id);
-    if (error) { alert('Error: ' + error.message); btn.disabled = false; return; }
+    if (error) { toast('Error: ' + error.message, 'error'); btn.disabled = false; return; }
 
     // Update row in-place — no re-render, no reordering confusion
     const row = btn.closest('tr');
@@ -1997,7 +2151,7 @@
     const name = btn.dataset.name;
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     const { error } = await sb.from('leads').delete().eq('id', id);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     btn.closest('tr').remove();
     if (window._outreachLeads) window._outreachLeads = window._outreachLeads.filter(l => l.id !== id);
   }
@@ -2006,7 +2160,7 @@
     const ids = getSelectedIds();
     if (!ids.length) return;
     const { error } = await sb.from('leads').update({ status: 'paused', scheduled_send_at: null }).in('id', ids);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderOutreach();
   }
 
@@ -2017,7 +2171,7 @@
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setUTCHours(16, 0, 0, 0);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: tomorrow.toISOString() }).in('id', ids);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderOutreach();
   }
 
@@ -2028,7 +2182,7 @@
     sendAt.setHours(9, 0, 0, 0);
     if (sendAt < new Date()) sendAt.setTime(Date.now() + 2 * 60 * 1000);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     clearSelection();
     renderOutreach();
   }
@@ -2040,7 +2194,7 @@
     sendAt.setDate(sendAt.getDate() + 1);
     sendAt.setHours(9, 0, 0, 0);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     clearSelection();
     renderOutreach();
   }
@@ -2053,7 +2207,7 @@
     const [y, m, d] = picker.value.split('-').map(Number);
     const sendAt = new Date(y, m - 1, d, 9, 0, 0, 0);
     const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     clearSelection();
     renderOutreach();
   }
@@ -2063,7 +2217,7 @@
     if (!ids.length) return;
     if (!confirm(`Delete ${ids.length} lead(s)? This cannot be undone.`)) return;
     const { error } = await sb.from('leads').delete().in('id', ids);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderOutreach();
   }
 
@@ -2093,13 +2247,14 @@
       sequence_step: 0,
       source: 'manual',
     });
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
     closeAddLeadModal();
     renderOutreach();
   }
 
   // ── Init ─────────────────────────────────────────────────────
   renderView('pipeline');
+  refreshRepliesBadge();
 </script>
 
 <!-- Add Lead Modal -->
