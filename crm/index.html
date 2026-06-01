@@ -212,8 +212,11 @@
     <div style="padding:0 20px 16px;margin-top:-8px">
       <button class="btn btn-ghost" id="themeToggle" onclick="toggleTheme()" style="width:100%;font-size:12px;padding:6px 10px">☀ Light mode</button>
     </div>
+    <div class="nav-item active" onclick="showView('home', event)" style="margin-top:4px">
+      <span>&#9632;</span> Dashboard
+    </div>
     <div class="nav-section">Outreach</div>
-    <div class="nav-item active" onclick="showView('pipeline', event)">
+    <div class="nav-item" onclick="showView('pipeline', event)">
       <span>&#9776;</span> Pipeline
     </div>
     <div class="nav-item" onclick="showView('outreach', event)">
@@ -451,7 +454,8 @@
   async function renderView(view) {
     const main = document.getElementById('main');
     main.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
-    if (view === 'pipeline') await renderPipeline();
+    if (view === 'home') await renderHome();
+    else if (view === 'pipeline') await renderPipeline();
     else if (view === 'outreach') await renderOutreach();
     else if (view === 'replies') await renderReplies();
     else if (view === 'analytics') await renderAnalytics();
@@ -786,6 +790,120 @@
     await sb.from('customers').update({ notes }).eq('id', id);
     const btn = document.querySelector('[onclick*="saveCustomerNotes"]');
     if (btn) { btn.textContent = 'Saved!'; setTimeout(() => btn.textContent = 'Save Notes', 1500); }
+  }
+
+  // ── Dashboard / Home ──────────────────────────────────────────
+  async function renderHome() {
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const [{ data: leads }, { data: events }, { data: customers }] = await Promise.all([
+      sb.from('leads').select('id, business_name, status, sequence_step, scheduled_send_at, email_subject, qualification_score, industry, city, last_sent_at').limit(5000),
+      sb.from('email_events').select('event_type, created_at, lead_id, metadata').gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(2000),
+      sb.from('customers').select('id, status').limit(2000),
+    ]);
+    const L = leads || [], E = events || [], C = customers || [];
+
+    // Replies needing action (latest per lead, action intents)
+    const replyEvents = E.filter(e => e.event_type === 'replied');
+    const seen = new Set(); const actionable = [];
+    replyEvents.forEach(e => {
+      if (!e.lead_id || seen.has(e.lead_id)) return;
+      seen.add(e.lead_id);
+      const intent = (e.metadata && (e.metadata.intent || e.metadata.outcome)) || 'replied';
+      if (['interested', 'question', 'referral'].includes(intent)) actionable.push({ e, intent });
+    });
+
+    // Send status
+    const queuedReady = L.filter(l => l.status === 'queued' && l.scheduled_send_at && l.email_subject);
+    const dueToday = queuedReady.filter(l => new Date(l.scheduled_send_at) <= new Date()).length;
+    const DAILY = 30;
+    const runway = Math.ceil(queuedReady.length / DAILY);
+    const sentThisWeek = E.filter(e => e.event_type === 'sent').length;
+    const repliesThisWeek = replyEvents.length;
+    const needsPersonalize = L.filter(l => l.status === 'queued' && !l.email_subject && l.email).length;
+    const noEmail = L.filter(l => !l.email).length;
+
+    const nameMap = {}; L.forEach(l => nameMap[l.id] = l);
+
+    const actionItems = actionable.length ? actionable.slice(0, 6).map(({ e, intent }) => {
+      const l = nameMap[e.lead_id] || {};
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span class="badge badge-${intent}" style="flex-shrink:0">${intent.replace('_', ' ')}</span>
+        <span style="flex:1;color:var(--text);font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="openLeadProfile('${e.lead_id}')">${l.business_name || 'Unknown'}</span>
+        <span style="font-size:11px;color:var(--text3);flex-shrink:0">${new Date(e.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span>
+      </div>`;
+    }).join('') : `<div style="color:var(--text3);font-size:13px;padding:14px 0">Nothing waiting. The reply agent will surface new replies here automatically.</div>`;
+
+    // Recent activity (last 8)
+    const actLabels = { sent: 'sent to', replied: 'reply from', opened: 'opened by', clicked: 'click from', bounced: 'bounced', delivered: 'delivered to' };
+    const recent = E.slice(0, 8).map(e => {
+      const l = nameMap[e.lead_id] || {};
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+        <span class="badge badge-${e.event_type}" style="font-size:10px;padding:2px 7px;flex-shrink:0">${e.event_type}</span>
+        <span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${actLabels[e.event_type] || e.event_type} ${l.business_name || ''}</span>
+        <span style="color:var(--text3);flex-shrink:0">${timeAgoShort(e.created_at)}</span>
+      </div>`;
+    }).join('') || '<div style="color:var(--text3);font-size:13px;padding:10px 0">No recent activity.</div>';
+
+    const activeCustomers = C.filter(c => c.status === 'active').length;
+
+    document.getElementById('main').innerHTML = `
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div style="font-size:12px;color:var(--text3)">${new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px">
+        ${kpiCard('Replies to Answer', actionable.length, actionable.length ? 'needs your response' : 'all caught up', { accent: '#22C55E', tone: actionable.length ? 'good' : '' })}
+        ${kpiCard('Due to Send', dueToday, `${queuedReady.length} queued total`, { accent: '#6366F1' })}
+        ${kpiCard('Send Runway', runway + 'd', `at ${DAILY}/day`, { accent: '#FB923C', tone: runway <= 3 ? 'warn' : '' })}
+        ${kpiCard('Sent (7d)', sentThisWeek, `${repliesThisWeek} replies back`, { accent: '#818CF8' })}
+        ${kpiCard('Active Clients', activeCustomers, `${C.length} total`, { accent: '#A855F7' })}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="analytics-card">
+          <div class="analytics-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Replies Needing Action</span>
+            ${actionable.length > 6 ? `<span style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:400" onclick="showView('replies')">View all ${actionable.length} &rarr;</span>` : ''}
+          </div>
+          ${actionItems}
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-title">Recent Activity</div>
+          ${recent}
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <div class="analytics-title">What Needs Doing</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:4px">
+          ${todoTile(needsPersonalize, 'leads need email copy', 'Run personalizer.js', needsPersonalize > 0 ? '#FB923C' : '#22C55E')}
+          ${todoTile(dueToday, 'emails due to send now', dueToday > 0 ? 'sender runs automatically hourly' : 'nothing due', dueToday > 0 ? '#6366F1' : '#22C55E')}
+          ${todoTile(actionable.length, 'replies to respond to', actionable.length > 0 ? 'see Replies tab' : 'all answered', actionable.length > 0 ? '#22C55E' : '#94A3B8')}
+          ${todoTile(noEmail, 'leads with no email', 'uncontactable until enriched', noEmail > 0 ? '#94A3B8' : '#22C55E')}
+        </div>
+      </div>
+    `;
+    updateRepliesBadge(actionable.length);
+  }
+
+  function todoTile(n, label, hint, color) {
+    return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="font-size:24px;font-weight:700;color:${color};line-height:1">${typeof n === 'number' ? n.toLocaleString() : n}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:5px">${label}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">${hint}</div>
+    </div>`;
+  }
+
+  function timeAgoShort(dateStr) {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), d = Math.floor(diff / 86400000);
+    if (m < 1) return 'now';
+    if (m < 60) return m + 'm';
+    if (h < 24) return h + 'h';
+    return d + 'd';
   }
 
   // ── Toasts ────────────────────────────────────────────────────
@@ -2253,7 +2371,7 @@
   }
 
   // ── Init ─────────────────────────────────────────────────────
-  renderView('pipeline');
+  renderView('home');
   refreshRepliesBadge();
 </script>
 
