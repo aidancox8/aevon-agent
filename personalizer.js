@@ -41,30 +41,18 @@ async function rateLimitedGenerate(prompt) {
   return generate(prompt);
 }
 
-const DAILY_LIMIT = 30; // max emails per weekday (domain still young - keep conservative until ~6-8 weeks old)
 const SEND_HOUR_UTC = 16; // 9am PT
 
-// Returns the next weekday send date that hasn't hit DAILY_LIMIT yet.
-// Multiple leads can share the same day — sender.js handles per-send pacing.
-function nextWeekdaySendSlot(dayCounts) {
-  const candidate = new Date();
-  candidate.setUTCDate(candidate.getUTCDate() + 1);
-  candidate.setUTCHours(SEND_HOUR_UTC, 0, 0, 0);
-
-  for (let i = 0; i < 90; i++) {
-    const dow = candidate.getUTCDay();
-    if (dow >= 1 && dow <= 5) {
-      const key = candidate.toISOString().slice(0, 10);
-      const count = dayCounts.get(key) || 0;
-      if (count < DAILY_LIMIT) {
-        dayCounts.set(key, count + 1);
-        return candidate.toISOString();
-      }
-    }
-    candidate.setUTCDate(candidate.getUTCDate() + 1);
-  }
-
-  throw new Error('Could not find an open send slot in the next 90 days');
+// Mark a lead eligible to send from the next weekday onward. The daily cap and
+// score-based ordering are enforced in sender.js at send time, so we no longer
+// spread leads across future days — a high-score lead found today competes for
+// tomorrow's slots instead of waiting behind a month-long backlog.
+function nextEligibleAt() {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCHours(SEND_HOUR_UTC, 0, 0, 0);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString();
 }
 
 function getIndustryContext(industry) {
@@ -173,18 +161,6 @@ async function run() {
 
   console.log(`Personalizing ${leads.length} leads...\n`);
 
-  // Count existing scheduled sends per day to respect daily limit
-  const { data: scheduled } = await supabase
-    .from('leads')
-    .select('scheduled_send_at')
-    .not('scheduled_send_at', 'is', null);
-
-  const dayCounts = new Map();
-  (scheduled || []).forEach(r => {
-    const key = r.scheduled_send_at.slice(0, 10);
-    dayCounts.set(key, (dayCounts.get(key) || 0) + 1);
-  });
-
   let success = 0;
   let failed = 0;
 
@@ -206,7 +182,7 @@ async function run() {
         throw new Error('Missing required fields in Gemini response');
       }
 
-      const sendAt = nextWeekdaySendSlot(dayCounts);
+      const sendAt = nextEligibleAt();
 
       const { error: updateError } = await supabase
         .from('leads')
@@ -222,7 +198,7 @@ async function run() {
 
       if (updateError) throw new Error(updateError.message);
 
-      console.log(`scheduled ${new Date(sendAt).toLocaleString('en-CA', { timeZone: 'America/Vancouver' })}`);
+      console.log(`eligible from ${new Date(sendAt).toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' })} (score-ranked at send)`);
       success++;
 
 } catch (err) {

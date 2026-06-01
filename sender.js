@@ -14,6 +14,32 @@ const FROM = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'Aidan from Aevon';
 const FOLLOWUP_DELAY_DAYS = 5;
 
+// Daily send budget is enforced HERE (not in personalizer) so a high-score
+// lead found today goes out next send, not a month behind the backlog.
+const DAILY_CAP = parseInt(process.env.DAILY_CAP || '30', 10);
+// Follow-ups go out first (time-sensitive) but never take more than this share
+// of the daily cap, so new leads always keep at least the rest.
+const FOLLOWUP_MAX_SHARE = 0.5;
+
+// Start of "today" in Vancouver, as an ISO timestamp, for counting today's sends.
+function vancouverDayStartISO() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const g = t => parts.find(p => p.type === t).value;
+  // Vancouver midnight expressed in UTC. PST=UTC-8, PDT=UTC-7; use the offset
+  // implied by comparing the wall date — simplest robust approach: build a Date
+  // for that wall-clock midnight in the zone via a known-good formatter round-trip.
+  const ymd = `${g('year')}-${g('month')}-${g('day')}`;
+  // Find the UTC instant whose Vancouver date is ymd and time is 00:00.
+  for (let h = 6; h <= 9; h++) { // PST/PDT are UTC+7/8; midnight Van = 07:00 or 08:00 UTC
+    const guess = new Date(`${ymd}T0${h}:00:00.000Z`);
+    const vanWall = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Vancouver', hour: '2-digit', hour12: false }).format(guess);
+    if (vanWall === '00') return guess.toISOString();
+  }
+  return new Date(`${ymd}T08:00:00.000Z`).toISOString();
+}
+
 // ── Send-day guard ────────────────────────────────────────────────
 
 function getVancouverDate() {
@@ -129,23 +155,60 @@ async function run() {
 
   const now = new Date().toISOString();
 
-  const { data: due, error } = await supabase
-    .from('leads')
-    .select('id, business_name, email, email_subject, email_body, followup_subject, followup_body, sequence_step')
+  // How many already went out today (across all hourly runs)? Enforce the cap.
+  const dayStart = vancouverDayStartISO();
+  const { count: sentToday } = await supabase
+    .from('email_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_type', 'sent')
+    .gte('created_at', dayStart);
+
+  const remaining = DAILY_CAP - (sentToday || 0);
+  if (remaining <= 0) {
+    console.log(`Daily cap reached (${sentToday}/${DAILY_CAP} sent today). Done.`);
+    return;
+  }
+
+  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, sequence_step, qualification_score, scheduled_send_at';
+  const baseFilter = q => q
     .eq('status', 'queued')
     .not('email_subject', 'is', null)
     .not('email', 'is', null)
-    .lte('scheduled_send_at', now)
-    .order('scheduled_send_at', { ascending: true })
-    .limit(50);
+    .lte('scheduled_send_at', now);
 
-  if (error) throw new Error(`Supabase fetch failed: ${error.message}`);
-  if (!due || due.length === 0) {
+  // Follow-ups (sequence_step = 1): time-sensitive, sent first, oldest scheduled first.
+  const { data: followups, error: fErr } = await baseFilter(
+    supabase.from('leads').select(cols).eq('sequence_step', 1)
+  ).order('scheduled_send_at', { ascending: true }).limit(DAILY_CAP);
+  if (fErr) throw new Error(`Supabase fetch (followups) failed: ${fErr.message}`);
+
+  // New leads (sequence_step = 0): highest score first, then oldest in queue.
+  const { data: initials, error: iErr } = await baseFilter(
+    supabase.from('leads').select(cols).eq('sequence_step', 0)
+  ).order('qualification_score', { ascending: false, nullsFirst: false })
+   .order('scheduled_send_at', { ascending: true }).limit(DAILY_CAP);
+  if (iErr) throw new Error(`Supabase fetch (initials) failed: ${iErr.message}`);
+
+  // Budget: follow-ups capped at half the cap; unused slots roll to new leads,
+  // and unused new-lead slots roll back to follow-ups — never exceed `remaining`.
+  const followupBudget = Math.min(followups?.length || 0, Math.ceil(DAILY_CAP * FOLLOWUP_MAX_SHARE));
+  const pickedFollowups = (followups || []).slice(0, followupBudget);
+  const initialBudget = Math.max(0, remaining - pickedFollowups.length);
+  const pickedInitials = (initials || []).slice(0, initialBudget);
+  // If new leads didn't use their full share, let extra follow-ups fill the gap.
+  let due = [...pickedFollowups, ...pickedInitials];
+  if (due.length < remaining) {
+    const extra = (followups || []).slice(pickedFollowups.length, pickedFollowups.length + (remaining - due.length));
+    due = [...pickedFollowups, ...extra, ...pickedInitials];
+  }
+  due = due.slice(0, remaining);
+
+  if (due.length === 0) {
     console.log('No emails due right now.');
     return;
   }
 
-  console.log(`Sending ${due.length} email(s)...\n`);
+  console.log(`Sending ${due.length} email(s) — ${pickedFollowups.length} follow-up, ${pickedInitials.length} new | ${sentToday || 0}/${DAILY_CAP} already sent today.\n`);
 
   let sent = 0;
   let failed = 0;
