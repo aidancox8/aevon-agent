@@ -90,18 +90,20 @@ function matchLead(index, fromEmail, subject) {
 // ── Classification ────────────────────────────────────────────────
 
 async function classifyReply(lead, replyText) {
-  const prompt = `You are triaging a reply to a cold outreach email sent by Aevon, a custom software and AI agent company in the Lower Mainland, BC.
+  const prompt = `You are Aidan, founder of Aevon, replying to someone who responded to your cold outreach. Aevon builds custom software and AI agents for Lower Mainland BC businesses (1-99 staff) drowning in repetitive manual work. Clients pay once and own it. No subscriptions.
 
 The reply came from this business:
 - Name: ${lead.business_name}
 - Industry: ${lead.industry || 'unknown'}
+${lead.lead_insights ? `- What we believe about their workflow: ${lead.lead_insights}` : ''}
+${lead.qualification_notes ? `- Qualification note: ${lead.qualification_notes}` : ''}
 
 Their reply (most recent message only, ignore any quoted history):
 """
 ${replyText.slice(0, 1500)}
 """
 
-Classify the intent into EXACTLY one of:
+STEP 1 - Classify intent into EXACTLY one of:
 - "interested": they want to learn more, ask about pricing/process, want a call, or describe their problems
 - "not_interested": they decline, say no thanks, ask to be removed, or unsubscribe
 - "referral": they redirect you to another person or department
@@ -109,11 +111,19 @@ Classify the intent into EXACTLY one of:
 - "question": a specific question that needs a human answer but intent is unclear
 - "other": anything that does not fit above
 
-Then write a short, human suggested reply (only if intent is interested, question, or referral — otherwise return an empty string). The reply should:
-- Be 2-4 sentences, plain and direct, no buzzwords, no em dashes
-- Move toward understanding their workflow or booking a short call
-- Not over-promise or invent specifics about their business
-- Not include a sign-off or signature (added separately)
+STEP 2 - Write a suggested reply (only if intent is interested, question, or referral; otherwise empty string).
+Follow this exact arc:
+1. ACKNOWLEDGE their specific struggle. Reflect back the actual pain THEY described (or, if they only asked a question, the pain implied by their industry). Make them feel understood, not pitched.
+2. BUILD THE NEED. In one line, name the hidden cost of that struggle staying as-is (time lost, leads slipping, work that scales badly) so the value of fixing it is obvious.
+3. SUGGEST a concrete thing Aevon could build for THEM, specific enough to spark a small "oh, that's clever" moment. It must be genuinely realistic and deliverable by a solo builder (e.g. an agent that reads inbound inquiries and drafts replies, an intake-to-CRM pipeline, an auto-generated report, a routing/scheduling tool). Frame it as how it helps THEM, not as a feature list.
+4. End with a low-friction next step: a specific question about their workflow OR a short call.
+
+Hard rules:
+- 3-6 sentences, warm and human, first person ("I"). Plain English.
+- No buzzwords (leverage, streamline, synergy, unlock, supercharge), no em dashes, no exclamation overload.
+- Do NOT overpromise, invent facts about their business, quote a price, or guarantee outcomes/timelines.
+- Realistic and good for THEM. If their idea is bigger than is sensible, gently right-size it.
+- No sign-off or signature (added separately).
 
 Respond with JSON only:
 {
@@ -160,7 +170,7 @@ function addressOf(headerValue) {
 
 // ── Draft creation ────────────────────────────────────────────────
 
-const SIGNATURE = `\n\nAidan Cox\naidan@aevon.ca\nhttps://calendar.app.google/7R7srDKzWrvmLQg37`;
+const SIGNATURE = `\n\nAidan Cox\nAevon\nBook a call: https://calendar.app.google/7R7srDKzWrvmLQg37`;
 
 async function buildRawDraft({ to, subject, inReplyTo, references, body }) {
   const replySubject = /^re:/i.test(subject || '') ? subject : `Re: ${subject || ''}`;
@@ -190,7 +200,7 @@ async function run() {
   // Leads we have actually emailed (have a subject) — the only ones a reply can match.
   const { data: leads, error } = await supabase
     .from('leads')
-    .select('id, business_name, email, industry, status, sequence_step, last_sent_at, email_subject, followup_subject')
+    .select('id, business_name, email, industry, status, sequence_step, last_sent_at, email_subject, followup_subject, lead_insights, qualification_notes')
     .not('email_subject', 'is', null);
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`);
   const index = buildLeadIndex(leads || []);
