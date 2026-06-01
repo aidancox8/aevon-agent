@@ -4,3 +4,5 @@ gmail-service-account.json
 *.service-account.json
 enrich.log
 enrich-emails.log
+overnight.log
+personalize30.log

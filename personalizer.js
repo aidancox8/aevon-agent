@@ -149,14 +149,23 @@ Format your response as valid JSON only, no markdown, no explanation:
 }
 
 async function run() {
+  // --limit N personalizes only the top N (highest-score) leads — useful for a
+  // small batch that won't collide with the lead finders' Gemini quota.
+  const args = process.argv.slice(2);
+  let limit = null;
+  for (let i = 0; i < args.length; i++) if (args[i] === '--limit') limit = parseInt(args[++i], 10);
+
   // Fetch leads that need personalization (no email content yet, have an email address)
-  const { data: leads, error } = await supabase
+  let q = supabase
     .from('leads')
     .select('id, business_name, industry, city, website, email, lead_insights, qualification_notes')
     .is('email_subject', null)
     .not('email', 'is', null)
     .eq('status', 'queued')
+    .order('qualification_score', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: true });
+  if (limit) q = q.limit(limit);
+  const { data: leads, error } = await q;
 
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`);
   if (!leads || leads.length === 0) {
