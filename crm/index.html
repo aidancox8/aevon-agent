@@ -606,7 +606,8 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
         <div class="analytics-card">
           <div class="analytics-title">Lead Details</div>
-          ${lead.email ? `<div class="drawer-field"><span class="drawer-field-label">Email</span><span class="drawer-field-value">${lead.email}</span></div>` : ''}
+          ${lead.contact_name ? `<div class="drawer-field"><span class="drawer-field-label">Contact</span><span class="drawer-field-value">${lead.contact_name}${lead.contact_role ? ` <span style="color:var(--text3)">(${lead.contact_role})</span>` : ''}</span></div>` : ''}
+          ${lead.email ? `<div class="drawer-field"><span class="drawer-field-label">Email</span><span class="drawer-field-value">${lead.email}${lead.email_quality ? ` <span class="badge badge-${lead.email_quality === 'personal' ? 'replied' : lead.email_quality === 'role' ? 'followup' : 'paused'}" style="font-size:9px;padding:1px 6px">${lead.email_quality}</span>` : ''}</span></div>` : ''}
           ${lead.phone ? `<div class="drawer-field"><span class="drawer-field-label">Phone</span><span class="drawer-field-value">${lead.phone}</span></div>` : ''}
           ${lead.address ? `<div class="drawer-field"><span class="drawer-field-label">Address</span><span class="drawer-field-value">${lead.address}</span></div>` : ''}
           ${lead.website ? `<div class="drawer-field"><span class="drawer-field-label">Website</span><a href="${lead.website}" target="_blank" style="color:var(--accent);font-size:13px">${lead.website}</a></div>` : ''}
@@ -1287,7 +1288,7 @@
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
     const [{ data: leads }, { data: events }, { data: customers }, { data: invoices }] = await Promise.all([
-      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_subject, opened_at, clicked_at, sequence_step, last_sent_at, scheduled_send_at, created_at, source').limit(5000),
+      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_quality, email_subject, opened_at, clicked_at, sequence_step, last_sent_at, scheduled_send_at, created_at, source').limit(5000),
       sb.from('email_events').select('event_type, created_at, lead_id, metadata').order('created_at', { ascending: false }).limit(5000),
       sb.from('customers').select('id, status, created_at').limit(2000),
       sb.from('invoices').select('amount, status, paid_date, created_at').limit(2000),
@@ -1342,6 +1343,30 @@
     const bounceRate = pctOf(bounced, base);
     const openRate = pctOf(openedLeads, base);
     const clickRate = pctOf(clickedLeads, base);
+    // Conversion: contacted leads that became customers. Two angles:
+    //  - of contacted (whole funnel efficiency)
+    //  - of replied (how well conversations close)
+    const convFromContacted = pctOf(convertedStatus, base);
+    const convFromReplied = pctOf(convertedStatus, repliedCount || 1);
+
+    // Reply rate by email quality (tests "named contact beats info@" thesis)
+    const qualStats = { personal: { c: 0, r: 0 }, role: { c: 0, r: 0 }, generic: { c: 0, r: 0 } };
+    L.forEach(l => {
+      const q = l.email_quality;
+      if (!qualStats[q]) return;
+      if (l.last_sent_at || l.sequence_step > 0) qualStats[q].c++;
+      if (repliedLeadIds.has(l.id)) qualStats[q].r++;
+    });
+    const qualRows = [
+      { label: 'Named person', key: 'personal', color: '#22C55E' },
+      { label: 'Role inbox', key: 'role', color: '#FB923C' },
+      { label: 'Generic info@', key: 'generic', color: '#94A3B8' },
+    ].filter(x => qualStats[x.key].c > 0).map(x => ({
+      label: x.label, value: qualStats[x.key].c,
+      rate: qualStats[x.key].c ? qualStats[x.key].r / qualStats[x.key].c : 0,
+      rateLabel: qualStats[x.key].c ? Math.round(qualStats[x.key].r / qualStats[x.key].c * 100) + '%' : '—',
+      color: x.color,
+    }));
     const scored = L.filter(l => l.qualification_score);
     const avgScore = scored.length ? (scored.reduce((s, l) => s + l.qualification_score, 0) / scored.length) : 0;
 
@@ -1414,8 +1439,8 @@
         ${kpiCard('Total Leads', total.toLocaleString(), `${hasEmail.toLocaleString()} contactable (${pctOf(hasEmail, total)}%)`, { accent: '#6366F1' })}
         ${kpiCard('Emails Sent', uniqueSent.toLocaleString(), `${personalized.toLocaleString()} personalized`, { accent: '#818CF8' })}
         ${kpiCard('Reply Rate', replyRate + '%', `${repliedCount} ${repliedCount === 1 ? 'reply' : 'replies'} &middot; ${interested} interested`, { accent: '#22C55E', tone: replyRate >= 3 ? 'good' : '' })}
+        ${kpiCard('Conversion Rate', convFromContacted + '%', `${convertedStatus} won &middot; ${convFromReplied}% of replies`, { accent: '#A855F7', tone: convertedStatus > 0 ? 'good' : '' })}
         ${kpiCard('Bounce Rate', bounceRate + '%', `${bounced} bounced${bounceRate >= 5 ? ' &middot; too high' : ' &middot; healthy'}`, { accent: '#EF4444', tone: bounceRate >= 5 ? 'warn' : 'good' })}
-        ${kpiCard('Avg Lead Score', avgScore.toFixed(1), `of 10 &middot; ${scored.length} scored`, { accent: '#7C3AED' })}
         ${kpiCard('Runway', runwayDays + 'd', `${readyQueued.toLocaleString()} queued at ${DAILY}/day`, { accent: '#FB923C', tone: runwayDays <= 3 ? 'warn' : '' })}
       </div>
 
@@ -1471,6 +1496,12 @@
             Opens read low because tracking was off until May 31, and Outlook recipients block the pixel. Reply rate is the reliable signal.
           </div>
         </div>
+      </div>
+
+      <div class="analytics-card" style="margin-bottom:16px">
+        <div class="analytics-title">Contact Quality <span style="font-weight:400;color:var(--text3)">(reply rate by inbox type)</span></div>
+        ${qualRows.length ? rankTable(qualRows, { showRate: true }) : '<div style="color:var(--text3);font-size:12.5px;padding:10px 0">No classified contacts yet. New leads from the finder are tagged personal / role / generic — this panel shows whether named contacts out-reply generic info@ inboxes.</div>'}
+        <div style="margin-top:10px;font-size:11.5px;color:var(--text3)">Reaching a named decision-maker should out-perform generic inboxes. The finder now prefers personal emails and pulls a contact name where it can.</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">

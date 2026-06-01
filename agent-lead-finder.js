@@ -121,33 +121,11 @@ async function searchPlaces(query, pageToken = null) {
   return res.data;
 }
 
+const { findContact } = require('./lib/contact-finder');
+
+// Scrapes homepage + contact/about/team pages for the best reachable contact.
 async function scrapeWebsite(websiteUrl) {
-  if (!websiteUrl) return { email: null, text: '' };
-  try {
-    const res = await axios.get(websiteUrl, {
-      timeout: 8000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AevonBot/1.0)' },
-    });
-    const $ = cheerio.load(res.data);
-    $('script, style, noscript').remove();
-    const text = $('body').text().replace(/\s+/g, ' ').slice(0, 3000);
-
-    let email = null;
-    $('a[href^="mailto:"]').each((_, el) => {
-      const href = $(el).attr('href');
-      const addr = href.replace('mailto:', '').split('?')[0].trim().toLowerCase();
-      if (addr.includes('@')) { email = addr; return false; }
-    });
-
-    if (!email) {
-      const match = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}(?=[^a-zA-Z]|$)/);
-      if (match) email = match[0].toLowerCase();
-    }
-
-    return { email, text };
-  } catch {
-    return { email: null, text: '' };
-  }
+  return findContact(websiteUrl);
 }
 
 // Minimum ms between Gemini calls to stay under rate limit
@@ -186,7 +164,8 @@ SCORE 1-5 (reject):
 - Sole operator with no staff doing repetitive knowledge work
 - Pure consumer service with no outbound, intake, or document workflows
 - Franchise or chain location — uses parent company systems
-- 100+ employees — has internal AI/IT team
+- Clear in-house software/product/dev team (would build their own tools). NOTE: a general IT/helpdesk/sysadmin function does NOT count — that is a different discipline from building custom apps/agents. Do not reject on headcount alone; firms up to ~99 staff without their own developers are valid targets
+- Enterprise (roughly 200+ staff) with obvious dedicated internal software capacity
 - No website or clearly a placeholder
 - Software or SaaS company — builds their own tools
 - No observable evidence of repetitive knowledge work
@@ -280,12 +259,13 @@ async function run() {
 
         const scraped = await Promise.all(
           fresh.map(async place => {
-            const { email, text } = await scrapeWebsite(place.websiteUri || null);
-            return { place, email, text };
+            const contact = await scrapeWebsite(place.websiteUri || null);
+            return { place, contact };
           })
         );
 
-        for (const { place, email, text } of scraped) {
+        for (const { place, contact } of scraped) {
+          const { email, emailQuality, contactName, contactRole, text } = contact;
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
 
@@ -302,7 +282,7 @@ async function run() {
           }
 
           totalQualified++;
-          console.log(`score ${score}/10 | ${email || 'no email'}`);
+          console.log(`score ${score}/10 | ${email || 'no email'}${emailQuality ? ' (' + emailQuality + ')' : ''}${contactName ? ' | ' + contactName : ''}`);
 
           const { error: insertErr } = await supabase.from('leads').insert({
             business_name: name,
@@ -310,12 +290,16 @@ async function run() {
             phone: place.internationalPhoneNumber || null,
             website,
             email,
+            email_quality: emailQuality,
+            contact_name: contactName,
+            contact_role: contactRole,
             industry: query,
             city,
             status: 'queued',
             sequence_step: 0,
             qualification_score: score,
             qualification_notes: notes,
+            source: query,
           });
 
           if (insertErr) {
