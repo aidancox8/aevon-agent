@@ -22,6 +22,25 @@ const DAILY_CAP = parseInt(process.env.DAILY_CAP || '30', 10);
 const FOLLOWUP_MAX_SHARE = 0.5;
 
 // Start of "today" in Vancouver, as an ISO timestamp, for counting today's sends.
+// Last-line guard against malformed / scraper-artifact emails reaching Resend.
+// Returns a reason string if the address looks unsafe to send, else null.
+function emailRisk(email) {
+  const e = (email || '').trim();
+  // Hard format check (also catches whitespace, commas, multiple addresses, junk).
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) return 'malformed';
+  const [local, domain] = e.toLowerCase().split('@');
+  // Leading digits glued to letters: "8011carol@", "604info@" — scraper artifact.
+  if (/^\d{2,}[a-z]/.test(local)) return 'digit-prefix artifact';
+  // Role/label words concatenated to a name with no separator: "corporationpam",
+  // "emailmatt", "phonejohn" — a word ran into the address during scraping.
+  if (/^(corporation|email|phone|fax|tel|contact|info|office|mailto|address|hours|monday|tuesday|wednesday|thursday|friday)[a-z]{3,}/.test(local)) {
+    return 'concatenated-word artifact';
+  }
+  // Absurdly long local part (concatenated text blob).
+  if (local.length > 40) return 'over-long local part';
+  return null;
+}
+
 function vancouverDayStartISO() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -233,6 +252,20 @@ async function run() {
     if (!subject || !body) continue;
 
     process.stdout.write(`  [${isFollowup ? 'followup' : 'email'}] ${lead.business_name} <${lead.email}>... `);
+
+    // Pre-send validation: never hand a malformed/artifact address to Resend.
+    // A bounce hurts the young domain more than skipping does. Park it for review.
+    const risk = emailRisk(lead.email);
+    if (risk) {
+      console.log(`SKIPPED (${risk})`);
+      await supabase.from('leads').update({
+        status: 'paused',
+        scheduled_send_at: null,
+        notes: `Held by sender: email looks invalid (${risk}). Needs a valid address.`,
+      }).eq('id', lead.id);
+      failed++;
+      continue;
+    }
 
     try {
       const { data: sendData, error: sendError } = await resend.emails.send({
