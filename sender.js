@@ -142,7 +142,7 @@ function isSendableDay() {
 // Plain, left-aligned personal email. No card/wrapper/hero image — a marketing
 // template look is the #1 "this was sent by a bot" tell. Mirrors how a person
 // actually types a 1:1 email, with a simple text signature.
-function toHtml(text) {
+function toHtml(text, leadId) {
   const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -152,6 +152,11 @@ function toHtml(text) {
     .split(/\n\n+/)
     .map(p => `<p style="margin:0 0 14px 0">${p.replace(/\n/g, '<br>')}</p>`)
     .join('');
+
+  // Clean link to the real site, tagged so a visit is attributed to this lead.
+  // Not a redirect/masked link — just aevon.ca with a query param — so it carries
+  // no deliverability risk while letting us see who was interested enough to look.
+  const siteUrl = leadId ? `https://aevon.ca/?ref=${leadId}` : 'https://aevon.ca';
 
   return `<!DOCTYPE html>
 <html>
@@ -167,6 +172,8 @@ function toHtml(text) {
         <td style="vertical-align:middle">
           <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan Cox</div>
           <div style="font-size:12px;color:#666666;margin-top:2px">
+            <a href="${siteUrl}" style="color:#666666;text-decoration:none">aevon.ca</a>
+            &nbsp;&middot;&nbsp;
             <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
             &nbsp;&middot;&nbsp;
             <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#666666;text-decoration:none">Book a call</a>
@@ -276,7 +283,7 @@ async function run() {
         to: lead.email,
         subject,
         text: body,
-        html: toHtml(body),
+        html: toHtml(body, lead.id),
       });
 
       if (sendError) throw new Error(sendError.message);
