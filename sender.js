@@ -248,6 +248,40 @@ async function run() {
     return;
   }
 
+  // Safety net: never email anyone who has already replied with real human
+  // intent, even if the reply-processor couldn't match it, hasn't run yet this
+  // hour, or the lead's status wasn't updated. A logged 'replied' event is
+  // ground truth and closes the timing gap between the hourly reply-processor
+  // and this hourly sender.
+  // EXCEPTION: a pure out-of-office (intent 'auto_reply') is NOT a real reply —
+  // those leads should still get their follow-up once they're back.
+  const dueIds = due.map(l => l.id);
+  const { data: repliedRows } = await supabase
+    .from('email_events')
+    .select('lead_id, metadata')
+    .eq('event_type', 'replied')
+    .in('lead_id', dueIds);
+  const repliedSet = new Set(
+    (repliedRows || [])
+      .filter(r => (r.metadata?.intent || r.metadata?.outcome || 'replied') !== 'auto_reply')
+      .map(r => r.lead_id)
+  );
+  if (repliedSet.size) {
+    const before = due.length;
+    due = due.filter(l => !repliedSet.has(l.id));
+    console.log(`Skipped ${before - due.length} lead(s) who already replied (safety net).`);
+    // Clear their queue state so they stop showing as due in future runs.
+    await supabase.from('leads')
+      .update({ scheduled_send_at: null })
+      .in('id', [...repliedSet])
+      .eq('status', 'queued');
+  }
+
+  if (due.length === 0) {
+    console.log('No emails due after reply filter.');
+    return;
+  }
+
   console.log(`Sending ${due.length} email(s) — ${pickedFollowups.length} follow-up, ${pickedInitials.length} new | ${sentToday || 0}/${DAILY_CAP} already sent today.\n`);
 
   let sent = 0;
