@@ -156,7 +156,7 @@ function toHtml(text, leadId) {
   // Clean link to the real site, tagged so a visit is attributed to this lead.
   // Not a redirect/masked link — just aevon.ca with a query param — so it carries
   // no deliverability risk while letting us see who was interested enough to look.
-  const siteUrl = leadId ? `https://aevon.ca/?ref=${leadId}` : 'https://aevon.ca';
+  const siteUrl = leadId ? `https://aevon.ca/demo.html?ref=${leadId}` : 'https://aevon.ca/demo.html';
 
   return `<!DOCTYPE html>
 <html>
