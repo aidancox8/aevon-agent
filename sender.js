@@ -148,7 +148,12 @@ function toHtml(text, leadId) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  const paragraphs = escaped
+  // Make bare https URLs in the body clickable (e.g. the {{DEMO}} link the
+  // sender substitutes into follow-ups). Plain-text version keeps the raw URL.
+  const linked = escaped.replace(/(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" style="color:#5254cc">$1</a>');
+
+  const paragraphs = linked
     .split(/\n\n+/)
     .map(p => `<p style="margin:0 0 14px 0">${p.replace(/\n/g, '<br>')}</p>`)
     .join('');
@@ -290,9 +295,14 @@ async function run() {
   for (const lead of due) {
     const isFollowup = lead.sequence_step === 1;
     const subject = isFollowup ? lead.followup_subject : lead.email_subject;
-    const body = isFollowup ? lead.followup_body : lead.email_body;
+    let body = isFollowup ? lead.followup_body : lead.email_body;
 
     if (!subject || !body) continue;
+
+    // Replace the {{DEMO}} token (follow-ups) with a clean, ref-tagged link to
+    // the interactive demo page. Done at send time because the ref is the lead id.
+    const demoUrl = `https://aevon.ca/demo.html?ref=${lead.id}`;
+    body = body.replace(/\{\{DEMO\}\}/g, demoUrl);
 
     process.stdout.write(`  [${isFollowup ? 'followup' : 'email'}] ${lead.business_name} <${lead.email}>... `);
 

@@ -130,7 +130,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 40 words. Friendly bump from a different angle than email 1 — do not just repeat it. Offer something small ("want me to send a 2-minute example of what I mean?") rather than re-asking the same question. No pitch.
+- Body: under 45 words. Friendly bump from a different angle than email 1 — do not just repeat it. Instead of re-asking the question, point them to a quick interactive example. End the body with a sentence like "I put together a couple of quick interactive examples of what I mean — worth a look: {{DEMO}}" and you MUST include the exact token {{DEMO}} where the link goes (it gets replaced with a real tracked link at send time). No other pitch.
 - Tone: same plain, human voice.
 
 LEAD INSIGHT (2-3 sentences): why this business fits Aevon, what workflow problems they likely have, and what specifically you would propose building if they reply.

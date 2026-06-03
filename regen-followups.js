@@ -33,10 +33,10 @@ Your first email said (subject): "${lead.email_subject}"
 First email body: "${lead.email_body}"
 
 Write a follow-up that:
-- Is under 40 words, plain and human, first person.
+- Is under 45 words, plain and human, first person.
 - Takes a DIFFERENT angle than the first email — do not just repeat or "bump" it.
-- Offers something small and concrete instead of re-asking: e.g. "want me to send a 2-minute example of what I mean for a business like yours?" — lower the cost of replying to near zero.
-- No pitch, no buzzwords, no em dashes, no "just circling back" / "bumping this".
+- Instead of re-asking, point them to a quick interactive example. End with a sentence like "I put together a couple of quick interactive examples of what I mean — worth a look: {{DEMO}}" and you MUST include the exact token {{DEMO}} where the link goes (replaced with a real tracked link at send time).
+- No other pitch, no buzzwords, no em dashes, no "just circling back" / "bumping this".
 - No sign-off (signature is added separately).
 - Subject: brief, reply-thread style (can reuse "Re: ..." of the original).
 
