@@ -18,8 +18,10 @@ const FOLLOWUP_DELAY_DAYS = 5;
 // lead found today goes out next send, not a month behind the backlog.
 const DAILY_CAP = parseInt(process.env.DAILY_CAP || '30', 10);
 // Follow-ups go out first (time-sensitive) but never take more than this share
-// of the daily cap, so new leads always keep at least the rest.
-const FOLLOWUP_MAX_SHARE = 0.5;
+// of the daily cap, so new leads always keep at least the rest. Leaned toward
+// new leads (0.3) while the fresh-lead backlog drains; raise toward 0.5 once
+// initials and follow-ups are balanced again. Env-overridable.
+const FOLLOWUP_MAX_SHARE = parseFloat(process.env.FOLLOWUP_MAX_SHARE || '0.3');
 
 // Start of "today" in Vancouver, as an ISO timestamp, for counting today's sends.
 // Last-line guard against malformed / scraper-artifact emails reaching Resend.

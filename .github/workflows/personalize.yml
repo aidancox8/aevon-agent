@@ -1,12 +1,12 @@
-name: Send Outreach Emails
+name: Personalize Leads
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 16-23 * * 1-5'  # Mon-Fri 9am-4pm PT
+    - cron: '0 13 * * 1-5'  # Mon-Fri 6am PT — before the sender runs, fills fresh copy
 
 jobs:
-  send:
+  personalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,15 +19,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Send due emails
+      - name: Personalize queued leads
         env:
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_AGENT: ${{ secrets.GEMINI_API_KEY_AGENT }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-          DAILY_CAP: ${{ secrets.DAILY_CAP }}
-          FOLLOWUP_MAX_SHARE: ${{ secrets.FOLLOWUP_MAX_SHARE }}
-        run: node sender.js
+        run: node personalizer.js
