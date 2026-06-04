@@ -7,28 +7,40 @@
  */
 
 require('dotenv').config();
-const axios = require('axios');
-const cheerio = require('cheerio');
 const supabase = require('./lib/supabase');
 const { createGenerate } = require('./lib/gemini');
+const { scrapeContext } = require('./lib/contact-finder');
 
 // Own instance — separate cooldown state from lead finders
 const generate = createGenerate(process.env.GEMINI_API_KEY);
 
+// Rich multi-page scrape (homepage + services/about) so the model gets real
+// detail to personalize on, not a 900-char homepage scrap.
 async function scrapeWebsite(url) {
-  if (!url) return null;
-  try {
-    const { data } = await axios.get(url, {
-      timeout: 8000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
-    });
-    const $ = cheerio.load(data);
-    $('script, style, nav, footer, noscript, iframe').remove();
-    const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 900);
-    return text || null;
-  } catch {
-    return null;
+  return scrapeContext(url);
+}
+
+// Robustly pull the first balanced JSON object out of a model response,
+// tolerating markdown fences and any stray text before/after it.
+function parseJsonObject(raw) {
+  if (!raw) return null;
+  let s = String(raw).replace(/```json/gi, '').replace(/```/g, '');
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') inStr = true;
+    else if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) {
+      try { return JSON.parse(s.slice(start, i + 1)); } catch { return null; }
+    } }
   }
+  return null;
 }
 
 const GEMINI_MIN_GAP = 4200;
@@ -187,15 +199,13 @@ async function run() {
       const websiteContent = await scrapeWebsite(lead.website);
       if (websiteContent) process.stdout.write(`(scraped) `);
       const prompt = buildPrompt(lead, websiteContent);
-      const raw = await rateLimitedGenerate(prompt);
-
-      // Extract JSON - handle markdown fences and stray text
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON object found in Gemini response');
-      const content = JSON.parse(jsonMatch[0]);
-
-      if (!content.email_subject || !content.email_body) {
-        throw new Error('Missing required fields in Gemini response');
+      let content = parseJsonObject(await rateLimitedGenerate(prompt));
+      // One retry — richer context occasionally yields malformed JSON.
+      if (!content || !content.email_subject || !content.email_body) {
+        content = parseJsonObject(await rateLimitedGenerate(prompt + '\n\nReturn ONLY the JSON object, nothing before or after it.'));
+      }
+      if (!content || !content.email_subject || !content.email_body) {
+        throw new Error('No valid JSON with required fields after retry');
       }
 
       const sendAt = nextEligibleAt();
