@@ -235,11 +235,33 @@ async function run() {
   if (fErr) throw new Error(`Supabase fetch (followups) failed: ${fErr.message}`);
 
   // New leads (sequence_step = 0): highest score first, then oldest in queue.
-  const { data: initials, error: iErr } = await baseFilter(
+  // Fetch a larger pool than the cap so we can re-tier named contacts ahead of
+  // role inboxes in JS without the DB's score-only limit cutting them off.
+  const { data: initialsPool, error: iErr } = await baseFilter(
     supabase.from('leads').select(cols).eq('sequence_step', 0)
   ).order('qualification_score', { ascending: false, nullsFirst: false })
-   .order('scheduled_send_at', { ascending: true }).limit(DAILY_CAP);
+   .order('scheduled_send_at', { ascending: true }).limit(Math.max(DAILY_CAP * 6, 120));
   if (iErr) throw new Error(`Supabase fetch (initials) failed: ${iErr.message}`);
+
+  // Prefer a real person's inbox over a generic role/catch-all box. Decision-
+  // makers don't read info@/contact@/sales@, so a named contact at a slightly
+  // lower score is a better send than a high-score role inbox. Stable partition
+  // keeps score order within each tier (pool already arrived score-sorted).
+  const ROLE_INBOXES = new Set([
+    'info', 'contact', 'contactus', 'contact-us', 'hello', 'hi', 'office',
+    'general', 'inquiries', 'enquiries', 'admin', 'sales', 'support', 'team',
+    'reception', 'accounts', 'account', 'mail', 'email', 'service',
+    'customerservice', 'help', 'marketing', 'connect', 'careers', 'jobs', 'hr',
+    'billing', 'orders', 'booking', 'bookings', 'reservations', 'quotes',
+    'quote', 'customs', 'foodbank', 'sold', 'noreply', 'no-reply'
+  ]);
+  const isRoleInbox = email => {
+    const local = String(email || '').split('@')[0].toLowerCase().replace(/[._-]?\d+$/, '');
+    return ROLE_INBOXES.has(local) || ROLE_INBOXES.has(local.replace(/[._-]/g, ''));
+  };
+  const named = (initialsPool || []).filter(l => !isRoleInbox(l.email));
+  const role  = (initialsPool || []).filter(l =>  isRoleInbox(l.email));
+  const initials = [...named, ...role];
 
   // Budget: follow-ups capped at half the cap; unused slots roll to new leads,
   // and unused new-lead slots roll back to follow-ups — never exceed `remaining`.

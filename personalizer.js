@@ -123,7 +123,13 @@ Write TWO emails, a lead insight, and a personalization basis.
 
 EMAIL 1 (initial outreach):
 - Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
-- Subject line: lowercase, short (2-5 words), curiosity-driven, hints at a specific pain. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos. Good examples: "the report grind", "the part that doesn't scale", "before the analysis even starts".
+- Subject line: lowercase, short (2-6 words), curiosity-driven, tied to the specific pain in sentence 1. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos.
+  CRITICAL — vary the GRAMMATICAL FORM, do not reuse a skeleton. The pattern "the [noun] grind / chase / shuffle / loop / bottleneck" has been massively overused and now reads as templated spam. Do NOT default to "the ___ grind". Rotate across genuinely different shapes, picking whichever fits this business:
+  • a plain question: "still quoting by hand?", "who chases the missing docs?"
+  • a fragment of the actual task: "re-keying every renewal", "same report, every project"
+  • a quiet observation: "two systems, one client", "before the analysis even starts"
+  • a noun phrase (use sparingly, NOT every time): "the renewal pileup"
+  Derive it from the concrete pain you name in sentence 1, so two different businesses naturally get two different subjects. If the subject you first think of contains the word "grind", rewrite it in a different form.
 - Body structure (under 65 words total):
   1. FIRST sentence: name a specific, repetitive operational pain that a business like theirs realistically lives with. Describe the grind concretely (the manual re-keying, the rebuilding-the-same-thing, the chasing). Make them think "that's me." Do NOT mention Aevon yet. If a real detail exists in the scrape (a named service, location, specialty), weave it in here — that is the single biggest thing that makes this not look like a mass email.
   2. SECOND sentence: what you'd build for THEM, and it must be CONCRETE and specific to the pain in sentence 1 (e.g. "a tool that reads the inbound request, pulls the client details, and drops them straight into your quote system"). BANNED: vague filler like "I build small tools that take that kind of work off a team's plate", "lift that off your plate", "the kind of work" — these say nothing and read as generated. Always name what the tool actually does.

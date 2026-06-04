@@ -31,3 +31,15 @@ jobs:
           DAILY_CAP: ${{ secrets.DAILY_CAP }}
           FOLLOWUP_MAX_SHARE: ${{ secrets.FOLLOWUP_MAX_SHARE }}
         run: node sender.js
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"from\":\"$FROM_EMAIL\",\"to\":\"aidan@aevon.ca\",\"subject\":\"[Aevon ALERT] Sender failed\",\"text\":\"The Send Outreach Emails workflow failed on its scheduled run. Today's batch may not have gone out. Check the run: $RUN_URL\"}"
