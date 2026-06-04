@@ -43,6 +43,13 @@ function emailRisk(email) {
   return null;
 }
 
+// Pick the best landing page for a lead. Insurance brokerages get the vertical
+// page built for them; everyone else gets the general interactive demos.
+function landingFor(industry, leadId) {
+  const page = /insurance/i.test(industry || '') ? 'insurance.html' : 'demo.html';
+  return `https://aevon.ca/${page}?ref=${leadId}`;
+}
+
 function vancouverDayStartISO() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -142,7 +149,7 @@ function isSendableDay() {
 // Plain, left-aligned personal email. No card/wrapper/hero image — a marketing
 // template look is the #1 "this was sent by a bot" tell. Mirrors how a person
 // actually types a 1:1 email, with a simple text signature.
-function toHtml(text, leadId) {
+function toHtml(text, leadId, industry) {
   const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -161,7 +168,7 @@ function toHtml(text, leadId) {
   // Clean link to the real site, tagged so a visit is attributed to this lead.
   // Not a redirect/masked link — just aevon.ca with a query param — so it carries
   // no deliverability risk while letting us see who was interested enough to look.
-  const siteUrl = leadId ? `https://aevon.ca/demo.html?ref=${leadId}` : 'https://aevon.ca/demo.html';
+  const siteUrl = leadId ? landingFor(industry, leadId) : 'https://aevon.ca/demo.html';
 
   return `<!DOCTYPE html>
 <html>
@@ -214,7 +221,7 @@ async function run() {
     return;
   }
 
-  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, sequence_step, qualification_score, scheduled_send_at';
+  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, sequence_step, qualification_score, scheduled_send_at, industry';
   const baseFilter = q => q
     .eq('status', 'queued')
     .not('email_subject', 'is', null)
@@ -301,7 +308,7 @@ async function run() {
 
     // Replace the {{DEMO}} token (follow-ups) with a clean, ref-tagged link to
     // the interactive demo page. Done at send time because the ref is the lead id.
-    const demoUrl = `https://aevon.ca/demo.html?ref=${lead.id}`;
+    const demoUrl = landingFor(lead.industry, lead.id);
     body = body.replace(/\{\{DEMO\}\}/g, demoUrl);
 
     process.stdout.write(`  [${isFollowup ? 'followup' : 'email'}] ${lead.business_name} <${lead.email}>... `);
@@ -327,7 +334,7 @@ async function run() {
         to: lead.email,
         subject,
         text: body,
-        html: toHtml(body, lead.id),
+        html: toHtml(body, lead.id, lead.industry),
       });
 
       if (sendError) throw new Error(sendError.message);
