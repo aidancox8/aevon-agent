@@ -113,10 +113,11 @@ EMAIL 1 (initial outreach):
 - Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
 - Subject line: lowercase, short (2-5 words), curiosity-driven, hints at a specific pain. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos. Good examples: "the report grind", "the part that doesn't scale", "before the analysis even starts".
 - Body structure (under 65 words total):
-  1. FIRST sentence: name a specific, repetitive operational pain that a business like theirs realistically lives with. Describe the grind concretely (the manual re-keying, the rebuilding-the-same-thing, the chasing). Make them think "that's me." Do NOT mention Aevon yet.
-  2. SECOND sentence: one short clause on what you do, framed as relief for THAT pain ("I build small tools that take that kind of work off a team's plate"). Aevon as a verb for them, not a company intro.
-  3. THIRD: a specific yes/no-style hypothesis question that is easy to answer in 5 seconds — "Is that a real time-sink for you, or something you've already handled?" NOT the open-ended "what is the most time-consuming part of your workflow" (that asks them to do unpaid homework).
+  1. FIRST sentence: name a specific, repetitive operational pain that a business like theirs realistically lives with. Describe the grind concretely (the manual re-keying, the rebuilding-the-same-thing, the chasing). Make them think "that's me." Do NOT mention Aevon yet. If a real detail exists in the scrape (a named service, location, specialty), weave it in here — that is the single biggest thing that makes this not look like a mass email.
+  2. SECOND sentence: what you'd build for THEM, and it must be CONCRETE and specific to the pain in sentence 1 (e.g. "a tool that reads the inbound request, pulls the client details, and drops them straight into your quote system"). BANNED: vague filler like "I build small tools that take that kind of work off a team's plate", "lift that off your plate", "the kind of work" — these say nothing and read as generated. Always name what the tool actually does.
+  3. THIRD: a short, easy-to-answer question. Do NOT reuse the same phrasing every time — vary it. Rotate among forms like: "Worth fixing, or already handled?" / "Is that eating real time for you?" / "Sound familiar, or am I off base?" / "How are you handling that today?" Pick whichever fits the email; never default to one stock line.
   - No sign-off — the signature block handles that.
+  - Word choice: say "custom tool", "small app", or "AI agent" — never "tiny" (it undersells). Vary it; don't repeat the same noun used in nearby sentences.
 
 CRITICAL anti-fabrication rules (read carefully):
 - You may ONLY state a concrete fact about THIS specific business (a named service, a recent project, a stated specialty, team size, locations, awards) if it appears verbatim in the "Scraped from their website" text above. If it is not in the scrape, you do NOT know it.
@@ -126,7 +127,8 @@ CRITICAL anti-fabrication rules (read carefully):
 
 Other rules:
 - Do NOT pitch a specific solution or product category. Do NOT open with flattery. Do NOT call Aevon a "shop".
-- Tone: direct, human, a little casual. Like a person who actually understands their business, not a vendor. No buzzwords, no em dashes, no filler ("leverage", "streamline", "fragmentation", "off-the-shelf", "bridges the gap", "unified solution", "high volume of").
+- Tone: direct, human, a little casual. Like a person who actually understands their business, not a vendor. No buzzwords, no em dashes, no filler ("leverage", "streamline", "fragmentation", "off-the-shelf", "bridges the gap", "unified solution", "high volume of", "take that kind of work off a team's plate", "tiny").
+- Each email must feel DIFFERENT from the last one written for the same industry. Vary sentence structure, the specific sub-task you name, and the closing question. Two brokers who compare emails should not see the same template.
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
