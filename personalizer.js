@@ -20,6 +20,23 @@ async function scrapeWebsite(url) {
   return scrapeContext(url);
 }
 
+// Hard cap on any async step so one slow site or a stuck API call can never
+// freeze the whole run (a single hung lead once stalled a run for 90 min).
+function withTimeout(promise, ms, label) {
+  let timer;
+  const guard = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
+}
+
+// Normalize a subject for duplicate detection: lowercase, strip punctuation and
+// extra spaces. Used to stop a batch of same-industry leads all getting the
+// identical subject line (e.g. three mortgage leads -> "who chases the docs").
+function normSubject(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 // Robustly pull the first balanced JSON object out of a model response,
 // tolerating markdown fences and any stray text before/after it.
 function parseJsonObject(raw) {
@@ -198,22 +215,35 @@ async function run() {
 
   let success = 0;
   let failed = 0;
+  // Subjects already used in THIS batch, so same-industry leads don't all land
+  // on the identical subject line.
+  const usedSubjects = new Set();
 
   for (const lead of leads) {
     process.stdout.write(`  [${lead.business_name}]... `);
 
     try {
-      const websiteContent = await scrapeWebsite(lead.website);
+      // Scrape is best-effort: on timeout/failure, write the email without it.
+      const websiteContent = await withTimeout(scrapeWebsite(lead.website), 15000, 'scrape').catch(() => null);
       if (websiteContent) process.stdout.write(`(scraped) `);
       const prompt = buildPrompt(lead, websiteContent);
-      let content = parseJsonObject(await rateLimitedGenerate(prompt));
+      let content = parseJsonObject(await withTimeout(rateLimitedGenerate(prompt), 60000, 'gemini'));
       // One retry — richer context occasionally yields malformed JSON.
       if (!content || !content.email_subject || !content.email_body) {
-        content = parseJsonObject(await rateLimitedGenerate(prompt + '\n\nReturn ONLY the JSON object, nothing before or after it.'));
+        content = parseJsonObject(await withTimeout(rateLimitedGenerate(prompt + '\n\nReturn ONLY the JSON object, nothing before or after it.'), 60000, 'gemini'));
       }
       if (!content || !content.email_subject || !content.email_body) {
         throw new Error('No valid JSON with required fields after retry');
       }
+
+      // If this subject duplicates one already used in the batch, regenerate it
+      // once with an explicit instruction to pick a different form.
+      if (usedSubjects.has(normSubject(content.email_subject))) {
+        const dedupPrompt = prompt + `\n\nThe subject line "${content.email_subject}" has already been used for another business in this batch. Write the SAME email but with a DIFFERENT subject line, in a different grammatical form. Return ONLY the JSON object.`;
+        const retry = parseJsonObject(await withTimeout(rateLimitedGenerate(dedupPrompt), 60000, 'gemini'));
+        if (retry && retry.email_subject && retry.email_body) content = retry;
+      }
+      usedSubjects.add(normSubject(content.email_subject));
 
       const sendAt = nextEligibleAt();
 
