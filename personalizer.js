@@ -146,7 +146,7 @@ EMAIL 1 (initial outreach):
   • a fragment of the actual task: "re-keying every renewal", "same report, every project"
   • a quiet observation: "two systems, one client", "before the analysis even starts"
   • a noun phrase (use sparingly, NOT every time): "the renewal pileup"
-  Derive it from the area of work you ask about, so two different businesses naturally get two different subjects. If the subject you first think of contains the word "grind", rewrite it in a different form.
+  Derive it from the area of work you ask about, so two different businesses naturally get two different subjects. If the subject you first think of contains the word "grind", rewrite it in a different form. The bullet examples above show FORM ONLY — NEVER output any of them word-for-word (especially "still quoting by hand?" or "re-keying every renewal"); write a fresh subject specific to THIS business.
 - Body structure (under 65 words total):
   This email is an ASK, not a pitch. The ONLY approach that has earned a positive reply so far was: briefly say who we are, make one honest observation, then ask an open question about their biggest time-sink. Do exactly that here. Asking what their biggest issue is consistently beats asserting a pain and pitching a fix.
   1. ONE line of plain context: that Aevon builds custom software and AI agents that take repetitive, manual admin work off small teams. One sentence — it earns the right to ask.
@@ -215,9 +215,13 @@ async function run() {
 
   let success = 0;
   let failed = 0;
-  // Subjects already used in THIS batch, so same-industry leads don't all land
-  // on the identical subject line.
+  // Subjects already used — both ones already saved on other queued leads and
+  // ones generated in THIS batch — so same-industry leads don't all land on the
+  // identical subject line across runs.
   const usedSubjects = new Set();
+  const { data: existingSubs } = await supabase
+    .from('leads').select('email_subject').not('email_subject', 'is', null).limit(2000);
+  (existingSubs || []).forEach(r => usedSubjects.add(normSubject(r.email_subject)));
 
   for (const lead of leads) {
     process.stdout.write(`  [${lead.business_name}]... `);
