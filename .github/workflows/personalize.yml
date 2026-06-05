@@ -2,6 +2,11 @@ name: Personalize Leads
 
 on:
   workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max leads to personalize (blank = all)'
+        required: false
+        default: ''
   schedule:
     - cron: '0 13 * * 1-5'  # Mon-Fri 6am PT — before the sender runs, fills fresh copy
 
@@ -27,7 +32,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node personalizer.js
+        run: node personalizer.js ${{ inputs.limit != '' && format('--limit {0}', inputs.limit) || '' }}
 
       - name: Alert on failure
         if: failure()
