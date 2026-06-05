@@ -1,0 +1,41 @@
+name: Repeat Visitor Signal
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '10 0 * * 2-6'  # ~5:10pm PT Mon-Fri (00:10 UTC Tue-Sat) — end-of-day digest
+
+jobs:
+  repeat-visitors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detect repeat visitors
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: node repeat-visitors.js
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"from\":\"$FROM_EMAIL\",\"to\":\"aidan@aevon.ca\",\"subject\":\"[Aevon ALERT] Repeat-visitor job failed\",\"text\":\"The Repeat Visitor Signal workflow failed on its scheduled run. Check the run: $RUN_URL\"}"
