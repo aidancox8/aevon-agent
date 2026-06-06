@@ -38,6 +38,14 @@ function emailRisk(email) {
   if (/^(corporation|email|phone|fax|tel|contact|info|office|mailto|address|hours|monday|tuesday|wednesday|thursday|friday)[a-z]{3,}/.test(local)) {
     return 'concatenated-word artifact';
   }
+  // A mailbox word with 1-3 junk letters stuck to the front: "ushello@" (us+hello),
+  // "ninfo@" (n+info), "drhello@" — from scraping "contact us hello@" etc. Flag
+  // when a known mailbox word sits at position 1-3 but the local doesn't simply
+  // START with that word (so clean "info@"/"hello@" are left alone).
+  var roleWord = '(info|hello|contact|sales|admin|office|enquir|inquir|support|reception|booking|mail|us)';
+  if (new RegExp('^[a-z]{1,3}' + roleWord).test(local) && !new RegExp('^' + roleWord).test(local)) {
+    return 'glued role-word artifact';
+  }
   // Absurdly long local part (concatenated text blob).
   if (local.length > 40) return 'over-long local part';
   return null;

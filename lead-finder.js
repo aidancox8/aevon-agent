@@ -279,11 +279,18 @@ async function run() {
         pageToken = data.nextPageToken || null;
         page++;
 
-        // Filter dupes first (in-memory, instant)
+        // Filter dupes + out-of-area first (in-memory, instant)
         const fresh = places.filter(place => {
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
           totalFound++;
+          // Geography guard: Google Places sometimes returns matches outside the
+          // queried city (even other countries — an AZ business once slipped in).
+          // Keep only addresses clearly in BC, Canada.
+          const addr = place.formattedAddress || '';
+          if (!/\bBC\b|british columbia/i.test(addr) || !/canada/i.test(addr)) {
+            totalSkipped++; return false;
+          }
           if (isDuplicate(dedup, name, website)) { totalSkipped++; return false; }
           return true;
         });

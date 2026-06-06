@@ -261,6 +261,11 @@ async function run() {
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
           totalFound++;
+          // Geography guard: keep only addresses clearly in BC, Canada.
+          const addr = place.formattedAddress || '';
+          if (!/\bBC\b|british columbia/i.test(addr) || !/canada/i.test(addr)) {
+            totalSkipped++; return false;
+          }
           if (isDuplicate(dedup, name, website)) { totalSkipped++; return false; }
           return true;
         });
