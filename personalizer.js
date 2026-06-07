@@ -136,7 +136,7 @@ ${lead.qualification_notes ? `- What we know about them: ${lead.qualification_no
 ${lead.lead_insights ? `- Their likely pain points: ${lead.lead_insights}` : ''}
 ${websiteContent ? `- Scraped from their website: ${websiteContent}` : ''}
 
-Write TWO emails, a lead insight, and a personalization basis.
+Write THREE emails, a lead insight, and a personalization basis.
 
 EMAIL 1 (initial outreach):
 - Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
@@ -171,6 +171,11 @@ EMAIL 2 (follow-up, send 5 days later if no reply):
 - Body: under 45 words, question-led like email 1. A friendly bump that re-asks about their biggest time-sink from a slightly DIFFERENT angle than email 1 — do not just repeat it. If it feels natural, you MAY add at the very end that it can be easier to show than describe, with a couple of quick examples, using the exact token {{DEMO}} where the link goes (it is replaced with a real tracked link at send time). Keep it an ask first; the examples are optional and secondary. No pitch.
 - Tone: same plain, human voice.
 
+EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):
+- Subject line: brief, reply-thread style.
+- Body: under 40 words. This is the LAST time you'll reach out, and you say so plainly — that honesty creates a little gentle urgency for anyone with even slight interest. No guilt-trip, no pressure. Acknowledge they're busy, say you'll leave it here, and leave the door open with one easy-to-answer line. Shape (do NOT copy verbatim): "I'll leave it here so I'm not cluttering your inbox. If [the specific thing from email 1] is ever worth a look, just reply and I'll pick it back up. Either way, all the best." No pitch, no link.
+- Tone: same plain, human voice.
+
 LEAD INSIGHT (2-3 sentences): why this business fits Aevon, what workflow problems they likely have, and what specifically you would propose building if they reply.
 
 PERSONALIZATION BASIS (one short line): state exactly what the email's opening pain was based on. If it used a real detail from the scrape, name it (e.g. "site lists custom syndicated reports"). If it was industry-level only, say "industry-level, no specific scrape detail". This is for the human to audit for hallucination.
@@ -181,6 +186,8 @@ Format your response as valid JSON only, no markdown, no explanation:
   "email_body": "...",
   "followup_subject": "...",
   "followup_body": "...",
+  "followup2_subject": "...",
+  "followup2_body": "...",
   "lead_insights": "...",
   "personalization_basis": "..."
 }`;
@@ -258,6 +265,8 @@ async function run() {
           email_body: content.email_body,
           followup_subject: content.followup_subject,
           followup_body: content.followup_body,
+          followup2_subject: content.followup2_subject || null,
+          followup2_body: content.followup2_body || null,
           lead_insights: content.lead_insights || null,
           personalization_basis: content.personalization_basis || null,
           scheduled_send_at: sendAt,

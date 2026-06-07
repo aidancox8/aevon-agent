@@ -229,16 +229,17 @@ async function run() {
     return;
   }
 
-  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, sequence_step, qualification_score, scheduled_send_at, industry';
+  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry';
   const baseFilter = q => q
     .eq('status', 'queued')
     .not('email_subject', 'is', null)
     .not('email', 'is', null)
     .lte('scheduled_send_at', now);
 
-  // Follow-ups (sequence_step = 1): time-sensitive, sent first, oldest scheduled first.
+  // Follow-ups (sequence_step 1 = 2nd email, 2 = 3rd/final): time-sensitive,
+  // sent first, oldest scheduled first.
   const { data: followups, error: fErr } = await baseFilter(
-    supabase.from('leads').select(cols).eq('sequence_step', 1)
+    supabase.from('leads').select(cols).in('sequence_step', [1, 2])
   ).order('scheduled_send_at', { ascending: true }).limit(DAILY_CAP);
   if (fErr) throw new Error(`Supabase fetch (followups) failed: ${fErr.message}`);
 
@@ -330,18 +331,25 @@ async function run() {
   let failed = 0;
 
   for (const lead of due) {
-    const isFollowup = lead.sequence_step === 1;
-    const subject = isFollowup ? lead.followup_subject : lead.email_subject;
-    let body = isFollowup ? lead.followup_body : lead.email_body;
+    const step = lead.sequence_step;
+    const subject = step === 2 ? lead.followup2_subject : step === 1 ? lead.followup_subject : lead.email_subject;
+    let body = step === 2 ? lead.followup2_body : step === 1 ? lead.followup_body : lead.email_body;
 
-    if (!subject || !body) continue;
+    if (!subject || !body) {
+      // No copy for this step (e.g. an older lead with no 3rd-email text). End
+      // the sequence cleanly so it isn't re-fetched and skipped every run.
+      if (step >= 1) {
+        await supabase.from('leads').update({ status: 'dont_contact', scheduled_send_at: null }).eq('id', lead.id);
+      }
+      continue;
+    }
 
     // Replace the {{DEMO}} token (follow-ups) with a clean, ref-tagged link to
     // the interactive demo page. Done at send time because the ref is the lead id.
     const demoUrl = landingFor(lead.industry, lead.id);
     body = body.replace(/\{\{DEMO\}\}/g, demoUrl);
 
-    process.stdout.write(`  [${isFollowup ? 'followup' : 'email'}] ${lead.business_name} <${lead.email}>... `);
+    process.stdout.write(`  [${step === 0 ? 'email' : 'followup ' + step}] ${lead.business_name} <${lead.email}>... `);
 
     // Pre-send validation: never hand a malformed/artifact address to Resend.
     // A bounce hurts the young domain more than skipping does. Park it for review.
@@ -371,7 +379,7 @@ async function run() {
 
       const resendId = sendData?.id;
       const nextStep = lead.sequence_step + 1;
-      const isLastStep = nextStep >= 2;
+      const isLastStep = nextStep >= 3;
 
       const update = {
         sequence_step: nextStep,
