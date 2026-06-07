@@ -79,13 +79,7 @@ async function run() {
     repeats.push({ leadId, lead: g.lead || {}, count: sessions, last });
   }
 
-  if (repeats.length === 0) {
-    console.log('No repeat visitors today. No email sent.');
-    return;
-  }
-
   repeats.sort((a, b) => b.count - a.count || b.last - a.last);
-
   const lines = repeats.map(r => {
     const L = r.lead || {};
     const name = L.business_name || '(unknown business)';
@@ -94,23 +88,50 @@ async function run() {
     return `• ${name}${ind}\n    ${L.email || 'no email'}${site}\n    ${r.count} visits, last ${vancouverTime(new Date(r.last).toISOString())}`;
   });
 
-  const text = [
-    `${repeats.length} lead${repeats.length > 1 ? 's' : ''} came back to the demo today (2+ visits). These are your warmest signals.`,
-    '',
-    ...lines,
-    '',
-    'A repeat visit means they looked, left, and came back. Worth a thoughtful, well-timed follow-up. Do NOT reference the visit (you only know via tracking) and do not over-chase a single return.',
-  ].join('\n');
+  // Explicit "I'm interested" button clicks in the last day — the strongest
+  // signal short of a reply. Listed first; includes any note they left.
+  const { data: intEvents } = await supabase
+    .from('email_events')
+    .select('created_at, metadata, leads(business_name, email, website, industry)')
+    .eq('event_type', 'interested')
+    .gte('created_at', new Date(dayAgo).toISOString())
+    .order('created_at', { ascending: false });
+  const interested = intEvents || [];
+
+  if (repeats.length === 0 && interested.length === 0) {
+    console.log('No warm signals today. No email sent.');
+    return;
+  }
+
+  const out = [];
+  if (interested.length) {
+    out.push(`${interested.length} lead${interested.length > 1 ? 's' : ''} clicked "I'm interested" today. Reach out to these first.`, '');
+    interested.forEach(ev => {
+      const L = ev.leads || {};
+      const name = L.business_name || '(unknown business)';
+      const note = ev.metadata && ev.metadata.note ? `\n    note: "${ev.metadata.note}"` : '';
+      out.push(`★ ${name}${L.industry ? ` [${L.industry}]` : ''}\n    ${L.email || 'no email'}${L.website ? ` | ${L.website}` : ''}${note}\n    clicked ${vancouverTime(ev.created_at)}`);
+    });
+    out.push('');
+  }
+  if (repeats.length) {
+    out.push(`${repeats.length} lead${repeats.length > 1 ? 's' : ''} came back to the demo today (2+ visits).`, '', ...lines, '',
+      'A repeat visit means they looked, left, and came back. Worth a thoughtful follow-up. Do NOT reference the tracking, and do not over-chase a single return.');
+  }
+
+  const subjBits = [];
+  if (interested.length) subjBits.push(`${interested.length} interested`);
+  if (repeats.length) subjBits.push(`${repeats.length} repeat visitor${repeats.length > 1 ? 's' : ''}`);
 
   const { error: sendErr } = await resend.emails.send({
     from: `${FROM_NAME} <${FROM}>`,
     reply_to: TO,
     to: TO,
-    subject: `[Aevon SIGNAL] ${repeats.length} repeat visitor${repeats.length > 1 ? 's' : ''} today`,
-    text,
+    subject: `[Aevon SIGNAL] ${subjBits.join(' + ')}`,
+    text: out.join('\n'),
   });
   if (sendErr) throw new Error(`send digest failed: ${sendErr.message}`);
-  console.log(`Sent repeat-visitor digest: ${repeats.length} lead(s).`);
+  console.log(`Sent signal digest: ${interested.length} interested, ${repeats.length} repeat.`);
 }
 
 run().catch(err => { console.error(err); process.exit(1); });
