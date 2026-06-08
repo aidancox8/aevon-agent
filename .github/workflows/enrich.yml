@@ -1,0 +1,42 @@
+name: Enrich Lead Emails
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max no-email leads to re-scrape (blank = all)'
+        required: false
+        default: ''
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Enrich no-email leads
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node enrich-emails.js ${{ inputs.limit != '' && format('--limit {0}', inputs.limit) || '' }}
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"from\":\"$FROM_EMAIL\",\"to\":\"aidan@aevon.ca\",\"subject\":\"[Aevon ALERT] Enrich job failed\",\"text\":\"The Enrich Lead Emails workflow failed. Check the run: $RUN_URL\"}"
