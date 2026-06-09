@@ -391,7 +391,7 @@ async function run() {
       };
 
       if (resendId) {
-        update[isFollowup ? 'resend_followup_id' : 'resend_email_id'] = resendId;
+        update[step === 0 ? 'resend_email_id' : 'resend_followup_id'] = resendId;
       }
 
       await supabase.from('leads').update(update).eq('id', lead.id);
@@ -402,7 +402,7 @@ async function run() {
           lead_id: lead.id,
           resend_email_id: resendId,
           event_type: 'sent',
-          metadata: { subject, is_followup: isFollowup },
+          metadata: { subject, step, is_followup: step > 0 },
         });
       }
 
