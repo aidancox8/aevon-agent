@@ -69,23 +69,32 @@ async function run() {
     return sessions;
   }
 
+  // Hot leads we alert on at FIRST visit, not just repeats (warm conversations
+  // where the user sent a tailored link and wants to know the moment it's opened).
+  const WATCHLIST = [
+    '9a3d60b0-874b-4347-b232-1e351b0e0c03', // Jean Seguin / Vancouver Business Brokers
+    '23260e23-b1e3-4deb-9b69-582c92d2be2a', // Restaurant Business Broker (also Jean)
+  ];
+
   const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
   const repeats = [];
   for (const [leadId, g] of byLead) {
     const sessions = countSessions(g.visits);
-    if (sessions < 2) continue;
     const last = Math.max(...g.visits.map(t => new Date(t).getTime()));
-    if (last < dayAgo) continue; // only surface leads who came back recently
-    repeats.push({ leadId, lead: g.lead || {}, count: sessions, last });
+    if (last < dayAgo) continue; // only surface recent activity
+    const watched = WATCHLIST.includes(leadId);
+    if (sessions < 2 && !watched) continue;
+    repeats.push({ leadId, lead: g.lead || {}, count: sessions, last, watched });
   }
 
-  repeats.sort((a, b) => b.count - a.count || b.last - a.last);
+  repeats.sort((a, b) => (b.watched ? 1 : 0) - (a.watched ? 1 : 0) || b.count - a.count || b.last - a.last);
   const lines = repeats.map(r => {
     const L = r.lead || {};
     const name = L.business_name || '(unknown business)';
     const site = L.website ? ` | ${L.website}` : '';
     const ind = L.industry ? ` [${L.industry}]` : '';
-    return `• ${name}${ind}\n    ${L.email || 'no email'}${site}\n    ${r.count} visits, last ${vancouverTime(new Date(r.last).toISOString())}`;
+    const tag = r.watched ? '★ WATCHED LEAD · ' : '';
+    return `• ${tag}${name}${ind}\n    ${L.email || 'no email'}${site}\n    ${r.count} visit${r.count > 1 ? 's' : ''}, last ${vancouverTime(new Date(r.last).toISOString())}`;
   });
 
   // Explicit "I'm interested" button clicks in the last day — the strongest
