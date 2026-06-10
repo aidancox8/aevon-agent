@@ -54,7 +54,11 @@ function emailRisk(email) {
 // Pick the best landing page for a lead. Insurance brokerages get the vertical
 // page built for them; everyone else gets the general interactive demos.
 function landingFor(industry, leadId) {
-  const page = /insurance/i.test(industry || '') ? 'insurance.html' : 'demo.html';
+  const i = industry || '';
+  let page = 'demo.html';
+  if (/insurance/i.test(i)) page = 'insurance.html';
+  else if (/mortgage|lending/i.test(i)) page = 'mortgage.html';
+  else if (/real estate|realtor|realty/i.test(i)) page = 'realestate.html';
   return `https://aevon.ca/${page}?ref=${leadId}`;
 }
 
