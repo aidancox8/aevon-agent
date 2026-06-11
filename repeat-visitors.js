@@ -26,7 +26,13 @@ const TO = 'aidan@aevon.ca';
 function isBotUa(ua) {
   const u = (ua || '').toLowerCase();
   if (!u) return true; // no UA at all -> not a real browser visit
-  return /x11;\s*linux|headless|bot|crawler|spider|python-requests|curl|wget|preview|scanner/.test(u);
+  if (/x11;\s*linux|headless|bot|crawler|spider|python-requests|curl|wget|preview|scanner/.test(u)) return true;
+  // Email-security gateways re-scan links with spoofed, OUTDATED browser UAs
+  // (observed: Chrome 79/117/124 rotating hourly). Real visitors run current
+  // builds. Treat anything older than Chrome 130 as a scanner.
+  const m = u.match(/chrome\/(\d+)/);
+  if (m && parseInt(m[1], 10) < 130) return true;
+  return false;
 }
 
 function vancouverTime(iso) {
