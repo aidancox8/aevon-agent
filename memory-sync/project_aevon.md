@@ -160,6 +160,8 @@ User's goal: **Aevon should run as automated and agent-led as possible.** He doe
 - Path: cron the finders + personalizer weekly; build a weekly digest the agent emails Aidan (sent / replies / needs-a-call) so he monitors in 2 min not by logging in; only enable reply auto-send after draft quality is proven.
 - Helper scripts added 2026-05-31: `personalizer.js --limit N` (score-ordered batch), `schedule-monday.js` (pull top-score leads forward to fill a send day), `regen-followups.js` (rewrite pending follow-ups), `enrich-emails.js` (re-scrape no-email leads). NOTE schedule-monday/nextEligibleAt use UTC "next weekday" — on Sunday-night PT this skips Monday (lands Tuesday); verify against Vancouver day when scheduling.
 
+**Mobile/cloud context sync (2026-06-10):** `aevon-agent` repo root has CLAUDE.md (hard rules + system map) and `memory-sync/` (copies of project_aevon + feedback files, reference files with secrets EXCLUDED). Cloud/phone claude.ai/code sessions on that repo boot with full context. RE-SYNC memory-sync/ whenever these local memory files change meaningfully.
+
 ## Current state (2026-06-09, supersedes stale bits above)
 
 - **Email strategy = ASK-LED** (pivoted 2026-06-06 after Jean's reply proved it): email 1 is one line of context + one honest observation + an open question about their biggest time-sink. NO pitch, NO link, NO asserted pain. Email 2 re-asks from a new angle, may add {{DEMO}}. **Email 3 (new)** = final touch, "I'll leave it here" plain-honesty urgency, no link. Sequence is 3 steps; sender ends leads at step 3 (dont_contact).
