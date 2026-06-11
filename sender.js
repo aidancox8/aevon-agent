@@ -48,6 +48,16 @@ function emailRisk(email) {
   }
   // Absurdly long local part (concatenated text blob).
   if (local.length > 40) return 'over-long local part';
+  // URL-encoded junk ("%20jnsandhu@") — percent has no business in a real address.
+  if (local.includes('%')) return 'url-encoded artifact';
+  // Phone number glued to the front ("583-6000e-mailinfo@").
+  if (/^\d{3}[-.]\d{3,4}/.test(local)) return 'phone-prefix artifact';
+  // The word "e-mail" embedded in the local part — scrape label residue.
+  if (/e-?mail/.test(local) && local.length > 8) return 'email-label artifact';
+  // Known web-vendor/theme domains scraped from site templates, never the business.
+  if (/^(qodeinteractive\.com|example\.com|sentry\.io|wixpress\.com|godaddy\.com|domain\.com|yourdomain\.com|email\.com|sentry\.wixpress\.com)$/.test(domain)) {
+    return 'template-vendor domain';
+  }
   return null;
 }
 
