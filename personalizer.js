@@ -9,7 +9,7 @@
 require('dotenv').config();
 const supabase = require('./lib/supabase');
 const { createGenerate } = require('./lib/gemini');
-const { scrapeContext } = require('./lib/contact-finder');
+const { scrapeContext, classifyEmail } = require('./lib/contact-finder');
 
 // Own instance — separate cooldown state from lead finders
 const generate = createGenerate(process.env.GEMINI_API_KEY);
@@ -224,8 +224,11 @@ async function run() {
   let limit = null;
   for (let i = 0; i < args.length; i++) if (args[i] === '--limit') limit = parseInt(args[++i], 10);
 
-  // Fetch leads that need personalization (no email content yet, have an email address)
-  let q = supabase
+  // Fetch leads that need personalization (no email content yet, have an email
+  // address), score-ordered. We pull the FULL pool (not the DB --limit) so we can
+  // re-tier named contacts ahead of role inboxes before applying the limit — that
+  // way the scarce Gemini quota goes to the leads most likely to send AND convert.
+  const { data: pool, error } = await supabase
     .from('leads')
     .select('id, business_name, industry, city, website, email, lead_insights, qualification_notes')
     .is('email_subject', null)
@@ -233,16 +236,22 @@ async function run() {
     .eq('status', 'queued')
     .order('qualification_score', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: true });
-  if (limit) q = q.limit(limit);
-  const { data: leads, error } = await q;
 
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`);
-  if (!leads || leads.length === 0) {
+  if (!pool || pool.length === 0) {
     console.log('No leads to personalize.');
     return;
   }
 
-  console.log(`Personalizing ${leads.length} leads...\n`);
+  // Named contacts first (a decision-maker's personal inbox beats info@/sales@ for
+  // both reachability and reply rate), preserving score order within each tier.
+  const isNamed = l => classifyEmail((l.email || '').split('@')[0]) === 'personal';
+  const named = pool.filter(isNamed);
+  const role = pool.filter(l => !isNamed(l));
+  let leads = [...named, ...role];
+  if (limit) leads = leads.slice(0, limit);
+
+  console.log(`Personalizing ${leads.length} leads (${named.length} named, ${role.length} role/generic in pool)...\n`);
 
   let success = 0;
   let failed = 0;
