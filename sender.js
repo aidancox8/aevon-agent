@@ -6,7 +6,35 @@
 
 require('dotenv').config();
 const { Resend } = require('resend');
+const dns = require('dns').promises;
+// Pin clean public resolvers so the MX guard works even on hosts whose ISP
+// hijacks NXDOMAIN (which would otherwise make dead domains look reachable).
+try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
+
+// Cached MX check: a domain with no mail server (and no A-record fallback) will
+// hard-bounce. Skipping it protects the young domain's sender reputation, which
+// is worth far more than the one send. Cache per-batch so repeat domains are free.
+const mxCache = new Map();
+async function domainAcceptsMail(email) {
+  const domain = (email.split('@')[1] || '').toLowerCase().trim();
+  if (!domain) return false;
+  if (mxCache.has(domain)) return mxCache.get(domain);
+  let ok = true;
+  try {
+    const mx = await dns.resolveMx(domain);
+    // A live mail domain has at least one MX with a real host. Requiring MX (not an
+    // A-record fallback) also defeats ISP NXDOMAIN hijacking, which injects A records
+    // for dead domains but never MX.
+    ok = Array.isArray(mx) && mx.some(r => r && r.exchange && r.exchange.trim());
+  } catch (e) {
+    // ENOTFOUND / ENODATA = no such domain/records -> cannot receive mail -> skip.
+    // Any other DNS error (timeout, SERVFAIL) is transient: let it through, don't over-skip.
+    ok = !(e.code === 'ENOTFOUND' || e.code === 'ENODATA');
+  }
+  mxCache.set(domain, ok);
+  return ok;
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -374,6 +402,18 @@ async function run() {
         status: 'paused',
         scheduled_send_at: null,
         notes: `Held by sender: email looks invalid (${risk}). Needs a valid address.`,
+      }).eq('id', lead.id);
+      failed++;
+      continue;
+    }
+
+    // MX guard: confirm the domain can actually receive mail before sending.
+    if (!(await domainAcceptsMail(lead.email))) {
+      console.log('SKIPPED (no MX, domain cannot receive mail)');
+      await supabase.from('leads').update({
+        status: 'paused',
+        scheduled_send_at: null,
+        notes: 'Held by sender: domain has no mail server (would hard-bounce).',
       }).eq('id', lead.id);
       failed++;
       continue;
