@@ -42,6 +42,42 @@ function vancouverTime(iso) {
   }).format(new Date(iso));
 }
 
+// ---- Open-tracking deliverability watch ----
+// Open tracking (pixel) was enabled 2026-06-11. Its only real risk is landing mail
+// in spam, which the send API CANNOT see directly (spam-foldered mail still counts
+// as "delivered"). The one hard negative signal we can watch is the spam-complaint
+// rate. Baseline before the pixel: 0 complaints / 588 sent, 88.8% delivered, 6.5%
+// bounce. We compare the post-pixel cohort and alert if complaints appear.
+const OPEN_TRACKING_SINCE = '2026-06-12T07:00:00Z'; // start of 2026-06-12 PT, first full post-pixel day
+const BASELINE = { deliveryPct: 88.8, bouncePct: 6.5, complaintPct: 0 };
+
+async function deliverabilityHealth() {
+  const { data } = await supabase
+    .from('email_events')
+    .select('event_type')
+    .in('event_type', ['sent', 'delivered', 'bounced', 'complained'])
+    .gte('created_at', OPEN_TRACKING_SINCE);
+  const c = { sent: 0, delivered: 0, bounced: 0, complained: 0 };
+  (data || []).forEach(e => { c[e.event_type === 'complained' ? 'complained' : e.event_type]++; });
+  if (c.sent < 50) {
+    return { line: `Deliverability (open-tracking watch): only ${c.sent} sent since the pixel went on, too few to judge yet.`, alert: false };
+  }
+  const deliveryPct = +(100 * c.delivered / c.sent).toFixed(1);
+  const bouncePct = +(100 * c.bounced / c.sent).toFixed(1);
+  const complaintPct = +(100 * c.complained / c.sent).toFixed(3);
+  // The pixel's harm shows as spam complaints. >0.1% is the industry danger line.
+  const alert = complaintPct > 0.1;
+  const verdict = alert
+    ? `>> ALERT: spam complaints at ${complaintPct}% (baseline 0%). The open-tracking pixel is likely hurting inbox placement. TURN OPEN TRACKING OFF in Resend (Domains > aevon.ca > disable Open Tracking).`
+    : `Complaints ${complaintPct}% (baseline 0). No deliverability harm detected from the pixel.`;
+  const line = [
+    `Deliverability (open-tracking watch, ${c.sent} sent since pixel):`,
+    `  delivered ${deliveryPct}% (baseline ${BASELINE.deliveryPct}) | bounce ${bouncePct}% (baseline ${BASELINE.bouncePct}) | complaints ${complaintPct}% (baseline 0)`,
+    `  ${verdict}`,
+  ].join('\n');
+  return { line, alert, alertText: verdict };
+}
+
 async function run() {
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const { data: events, error } = await supabase
@@ -113,7 +149,20 @@ async function run() {
     .order('created_at', { ascending: false });
   const interested = intEvents || [];
 
+  // Deliverability health (open-tracking pixel watch). Runs every day; can force an
+  // alert email on its own even when there are no warm signals.
+  const deliver = await deliverabilityHealth();
+
   if (repeats.length === 0 && interested.length === 0) {
+    if (deliver.alert) {
+      await resend.emails.send({
+        from: `${FROM_NAME} <${FROM}>`, reply_to: TO, to: TO,
+        subject: '[Aevon ALERT] open-tracking hurting deliverability',
+        text: deliver.line + '\n\nNo warm signals today.',
+      });
+      console.log('No warm signals, but deliverability ALERT sent.');
+      return;
+    }
     console.log('No warm signals today. No email sent.');
     return;
   }
@@ -134,9 +183,13 @@ async function run() {
       'A repeat visit means they looked, left, and came back. Worth a thoughtful follow-up. Do NOT reference the tracking, and do not over-chase a single return.');
   }
 
+  // Always append the deliverability health line to the daily digest.
+  out.push('', '----------', deliver.line);
+
   const subjBits = [];
   if (interested.length) subjBits.push(`${interested.length} interested`);
   if (repeats.length) subjBits.push(`${repeats.length} repeat visitor${repeats.length > 1 ? 's' : ''}`);
+  if (deliver.alert) subjBits.push('DELIVERABILITY ALERT');
 
   const { error: sendErr } = await resend.emails.send({
     from: `${FROM_NAME} <${FROM}>`,
