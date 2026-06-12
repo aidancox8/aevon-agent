@@ -115,8 +115,47 @@ function getIndustryContext(industry) {
   return 'Growing businesses in the Lower Mainland often reach a point where their team is spending significant time on manual, repetitive internal work that holds them back.';
 }
 
+// The demo-offer hook only fits inquiry-driven businesses we have a real tailored
+// demo for. Offering "a demo of an agent handling your inquiries" to a manufacturer
+// is nonsense, and offering it where we can't deliver a matching demo erodes trust.
+// Gate it to the four verticals with built agent-reel presets; everyone else gets
+// the proven ask-led email.
+function demoFit(industry) {
+  const i = (industry || '').toLowerCase();
+  if (/insurance/.test(i)) return { who: 'an insurance brokerage', what: 'inbound quote requests and renewals' };
+  if (/mortgage|lending/.test(i)) return { who: 'a mortgage broker', what: 'pre-approval inquiries and document chasing' };
+  if (/real estate|realtor|realty|real-estate/.test(i)) return { who: 'a real estate team', what: 'buyer and listing inquiries' };
+  if (/business broker|biz broker|m&a|mergers|brokerage/.test(i) && !/insurance|mortgage|real estate|realty/.test(i))
+    return { who: 'a business broker', what: 'buyer inquiries on your listings' };
+  return null;
+}
+
 function buildPrompt(lead, websiteContent) {
   const industryContext = getIndustryContext(lead.industry);
+  const demo = demoFit(lead.industry);
+  const email1Block = demo ? `EMAIL 1 (initial outreach, DEMO-OFFER approach):
+- Goal: get a reply by offering something specific and genuinely useful: a short demo built around how ${demo.who} handles inbound inquiries. This exact approach (offering a tailored demo, then sending it when they say yes) is the ONLY thing that has earned an engaged reply so far. Use it.
+- Subject line: lowercase, short (2-5 words), curiosity-driven, about their inquiries/leads. Vary the grammatical form (a plain question, a fragment, a quiet observation) — NEVER reuse a skeleton, never the word "grind". Write something fresh and specific to this business.
+- Body (under 60 words), and DO NOT include any link:
+  1. ONE line of plain context: that Aevon builds custom software and AI agents for businesses like theirs.
+  2. ONE line: that you put together a short demo of an AI agent handling the kind of inbound inquiries ${demo.who} deals with (${demo.what}) — reading each one, qualifying it, and drafting the reply, all inside the inbox they already use.
+  3. A low-friction offer: ask if they want you to send it over. Make it easy to say yes ("two minutes to watch", "happy to send it").
+  - Do NOT include a link (you will send it after they reply yes). Do NOT hard-pitch features. Do NOT assert their pain as fact. No sign-off (the signature handles that).` : `EMAIL 1 (initial outreach):
+- Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
+- Subject line: lowercase, short (2-6 words), curiosity-driven, tied to the area of work you ask about in the body. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos.
+  CRITICAL — vary the GRAMMATICAL FORM, do not reuse a skeleton. The pattern "the [noun] grind / chase / shuffle / loop / bottleneck" has been massively overused and now reads as templated spam. Do NOT default to "the ___ grind". Rotate across genuinely different shapes, picking whichever fits this business:
+  • a plain question: "still quoting by hand?", "who chases the missing docs?"
+  • a fragment of the actual task: "re-keying every renewal", "same report, every project"
+  • a quiet observation: "two systems, one client", "before the analysis even starts"
+  • a noun phrase (use sparingly, NOT every time): "the renewal pileup"
+  Derive it from the area of work you ask about, so two different businesses naturally get two different subjects. If the subject you first think of contains the word "grind", rewrite it in a different form. The bullet examples above show FORM ONLY — NEVER output any of them word-for-word (especially "still quoting by hand?" or "re-keying every renewal"); write a fresh subject specific to THIS business.
+- Body structure (under 65 words total):
+  This email is an ASK, not a pitch. The ONLY approach that has earned a positive reply so far was: briefly say who we are, make one honest observation, then ask an open question about their biggest time-sink. Do exactly that here. Asking what their biggest issue is consistently beats asserting a pain and pitching a fix.
+  1. ONE line of plain context: that Aevon builds custom software and AI agents that take repetitive, manual admin work off small teams. One sentence — it earns the right to ask.
+  2. ONE honest, light observation about a business like theirs — something you can genuinely stand behind: a real detail from the scrape if one exists, otherwise an industry-level truth (the kind of recurring intake / paperwork / follow-up / scheduling their type of business deals with). This is an OBSERVATION, not a diagnosis you plan to fix.
+  3. AN OPEN QUESTION — the heart of the email. Ask what the most manual, repetitive, or time-consuming part of [a specific, relevant area of their work] is right now. Vary the wording and the area every time. Forms (do NOT copy verbatim): "What's the most time-consuming part of how you handle [X] right now?" / "Where does your team lose the most time on [X]?" / "What part of [X] still eats the most manual hours?"
+  - Do NOT propose, name, or describe a solution or tool. Do NOT assert their pain as fact. Do NOT include a link. The goal is simply to get them talking about their biggest issue.
+  - No sign-off — the signature block handles that.`;
   return `You are writing a cold outreach email on behalf of Aevon, a custom software company based in the Lower Mainland, BC.
 
 About Aevon:
@@ -138,22 +177,7 @@ ${websiteContent ? `- Scraped from their website: ${websiteContent}` : ''}
 
 Write THREE emails, a lead insight, and a personalization basis.
 
-EMAIL 1 (initial outreach):
-- Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
-- Subject line: lowercase, short (2-6 words), curiosity-driven, tied to the area of work you ask about in the body. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos.
-  CRITICAL — vary the GRAMMATICAL FORM, do not reuse a skeleton. The pattern "the [noun] grind / chase / shuffle / loop / bottleneck" has been massively overused and now reads as templated spam. Do NOT default to "the ___ grind". Rotate across genuinely different shapes, picking whichever fits this business:
-  • a plain question: "still quoting by hand?", "who chases the missing docs?"
-  • a fragment of the actual task: "re-keying every renewal", "same report, every project"
-  • a quiet observation: "two systems, one client", "before the analysis even starts"
-  • a noun phrase (use sparingly, NOT every time): "the renewal pileup"
-  Derive it from the area of work you ask about, so two different businesses naturally get two different subjects. If the subject you first think of contains the word "grind", rewrite it in a different form. The bullet examples above show FORM ONLY — NEVER output any of them word-for-word (especially "still quoting by hand?" or "re-keying every renewal"); write a fresh subject specific to THIS business.
-- Body structure (under 65 words total):
-  This email is an ASK, not a pitch. The ONLY approach that has earned a positive reply so far was: briefly say who we are, make one honest observation, then ask an open question about their biggest time-sink. Do exactly that here. Asking what their biggest issue is consistently beats asserting a pain and pitching a fix.
-  1. ONE line of plain context: that Aevon builds custom software and AI agents that take repetitive, manual admin work off small teams. One sentence — it earns the right to ask.
-  2. ONE honest, light observation about a business like theirs — something you can genuinely stand behind: a real detail from the scrape if one exists, otherwise an industry-level truth (the kind of recurring intake / paperwork / follow-up / scheduling their type of business deals with). This is an OBSERVATION, not a diagnosis you plan to fix.
-  3. AN OPEN QUESTION — the heart of the email. Ask what the most manual, repetitive, or time-consuming part of [a specific, relevant area of their work] is right now. Vary the wording and the area every time. Forms (do NOT copy verbatim): "What's the most time-consuming part of how you handle [X] right now?" / "Where does your team lose the most time on [X]?" / "What part of [X] still eats the most manual hours?"
-  - Do NOT propose, name, or describe a solution or tool. Do NOT assert their pain as fact. Do NOT include a link. The goal is simply to get them talking about their biggest issue.
-  - No sign-off — the signature block handles that.
+${email1Block}
 
 CRITICAL anti-fabrication rules (read carefully):
 - The observation in sentence 2 may be an honest, soft, industry-level truth ("businesses like yours usually handle a steady stream of X") — that is fine and human.
