@@ -66,13 +66,19 @@ function emailRisk(email) {
   if (/^(corporation|email|phone|fax|tel|contact|info|office|mailto|address|hours|monday|tuesday|wednesday|thursday|friday)[a-z]{3,}/.test(local)) {
     return 'concatenated-word artifact';
   }
-  // A mailbox word with 1-3 junk letters stuck to the front: "ushello@" (us+hello),
-  // "ninfo@" (n+info), "drhello@" — from scraping "contact us hello@" etc. Flag
-  // when a known mailbox word sits at position 1-3 but the local doesn't simply
-  // START with that word (so clean "info@"/"hello@" are left alone).
-  var roleWord = '(info|hello|contact|sales|admin|office|enquir|inquir|support|reception|booking|mail|us)';
-  if (new RegExp('^[a-z]{1,3}' + roleWord).test(local) && !new RegExp('^' + roleWord).test(local)) {
-    return 'glued role-word artifact';
+  // A mailbox/label word glued INSIDE the local part with letters before it:
+  // "usinfo", "mediacontact", "canadareception", "nuvohello", "bookkeepingcontactinfo".
+  // These scraper artifacts have real domains but dead mailboxes, so they hard-bounce
+  // (the MX guard can't catch them; the domain is live). Requiring 2+ letters before
+  // the word leaves clean "info@"/"contact@" and names like "infosys" (word at start)
+  // untouched. Word list is high-precision: these effectively never appear mid-name.
+  if (/[a-z]{2,}(info|contact|reception|support|enquir|inquir|bookkeeping|customerservice|frontdesk|webmaster|hello)/.test(local)) {
+    return 'glued label-word artifact';
+  }
+  // A 1-2 char fragment + separator + role word: "to.support", "a-info" — scraped
+  // from "...contact us to support@" style page text.
+  if (/^[a-z]{1,2}[._-](info|contact|support|sales|hello|reception|admin|office)/.test(local)) {
+    return 'fragment-prefixed role word';
   }
   // Absurdly long local part (concatenated text blob).
   if (local.length > 40) return 'over-long local part';
