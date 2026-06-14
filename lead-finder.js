@@ -128,25 +128,38 @@ function parseArgs() {
   return result;
 }
 
-async function searchPlaces(query, pageToken = null) {
+async function searchPlaces(query, pageToken = null, attempt = 0) {
   const body = { textQuery: query, maxResultCount: 20 };
   if (pageToken) body.pageToken = pageToken;
 
-  const res = await axios.post(PLACES_URL, body, {
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': MAPS_KEY,
-      'X-Goog-FieldMask': [
-        'places.displayName',
-        'places.formattedAddress',
-        'places.websiteUri',
-        'places.internationalPhoneNumber',
-        'nextPageToken',
-      ].join(','),
-    },
-  });
-
-  return res.data;
+  try {
+    const res = await axios.post(PLACES_URL, body, {
+      timeout: 20000,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': MAPS_KEY,
+        'X-Goog-FieldMask': [
+          'places.displayName',
+          'places.formattedAddress',
+          'places.websiteUri',
+          'places.internationalPhoneNumber',
+          'nextPageToken',
+        ].join(','),
+      },
+    });
+    return res.data;
+  } catch (err) {
+    // Retry transient network/DNS/5xx errors with backoff so a blip doesn't kill
+    // the whole sweep (a single ENOTFOUND used to be fatal).
+    const transient = !err.response
+      || ['ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET', 'EAI_AGAIN', 'ECONNABORTED'].includes(err.code)
+      || (err.response && err.response.status >= 500);
+    if (transient && attempt < 4) {
+      await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+      return searchPlaces(query, pageToken, attempt + 1);
+    }
+    throw err;
+  }
 }
 
 const { findContact } = require('./lib/contact-finder');
@@ -273,6 +286,7 @@ async function run() {
       let pageToken = null;
       let page = 0;
 
+      try {
       do {
         const data = await searchPlaces(fullQuery, pageToken);
         const places = data.places || [];
@@ -354,6 +368,12 @@ async function run() {
           if (savedSinceRefresh >= 20) await refreshDedup();
         }
       } while (pageToken && page < maxPages);
+      } catch (err) {
+        // A query that still fails after retries is skipped, not fatal — the sweep
+        // continues to the next city/business type.
+        console.log(`  query "${fullQuery}" failed after retries, skipping: ${err.message}`);
+        continue;
+      }
     }
   }
 
