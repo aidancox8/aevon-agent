@@ -80,6 +80,14 @@ function emailRisk(email) {
   if (/^[a-z]{1,2}[._-](info|contact|support|sales|hello|reception|admin|office)/.test(local)) {
     return 'fragment-prefixed role word';
   }
+  // Role word + separator + location/junk: "info-burnaby-metrotown", "clientcare.surrey",
+  // "contact.us", "tools.newtonimmigration" — scraped nav/location labels, dead mailboxes.
+  if (/^(info|hello|contact|tools|appointment|number|email|clientcare|customerservice|enquir|inquir|support|sales|admin|office|reception)[._-]/.test(local)) {
+    return 'role-word + separator artifact';
+  }
+  // A URL captured as an address, or an embedded phone number glued into the local part.
+  if (local.includes('/')) return 'url-in-address artifact';
+  if (/\d{3}[-.]\d{3}/.test(local)) return 'embedded-phone artifact';
   // Absurdly long local part (concatenated text blob).
   if (local.length > 40) return 'over-long local part';
   // URL-encoded junk ("%20jnsandhu@") — percent has no business in a real address.
