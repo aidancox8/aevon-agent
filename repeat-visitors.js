@@ -65,22 +65,17 @@ async function deliverabilityHealth() {
   const deliveryPct = +(100 * c.delivered / c.sent).toFixed(1);
   const bouncePct = +(100 * c.bounced / c.sent).toFixed(1);
   const complaintPct = +(100 * c.complained / c.sent).toFixed(3);
-  const openPct = +(100 * c.opened / Math.max(c.delivered, 1)).toFixed(1);
-  // The pixel's harm shows as spam complaints. >0.1% is the industry danger line.
+  // The one deliverability signal we can watch is spam complaints. >0.1% is the danger line.
   const alert = complaintPct > 0.1;
   const verdict = alert
-    ? `>> ALERT: spam complaints at ${complaintPct}% (baseline 0%). The open-tracking pixel is likely hurting inbox placement. TURN OPEN TRACKING OFF in Resend (Domains > aevon.ca > disable Open Tracking).`
-    : `Complaints ${complaintPct}% (baseline 0). No deliverability harm detected from the pixel.`;
-  // Open tracking was unproven as of 2026-06-14 (a self-send test never produced an
-  // open). This is the first real read: 0% on a meaningful delivered count means the
-  // pixel is NOT working (Resend plan/config); a normal rate means it finally works.
-  const openVerdict = c.opened === 0
-    ? `OPENS: 0 of ${c.delivered} delivered. Open tracking is NOT recording. Likely a Resend plan/config issue, do not rely on open data.`
-    : `OPENS: ${openPct}% (${c.opened}/${c.delivered}). Open tracking is working. (Apple Mail inflates this, treat as directional.)`;
+    ? `>> ALERT: spam complaints at ${complaintPct}% (baseline 0%). Investigate sending content/list quality.`
+    : `Complaints ${complaintPct}% (baseline 0). No deliverability harm detected.`;
+  // Open tracking was tested 2026-06-14/15 (47 delivered, 0 opens) and DISABLED:
+  // Resend's pixel does not inject on this setup, so opens are not a metric we have.
+  // Real engagement is tracked via the self-hosted ?ref click/interest events instead.
   const line = [
-    `Deliverability (open-tracking watch, ${c.sent} sent since pixel):`,
+    `Deliverability (${c.sent} sent in window):`,
     `  delivered ${deliveryPct}% (baseline ${BASELINE.deliveryPct}) | bounce ${bouncePct}% (baseline ${BASELINE.bouncePct}) | complaints ${complaintPct}% (baseline 0)`,
-    `  ${openVerdict}`,
     `  ${verdict}`,
   ].join('\n');
   return { line, alert, alertText: verdict };
