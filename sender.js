@@ -72,7 +72,7 @@ function emailRisk(email) {
   // (the MX guard can't catch them; the domain is live). Requiring 2+ letters before
   // the word leaves clean "info@"/"contact@" and names like "infosys" (word at start)
   // untouched. Word list is high-precision: these effectively never appear mid-name.
-  if (/[a-z]{2,}(info|contact|reception|support|enquir|inquir|bookkeeping|customerservice|frontdesk|webmaster|hello)/.test(local)) {
+  if (/[a-z]+(info|contact|reception|support|enquir|inquir|bookkeeping|customerservice|frontdesk|webmaster|hello)/.test(local)) {
     return 'glued label-word artifact';
   }
   // A 1-2 char fragment + separator + role word: "to.support", "a-info" — scraped
@@ -91,7 +91,7 @@ function emailRisk(email) {
   // Absurdly long local part (concatenated text blob).
   if (local.length > 40) return 'over-long local part';
   // URL-encoded junk ("%20jnsandhu@") — percent has no business in a real address.
-  if (local.includes('%')) return 'url-encoded artifact';
+  if (e.includes('%')) return 'url-encoded artifact';
   // Phone number glued to the front ("583-6000e-mailinfo@").
   if (/^\d{3}[-.]\d{3,4}/.test(local)) return 'phone-prefix artifact';
   // The word "e-mail" embedded in the local part — scrape label residue.
