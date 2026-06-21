@@ -291,15 +291,20 @@ async function run() {
 
       const sendAt = nextEligibleAt();
 
+      // Gemini ignores the no-em-dash instruction often, so strip em/en dashes from
+      // every generated field. A dash used as a break becomes a comma; this is the
+      // single biggest "this was written by AI" tell, so it must never ship.
+      const noDash = s => (s == null ? s : String(s).replace(/\s*[—–]\s*/g, ', '));
+
       const { error: updateError } = await supabase
         .from('leads')
         .update({
-          email_subject: content.email_subject,
-          email_body: content.email_body,
-          followup_subject: content.followup_subject,
-          followup_body: content.followup_body,
-          followup2_subject: content.followup2_subject || null,
-          followup2_body: content.followup2_body || null,
+          email_subject: noDash(content.email_subject),
+          email_body: noDash(content.email_body),
+          followup_subject: noDash(content.followup_subject),
+          followup_body: noDash(content.followup_body),
+          followup2_subject: noDash(content.followup2_subject) || null,
+          followup2_body: noDash(content.followup2_body) || null,
           lead_insights: content.lead_insights || null,
           personalization_basis: content.personalization_basis || null,
           scheduled_send_at: sendAt,
