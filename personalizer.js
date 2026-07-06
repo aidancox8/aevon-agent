@@ -115,53 +115,54 @@ function getIndustryContext(industry) {
   return 'Growing businesses in the Lower Mainland often reach a point where their team is spending significant time on manual, repetitive internal work that holds them back.';
 }
 
-// The demo-offer hook only fits inquiry-driven businesses we have a real tailored
-// demo for. Offering "a demo of an agent handling your inquiries" to a manufacturer
-// is nonsense, and offering it where we can't deliver a matching demo erodes trust.
-// Gate it to the four verticals with built agent-reel presets; everyone else gets
-// the proven ask-led email.
-function demoFit(industry) {
+// Per-industry phrasing for what the Inbox Agent handles. The product is universal
+// (every business gets inbound email); this makes the pitch land in THEIR words.
+// Strategy note (2026-07): the ask-led email was retired after ~1,100 sends at ~0%
+// genuine replies. Every email now shows the one productized offer, the Inbox Agent.
+function inquiryProfile(industry) {
   const i = (industry || '').toLowerCase();
-  if (/insurance/.test(i)) return { who: 'an insurance brokerage', what: 'inbound quote requests and renewals' };
-  if (/mortgage|lending/.test(i)) return { who: 'a mortgage broker', what: 'pre-approval inquiries and document chasing' };
-  if (/real estate|realtor|realty|real-estate/.test(i)) return { who: 'a real estate team', what: 'buyer and listing inquiries' };
-  if (/business broker|biz broker|m&a|mergers|brokerage/.test(i) && !/insurance|mortgage|real estate|realty/.test(i))
-    return { who: 'a business broker', what: 'buyer inquiries on your listings' };
-  return null;
+  if (/insurance/.test(i)) return 'quote requests and renewal emails';
+  if (/mortgage|lending/.test(i)) return 'pre-approval inquiries and document chasing';
+  if (/real estate|realtor|realty|real-estate/.test(i)) return 'buyer and listing inquiries';
+  if (/business broker|biz broker|m&a|mergers/.test(i)) return 'buyer inquiries on listings';
+  if (/account|bookkeep|tax/.test(i)) return 'client questions and document requests';
+  if (/law|legal|notary/.test(i)) return 'intake requests and client follow-ups';
+  if (/dental|medical|clinic|physio|chiro|vet|health|optometr|pharma|rehab|massage/.test(i)) return 'appointment requests and patient questions';
+  if (/hvac|plumb|electric|roof|landscap|contract|renovat|construction|moving|clean|painting/.test(i)) return 'quote requests and job inquiries';
+  if (/property manag|strata/.test(i)) return 'tenant and owner emails';
+  if (/logistic|freight|courier|transport|shipping|import|export|distribut/.test(i)) return 'rate requests and shipment questions';
+  if (/manufactur|machin|fabricat|industrial/.test(i)) return 'quote requests and order emails';
+  if (/marketing|advertis|design|creative|media/.test(i)) return 'new-business inquiries and client requests';
+  if (/immigration|consult|recruit|staffing/.test(i)) return 'consultation requests and client emails';
+  if (/school|educat|tutor|academy|college/.test(i)) return 'enrollment and parent inquiries';
+  if (/event|rental|catering|restaurant|venue/.test(i)) return 'booking and quote requests';
+  if (/engineer|architect|survey|environment/.test(i)) return 'project inquiries and RFQs';
+  return 'the inquiries and quote requests that land in their inbox';
 }
 
 function buildPrompt(lead, websiteContent) {
   const industryContext = getIndustryContext(lead.industry);
-  const demo = demoFit(lead.industry);
-  const email1Block = demo ? `EMAIL 1 (initial outreach, DEMO-OFFER approach):
-- Goal: get a reply by offering something specific and genuinely useful: a short demo built around how ${demo.who} handles inbound inquiries. This exact approach (offering a tailored demo, then sending it when they say yes) is the ONLY thing that has earned an engaged reply so far. Use it.
-- Subject line: lowercase, short (2-5 words), curiosity-driven, about their inquiries/leads. Vary the grammatical form (a plain question, a fragment, a quiet observation) — NEVER reuse a skeleton, never the word "grind". Write something fresh and specific to this business.
-- Body (under 60 words), and DO NOT include any link:
-  1. ONE line of plain context: that Aevon builds custom software and AI agents for businesses like theirs.
-  2. ONE line: that you put together a short demo of an AI agent handling the kind of inbound inquiries ${demo.who} deals with (${demo.what}) — reading each one, qualifying it, and drafting the reply, all inside the inbox they already use.
-  3. A low-friction offer: ask if they want you to send it over. Make it easy to say yes ("two minutes to watch", "happy to send it").
-  - Do NOT include a link (you will send it after they reply yes). Do NOT hard-pitch features. Do NOT assert their pain as fact. No sign-off (the signature handles that).` : `EMAIL 1 (initial outreach):
-- Goal: get a reply. The reader decides in the first line whether to keep reading or delete, so the first line must be about THEM, not about Aevon.
-- Subject line: lowercase, short (2-6 words), curiosity-driven, tied to the area of work you ask about in the body. NOT "Workflows at [Company]" or "Operations at [Company]" — those read like internal memos.
-  CRITICAL — vary the GRAMMATICAL FORM, do not reuse a skeleton. The pattern "the [noun] grind / chase / shuffle / loop / bottleneck" has been massively overused and now reads as templated spam. Do NOT default to "the ___ grind". Rotate across genuinely different shapes, picking whichever fits this business:
-  • a plain question: "still quoting by hand?", "who chases the missing docs?"
-  • a fragment of the actual task: "re-keying every renewal", "same report, every project"
-  • a quiet observation: "two systems, one client", "before the analysis even starts"
-  • a noun phrase (use sparingly, NOT every time): "the renewal pileup"
-  Derive it from the area of work you ask about, so two different businesses naturally get two different subjects. If the subject you first think of contains the word "grind", rewrite it in a different form. The bullet examples above show FORM ONLY — NEVER output any of them word-for-word (especially "still quoting by hand?" or "re-keying every renewal"); write a fresh subject specific to THIS business.
-- Body structure (under 65 words total):
-  This email is an ASK, not a pitch. The ONLY approach that has earned a positive reply so far was: briefly say who we are, make one honest observation, then ask an open question about their biggest time-sink. Do exactly that here. Asking what their biggest issue is consistently beats asserting a pain and pitching a fix.
-  1. ONE line of plain context: that Aevon builds custom software and AI agents that take repetitive, manual admin work off small teams. One sentence — it earns the right to ask.
-  2. ONE honest, light observation about a business like theirs — something you can genuinely stand behind: a real detail from the scrape if one exists, otherwise an industry-level truth (the kind of recurring intake / paperwork / follow-up / scheduling their type of business deals with). This is an OBSERVATION, not a diagnosis you plan to fix.
-  3. AN OPEN QUESTION — the heart of the email. Ask what the most manual, repetitive, or time-consuming part of [a specific, relevant area of their work] is right now. Vary the wording and the area every time. Forms (do NOT copy verbatim): "What's the most time-consuming part of how you handle [X] right now?" / "Where does your team lose the most time on [X]?" / "What part of [X] still eats the most manual hours?"
-  - Do NOT propose, name, or describe a solution or tool. Do NOT assert their pain as fact. Do NOT include a link. The goal is simply to get them talking about their biggest issue.
-  - No sign-off — the signature block handles that.`;
-  return `You are writing a cold outreach email on behalf of Aevon, a custom software company based in the Lower Mainland, BC.
+  const what = inquiryProfile(lead.industry);
+  const email1Block = `EMAIL 1 (initial outreach, SHOW-THE-PRODUCT approach):
+- Goal: get a reply by offering a 90-second demo of ONE specific product, the Aevon Front Desk agent, described in THEIR terms. Do NOT ask open discovery questions (tested for months, near-zero replies). Show the thing and make it concrete.
+- CRITICAL POSITIONING: this is NOT an email-writing assistant. Gmail and Outlook already ship AI that helps write replies, so NEVER describe it in those terms ("reads your email", "drafts replies for you" as the headline). Sell the WORKER: it runs their intake end to end. It answers and qualifies ${what}, books the appointment or showing, files every lead into a simple pipeline, and follows up with the ones that go quiet. The owner just approves.
+- HARD CAPABILITY CONTRACT: the agent does EXACTLY five things: (1) answers and qualifies inbound inquiries, (2) drafts the replies in the owner's voice, (3) books appointments/showings/calls, (4) files every lead into a pipeline board, (5) follows up with leads that go quiet. Describe ONLY these, phrased for their business. NEVER invent other capabilities (writing reports, checking application status, processing paperwork, integrations you have not been told about). Describe it handling ${what} specifically, do not substitute a different task or a different industry's inquiries.
+- Price in email 1: you may say "$1,500 flat setup, live inside a week, you own it". Do NOT mention the monthly fee in email 1 (the follow-up covers full terms).
+- Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
+- Body (under 70 words), and DO NOT include any link:
+  1. ONE plain line of who you are: Aevon builds AI front desk agents for Lower Mainland businesses.
+  2. ONE or TWO lines on what it does for a business like theirs, per the positioning above. If a REAL scraped detail exists, weave it in naturally instead of generic phrasing.
+  3. ONE line of productized concreteness: flat setup fee, live inside a week, and they own it.
+  4. The ask, low friction: do they want the 90 second demo? Make yes easy ("happy to send it over").
+  - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
+  return `You are writing a cold outreach email on behalf of Aevon, a software company based in the Lower Mainland, BC.
 
 About Aevon:
-- Builds custom apps and AI agents for businesses dealing with manual, repetitive internal work
-- Clients pay once and own the software outright — no subscriptions, no vendor lock-in
-- Target clients: 5-50 employee businesses in the Lower Mainland
+- Flagship product: the Aevon Front Desk agent. It runs a business's inbound intake end to end: answers and qualifies every inquiry, drafts replies in the owner's voice, books appointments, files every lead into a simple pipeline board, and follows up with leads that go quiet. Nothing sends without the owner's approval.
+- It is NOT a generic email assistant (Gmail/Outlook already have those). It is wired into how the specific business works: their services, their booking rules, their documents, their pipeline.
+- Productized: $1,500 flat setup, live inside a week, then $150/month to run, monitor, and tune it. The client owns the software.
+- Also builds fully custom apps and AI agents for businesses that need more than the flagship.
+- Target clients: 1-50 employee businesses in the Lower Mainland
 
 Industry context (general knowledge about this type of business — use only to inform tone and question, do not repeat verbatim or state as fact about this specific business):
 ${industryContext}
@@ -180,24 +181,24 @@ Write THREE emails, a lead insight, and a personalization basis.
 ${email1Block}
 
 CRITICAL anti-fabrication rules (read carefully):
-- The observation in sentence 2 may be an honest, soft, industry-level truth ("businesses like yours usually handle a steady stream of X") — that is fine and human.
+- Any observation about their business may be an honest, soft, industry-level truth ("businesses like yours usually handle a steady stream of X") — that is fine and human.
 - But you may ONLY state a CONCRETE, specific fact about THIS business (a named service, a recent project, a stated specialty, team size, locations, awards, named clients) if it appears verbatim in the "Scraped from their website" text above. If it is not in the scrape, you do NOT know it — do not invent it.
 - Never claim to have seen something specific you did not ("I saw your award", "congrats on the expansion", a specific client count or metric). Inventing specifics reads as a bot and destroys trust.
 - If you have no real scraped detail, keep the observation general and true. A plainly honest general email beats a fake-specific one.
 
 Other rules:
-- Do NOT pitch a specific solution or product category. Do NOT open with flattery. Do NOT call Aevon a "shop".
+- Pitch ONLY the Inbox Agent. Do not invent other products or promise custom scopes. Do NOT open with flattery. Do NOT call Aevon a "shop".
 - Tone: direct, human, a little casual. Like a person who actually understands their business, not a vendor. No buzzwords, no em dashes, no filler ("leverage", "streamline", "fragmentation", "off-the-shelf", "bridges the gap", "unified solution", "take that kind of work off a team's plate", "tiny").
-- Each email must feel DIFFERENT from the last one written for the same industry. Vary sentence structure, the specific sub-task you name, and the closing question. Two brokers who compare emails should not see the same template.
+- Each email must feel DIFFERENT from the last one written for the same industry. Vary sentence structure, the specific inquiry type you name, and the closing ask. Two brokers who compare emails should not see the same template.
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 45 words, question-led like email 1. A friendly bump that re-asks about their biggest time-sink from a slightly DIFFERENT angle than email 1 — do not just repeat it. If it feels natural, you MAY add at the very end that it can be easier to show than describe, with a couple of quick examples, using the exact token {{DEMO}} where the link goes (it is replaced with a real tracked link at send time). Keep it an ask first; the examples are optional and secondary. No pitch.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying: include the exact token {{DEMO}} (replaced with a real tracked link at send time), e.g. "here it is if it's easier to just watch: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, $150 a month to run and tune it, and they own it. Close with one easy line inviting a reply. No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 40 words. This is the LAST time you'll reach out, and you say so plainly — that honesty creates a little gentle urgency for anyone with even slight interest. No guilt-trip, no pressure. Acknowledge they're busy, say you'll leave it here, and leave the door open with one easy-to-answer line. Shape (do NOT copy verbatim): "I'll leave it here so I'm not cluttering your inbox. If [the specific thing from email 1] is ever worth a look, just reply and I'll pick it back up. Either way, all the best." No pitch, no link.
+- Body: under 40 words. This is the LAST time you'll reach out, and you say so plainly — that honesty creates a little gentle urgency for anyone with even slight interest. No guilt-trip, no pressure. Acknowledge they're busy, say you'll leave it here, and leave the door open with one easy-to-answer line. Shape (do NOT copy verbatim): "I'll leave it here so I'm not cluttering your inbox. If handing off [their inquiry type] is ever worth a look, just reply and I'll pick it back up. Either way, all the best." No pitch, no link.
 - Tone: same plain, human voice.
 
 LEAD INSIGHT (2-3 sentences): why this business fits Aevon, what workflow problems they likely have, and what specifically you would propose building if they reply.

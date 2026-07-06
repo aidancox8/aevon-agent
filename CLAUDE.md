@@ -12,8 +12,10 @@ You are working on Aevon, Aidan Cox's custom-software/AI-agent business for Lowe
 5. Always commit AND push after editing files in either Aevon repo — deploys happen on push.
 6. CAD for all pricing. Never fabricate clients/references (zero clients so far). Cold copy must sound human-typed: ask-led, no pitch in email 1.
 
-## Positioning and pricing
-"You're paying monthly for software that almost fits. I build exactly what you need. You own it. No subscriptions, no per-seat fees." Builds $1,500-8,000 CAD scoped upfront, optional $50-75/mo hosting, deposit before build, never pay-after-satisfaction. Next step with warm leads is always: call or email questions -> plan + quote -> contract + payment -> build.
+## Positioning and pricing (UPDATED 2026-07-05, supersedes older docs)
+Flagship offer: **the Aevon Front Desk agent**, productized. It runs a business's inbound intake end to end: answers and qualifies every inquiry, drafts replies in the owner's voice, books appointments, files leads into a pipeline board, and follows up with leads that go quiet. Nothing sends without the owner. $1,500 flat setup, live inside a week, $150/mo to run and tune, client owns it. Founding rate (first 2 clients): $900 setup / $100 per month year one, for a testimonial + case study + intros. See sales/front-desk-offer.md.
+CRITICAL: never position it as an email-writing assistant (Gmail/Copilot own that). It is a worker wired into THEIR workflow: qualify, book, send documents, file, chase. Custom builds beyond the flagship: quote per scope (sales/quote-template.md).
+Strategy of record: demo-first everywhere, warm channels (referral partners, network) as the growth engine, cold email on autopilot only, dogfood case study for proof. Rationale: ~1,100 cold sends at ~0% genuine replies incl. a verified-contact A/B killed cold-as-primary-channel.
 
 ## System map
 - **Pipeline:** lead-finder.js / agent-lead-finder.js (Google Places, BC-only guard) -> personalizer.js (Gemini, 3-email ask-led sequence) -> sender.js (Resend, DAILY_CAP env=55, named-contacts first, never status!='queued') -> landing pages with ?ref= visit tracking + interest button -> reply-processor.js (Gmail OAuth, drafts only).

@@ -1,4 +1,5 @@
 # Quote Template (with recurring revenue)
+> UPDATE 2026-07-05: The default offer is now the productized Front Desk agent, see front-desk-offer.md. This template applies to CUSTOM builds beyond the flagship.
 
 The structure that keeps the "you own it" promise AND builds monthly recurring revenue.
 Pricing stays variable and value-based, quoted per project after a discovery call.

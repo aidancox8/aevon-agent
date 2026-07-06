@@ -1,4 +1,5 @@
 # Founding Client Offer
+> UPDATE 2026-07-05: Founding terms now live in front-desk-offer.md ($900 setup / $100 per month year one for the first 2 clients).
 
 The play: trade a discounted first build for proof (case study + testimonial + referrals).
 Use this for the NEXT warm lead or a network/pilot contact. Do NOT discount Jean unless

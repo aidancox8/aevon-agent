@@ -186,3 +186,10 @@ User's goal: **Aevon should run as automated and agent-led as possible.** He doe
 5. Add social proof / case studies section to website (need content from user)
 6. New logo in development (user is designing via Claude design tool)
 7. Build one polished demo app to show prospects during discovery calls
+
+## Strategy pivot (2026-07-05, Fable decision under standing authority)
+Cold email verdict: ~1,100 sends, ~0% genuine replies, Apollo verified-owner A/B 0/22. Cold is autopilot-only now.
+Flagship offer: **Aevon Front Desk agent** (productized): runs intake end to end (qualify, book, file, chase), $1,500 setup + $150/mo, live in a week, client owns it. Founding rate first 2 clients: $900 + $100/mo yr1. Canonical doc: aevon-agent/sales/front-desk-offer.md.
+Positioning rule: NEVER "AI email assistant" (Gemini/Copilot commoditized that, user flagged). Sell the worker + workflow integration + local human.
+Growth: demo-first, warm channels (bookkeeper/accountant referral partners, network, 10 conversations/week), dogfood case study (Aevon/Tech Neighbour inboxes). 30-day kill criterion: 1 paying client or reposition.
+Queue: all ~3,300 unsent leads wiped 2026-07-05 and regenerating with Front Desk copy (backup: leads_backup_20260705). Jean: quoted $2-3k Jun 22, silent since; phased re-engagement drafted; next move is a phone call.
