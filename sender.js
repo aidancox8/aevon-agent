@@ -107,11 +107,15 @@ function emailRisk(email) {
 // page built for them; everyone else gets the general interactive demos.
 function landingFor(industry, leadId) {
   const i = industry || '';
-  let page = 'demo.html';
-  if (/insurance/i.test(i)) page = 'insurance.html';
-  else if (/mortgage|lending/i.test(i)) page = 'mortgage.html';
-  else if (/real estate|realtor|realty/i.test(i)) page = 'realestate.html';
-  return `https://aevon.ca/${page}?ref=${leadId}`;
+  // Verticals get their landing page (embedded matching reel + CTA). Everyone else
+  // goes straight to the generic Front Desk reel: the follow-up copy promises a
+  // 90-second demo you can just watch, and demo.html (interactive apps) broke that
+  // promise. ?v must precede ref; the reel strips only ref and keeps v.
+  let page = 'agent-reel.html?v=generic&';
+  if (/insurance/i.test(i)) page = 'insurance.html?';
+  else if (/mortgage|lending/i.test(i)) page = 'mortgage.html?';
+  else if (/real estate|realtor|realty/i.test(i)) page = 'realestate.html?';
+  return `https://aevon.ca/${page}ref=${leadId}`;
 }
 
 function vancouverDayStartISO() {
