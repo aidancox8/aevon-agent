@@ -119,6 +119,7 @@ async function run() {
   const WATCHLIST = [
     '9a3d60b0-874b-4347-b232-1e351b0e0c03', // Jean Seguin / Vancouver Business Brokers
     '23260e23-b1e3-4deb-9b69-582c92d2be2a', // Restaurant Business Broker (also Jean)
+    'f424365f-df30-4aae-88df-ca96f9b23e1e', // Vickers Law Group (Jessica Breukelman, interested 2026-07-08)
   ];
 
   const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
