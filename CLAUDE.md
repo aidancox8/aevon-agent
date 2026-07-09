@@ -19,8 +19,8 @@ Strategy of record: demo-first everywhere, warm channels (referral partners, net
 
 ## System map
 - **Pipeline:** lead-finder.js / agent-lead-finder.js (Google Places, BC-only guard) -> personalizer.js (Gemini, 3-email ask-led sequence) -> sender.js (Resend, DAILY_CAP env=55, named-contacts first, never status!='queued') -> landing pages with ?ref= visit tracking + interest button -> reply-processor.js (Gmail OAuth, drafts only).
-- **Workflows (GitHub Actions):** send-outreach (hourly weekdays), process-replies (hourly offset), personalize (6am PT + manual w/ limit input), repeat-visitors (5:10pm signal email), enrich (manual). All email [Aevon ALERT] to aidan@aevon.ca on failure.
-- **Cloud routine:** "Aevon morning replies briefing" (weekdays 8am PT) reads inbox, drafts replies, posts 9am calendar-event briefing.
+- **Workflows (GitHub Actions):** send-outreach (hourly weekdays), process-replies (hourly offset), personalize (6am PT + manual w/ limit input), enrich (manual). repeat-visitors is DISABLED (2026-07-09): its [Aevon SIGNAL] digest was replaced by the cloud routine's Signals section. All workflows still email [Aevon ALERT] to aidan@aevon.ca on failure.
+- **Cloud routine:** "Aevon morning replies briefing" (weekdays 8am PT, trig_016e43ep7bHUmvTArah9C2fc) reads inbox, drafts replies, queries Supabase REST directly for visit/interest/complaint signals (pulls the publishable key from the public CRM page at runtime), posts 9am calendar-event briefing.
 - **CRM:** GitHub Pages at aidancox8.github.io/aevon-agent/crm/ (single-file crm/index.html).
 - **Demos:** aevon.ca/agent-reel.html = Gmail-replica agent demo, preset-driven (?v=realestate|mortgage|insurance, default = Jean's broker version — do not change the default, his outreach links depend on it). Vertical landing pages (insurance/realestate/mortgage.html) embed the matching preset.
 - **Supabase project:** qzxtfgzpyptvriorfhxw (leads, email_events tables; track-visit edge function).
