@@ -160,7 +160,7 @@ function buildPrompt(lead, websiteContent) {
 About Aevon:
 - Flagship product: the Aevon Front Desk agent. It runs a business's inbound intake end to end: answers and qualifies every inquiry, drafts replies in the owner's voice, books appointments, files every lead into a simple pipeline board, and follows up with leads that go quiet. Nothing sends without the owner's approval.
 - It is NOT a generic email assistant (Gmail/Outlook already have those). It is wired into how the specific business works: their services, their booking rules, their documents, their pipeline.
-- Productized: $1,500 flat setup, live inside a week, then $150/month to run, monitor, and tune it. The client owns the software.
+- Productized: $1,500 flat setup (includes the first 2 months of running and tuning), live inside a week, then $150/month or the client takes it in-house. The client owns the software.
 - Also builds fully custom apps and AI agents for businesses that need more than the flagship.
 - Target clients: 1-50 employee businesses in the Lower Mainland
 
@@ -193,7 +193,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying: include the exact token {{DEMO}} (replaced with a real tracked link at send time), e.g. "here it is if it's easier to just watch: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, $150 a month to run and tune it, and they own it. Close with one easy line inviting a reply. No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying: include the exact token {{DEMO}} (replaced with a real tracked link at send time), e.g. "here it is if it's easier to just watch: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, first 2 months of running included, then $150 a month, and they own it. Close with one easy line inviting a reply. No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):
