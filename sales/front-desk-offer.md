@@ -10,7 +10,7 @@ up with the ones that go quiet. Nothing sends without your approval.
 
 ## Terms
 - $1,500 flat setup. Live inside a week.
-- Setup includes the FIRST 2 MONTHS of running and tuning. After that, $150/month (hosting, monitoring, AI costs, tuning), or the client takes it in-house.
+- Monthly is OPTIONAL and framed that way: $150/month for hosting, monitoring, AI costs, and tuning. Cancel anytime or take it in-house. Never give away free months preemptively; the founding rate is the closing lever.
 - You own the software. Cancel the monthly any time and self-host if you want.
 - Founding-client rate (first 2 clients): $900 setup, monthly locked at $100 for year one,
   in exchange for a testimonial, a case study, and 1-2 introductions. Deposit still required.
