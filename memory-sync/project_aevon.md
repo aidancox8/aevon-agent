@@ -193,3 +193,5 @@ Flagship offer: **Aevon Front Desk agent** (productized): runs intake end to end
 Positioning rule: NEVER "AI email assistant" (Gemini/Copilot commoditized that, user flagged). Sell the worker + workflow integration + local human.
 Growth: demo-first, warm channels (bookkeeper/accountant referral partners, network, 10 conversations/week), dogfood case study (Aevon/Tech Neighbour inboxes). 30-day kill criterion: 1 paying client or reposition.
 Queue: all ~3,300 unsent leads wiped 2026-07-05 and regenerating with Front Desk copy (backup: leads_backup_20260705). Jean: quoted $2-3k Jun 22, silent since; phased re-engagement drafted; next move is a phone call.
+
+**Email signature rule (2026-07-09):** Gmail does NOT render SVG images. All email signatures must use https://aevon.ca/logo-email.png (80px PNG), never logo.svg. Signature block: logo img 40x40 + "Aidan Cox" + aidan@aevon.ca + Book a call link.
