@@ -195,3 +195,4 @@ Growth: demo-first, warm channels (bookkeeper/accountant referral partners, netw
 Queue: all ~3,300 unsent leads wiped 2026-07-05 and regenerating with Front Desk copy (backup: leads_backup_20260705). Jean: quoted $2-3k Jun 22, silent since; phased re-engagement drafted; next move is a phone call.
 
 **Email signature rule (2026-07-09):** Gmail does NOT render SVG images. All email signatures must use https://aevon.ca/logo-email.png (80px PNG), never logo.svg. Signature block: logo img 40x40 + "Aidan Cox" + aidan@aevon.ca + Book a call link.
+**Signature rule update (2026-07-09 final):** API-created Gmail drafts turn linked images into attachments. Use TEXT-ONLY signatures in all drafted emails (bold name + Aevon | aevon.ca + email + Book a call link). No images at all.
