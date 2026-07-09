@@ -95,10 +95,28 @@ async function run() {
   const byLead = new Map();
   for (const ev of events || []) {
     if (isBotUa(ev.metadata?.ua)) continue;
-    const g = byLead.get(ev.lead_id) || { lead: ev.leads, visits: [] };
+    const g = byLead.get(ev.lead_id) || { lead: ev.leads, visits: [], uas: [] };
     g.lead = g.lead || ev.leads;
     g.visits.push(ev.created_at);
+    g.uas.push(ev.metadata?.ua || '');
     byLead.set(ev.lead_id, g);
+  }
+
+  // Scanner-burst detector: gateways rotate spoofed UAs across device families
+  // (Windows + iPhone + Android + Edge in one day, e.g. Pacific Quorum 2026-07-08).
+  // No real person browses from 3+ device families in 48h. Drop those leads.
+  function uaFamily(ua) {
+    const u = (ua || '').toLowerCase();
+    if (/iphone|ipad/.test(u)) return 'ios';
+    if (/android/.test(u)) return 'android';
+    if (/edge\//.test(u)) return 'edge';
+    if (/macintosh/.test(u)) return 'mac';
+    if (/windows/.test(u)) return 'windows';
+    return 'other';
+  }
+  for (const [leadId, g] of [...byLead]) {
+    const fams = new Set(g.uas.map(uaFamily));
+    if (fams.size >= 3) byLead.delete(leadId);
   }
 
   // Collapse events less than 30 min apart into one visit, so a double-logged
