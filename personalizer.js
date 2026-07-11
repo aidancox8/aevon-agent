@@ -242,7 +242,11 @@ async function run() {
   // small batch that won't collide with the lead finders' Gemini quota.
   const args = process.argv.slice(2);
   let limit = null;
-  for (let i = 0; i < args.length; i++) if (args[i] === '--limit') limit = parseInt(args[++i], 10);
+  let region = null; // --region us | ca: restrict the pool by lead geography
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--limit') limit = parseInt(args[++i], 10);
+    if (args[i] === '--region') region = args[++i];
+  }
 
   // Fetch leads that need personalization (no email content yet, have an email
   // address), score-ordered. We pull the FULL pool (not the DB --limit) so we can
@@ -263,11 +267,16 @@ async function run() {
     return;
   }
 
+  const scoped = region
+    ? pool.filter(l => (region === 'ca') === isCanadianLead(l.city))
+    : pool;
+  if (region) console.log(`Region filter --region ${region}: ${scoped.length} of ${pool.length} leads.`);
+
   // Named contacts first (a decision-maker's personal inbox beats info@/sales@ for
   // both reachability and reply rate), preserving score order within each tier.
   const isNamed = l => classifyEmail((l.email || '').split('@')[0]) === 'personal';
-  const named = pool.filter(isNamed);
-  const role = pool.filter(l => !isNamed(l));
+  const named = scoped.filter(isNamed);
+  const role = scoped.filter(l => !isNamed(l));
   let leads = [...named, ...role];
   if (limit) leads = leads.slice(0, limit);
 
