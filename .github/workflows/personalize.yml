@@ -13,6 +13,9 @@ on:
 jobs:
   personalize:
     runs-on: ubuntu-latest
+    # Scheduled runs are capped below (--limit); this is a backstop so a hung run
+    # ends as a real failure (alert fires) instead of a silent 6h "cancelled".
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +35,9 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node personalizer.js ${{ inputs.limit != '' && format('--limit {0}', inputs.limit) || '' }}
+        # Scheduled runs cap at 450 (the daily Gemini budget) so the job exits
+        # cleanly instead of grinding into GitHub's 6h kill as "cancelled".
+        run: node personalizer.js ${{ github.event_name == 'schedule' && '--limit 450' || (inputs.limit != '' && format('--limit {0}', inputs.limit) || '') }}
 
       - name: Alert on failure
         if: failure()
