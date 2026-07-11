@@ -96,6 +96,18 @@ const SEARCH_QUERIES = [
   'home care agency',
 ];
 
+// Canadian province codes; any other 2-letter suffix on a city is a US state.
+const CA_PROVINCES = new Set(['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NS', 'NB', 'PE', 'NL', 'YT', 'NT', 'NU']);
+
+function matchesRegion(addr, city) {
+  const m = (city || '').trim().match(/\b([A-Z]{2})$/);
+  if (!m) return false;
+  const code = m[1];
+  const inRegion = new RegExp(`\\b${code}\\b`).test(addr);
+  if (CA_PROVINCES.has(code)) return inRegion && /canada/i.test(addr);
+  return inRegion && /\bUSA\b|united states/i.test(addr);
+}
+
 function parseArgs() {
   const args = process.argv.slice(2);
   const result = { minScore: 7 };
@@ -149,7 +161,7 @@ async function geminiRateLimited(prompt) {
 }
 
 async function qualifyLead(business, websiteText) {
-  const prompt = `You are a lead qualifier for Aevon, a company that builds custom AI agents for businesses in the Lower Mainland, BC. Score this business based on how much repetitive, high-volume knowledge work their staff does — not based on their industry.
+  const prompt = `You are a lead qualifier for Aevon, a company that builds custom AI agents for small businesses. Score this business based on how much repetitive, high-volume knowledge work their staff does — not based on their industry.
 
 AI agents automate work that recurs on a predictable pattern: outreach sequences, document drafting, intake routing, report generation, data extraction, scheduling coordination. The question is whether this business's staff is clearly doing a lot of that kind of work manually.
 
@@ -261,9 +273,11 @@ async function run() {
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
           totalFound++;
-          // Geography guard: keep only addresses clearly in BC, Canada.
+          // Geography guard: the result must clearly sit in the searched
+          // city's own province/state and country (Places text search happily
+          // returns cross-border matches — an Arizona vet once slipped in).
           const addr = place.formattedAddress || '';
-          if (!/\bBC\b|british columbia/i.test(addr) || !/canada/i.test(addr)) {
+          if (!matchesRegion(addr, city)) {
             totalSkipped++; return false;
           }
           if (isDuplicate(dedup, name, website)) { totalSkipped++; return false; }

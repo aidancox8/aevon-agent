@@ -196,3 +196,6 @@ Queue: all ~3,300 unsent leads wiped 2026-07-05 and regenerating with Front Desk
 
 **Email signature rule (2026-07-09):** Gmail does NOT render SVG images. All email signatures must use https://aevon.ca/logo-email.png (80px PNG), never logo.svg. Signature block: logo img 40x40 + "Aidan Cox" + aidan@aevon.ca + Book a call link.
 **Signature rule update (2026-07-09 final):** API-created Gmail drafts turn linked images into attachments. Use TEXT-ONLY signatures in all drafted emails (bold name + Aevon | aevon.ca + email + Book a call link). No images at all.
+
+## US expansion (2026-07-10, user decision)
+US cold email is ON, WITHOUT a mailing address in the footer (user's informed risk call; CASL sends never had one either, and enforcement at this volume targets mass spammers). Mitigations: named contacts only, instant dont_contact on any opt-out reply, complaint alarm in signals digest. First cohort: Seattle metro (Seattle/Bellevue/Tacoma/Kirkland WA), verticals law firm / financial advisor / insurance / mortgage / real estate / dental (run-us-pull.sh). agent-lead-finder.js geo guard is region-parametric (city 2-letter suffix decides country); personalizer.js is region-aware (US leads get neutral framing, NEVER claims to be local). Pricing numbers unchanged, read as USD by US leads.

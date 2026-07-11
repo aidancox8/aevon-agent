@@ -112,7 +112,14 @@ function getIndustryContext(industry) {
     return 'Engineering and technical consulting firms produce recurring deliverables — field reports, assessments, project updates — across many active projects at once.';
   if (/consult/.test(i))
     return 'Consulting firms repeatedly produce proposals, status reports, and client deliverables across many engagements, much of it written from scratch each time.';
-  return 'Growing businesses in the Lower Mainland often reach a point where their team is spending significant time on manual, repetitive internal work that holds them back.';
+  return 'Growing businesses often reach a point where their team is spending significant time on manual, repetitive internal work that holds them back.';
+}
+
+// Canadian province codes; any other 2-letter city suffix means a US lead.
+const CA_PROVINCES = new Set(['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NS', 'NB', 'PE', 'NL', 'YT', 'NT', 'NU']);
+function isCanadianLead(city) {
+  const m = (city || '').trim().match(/\b([A-Z]{2})$/);
+  return !m || CA_PROVINCES.has(m[1]);
 }
 
 // Per-industry phrasing for what the Inbox Agent handles. The product is universal
@@ -143,6 +150,18 @@ function inquiryProfile(industry) {
 function buildPrompt(lead, websiteContent) {
   const industryContext = getIndustryContext(lead.industry);
   const what = inquiryProfile(lead.industry);
+  const local = isCanadianLead(lead.city);
+  // BC leads get the local framing; US leads get a neutral one. NEVER imply
+  // being local to a US lead's area — that would be a fabrication.
+  const whoWeAre = local
+    ? 'Aevon builds AI front desk agents for Lower Mainland businesses.'
+    : 'Aevon builds AI front desk agents for small businesses.';
+  const companyLine = local
+    ? 'a software company based in the Lower Mainland, BC'
+    : 'a software company (do NOT claim to be local to the lead\'s city or state, and do not volunteer the company\'s location; simply omit geography)';
+  const targetLine = local
+    ? '1-50 employee businesses in the Lower Mainland'
+    : '1-50 employee businesses';
   const email1Block = `EMAIL 1 (initial outreach, SHOW-THE-PRODUCT approach):
 - Goal: get a reply by offering a 90-second demo of ONE specific product, the Aevon Front Desk agent, described in THEIR terms. Do NOT ask open discovery questions (tested for months, near-zero replies). Show the thing and make it concrete.
 - CRITICAL POSITIONING: this is NOT an email-writing assistant. Gmail and Outlook already ship AI that helps write replies, so NEVER describe it in those terms ("reads your email", "drafts replies for you" as the headline). Sell the WORKER: it runs their intake end to end. It answers and qualifies ${what}, books the appointment or showing, files every lead into a simple pipeline, and follows up with the ones that go quiet. The owner just approves.
@@ -150,19 +169,19 @@ function buildPrompt(lead, websiteContent) {
 - Price in email 1: you may say "$1,500 flat setup, live inside a week, you own it". Do NOT mention the monthly fee in email 1 (the follow-up covers full terms).
 - Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
 - Body (under 70 words), and DO NOT include any link:
-  1. ONE plain line of who you are: Aevon builds AI front desk agents for Lower Mainland businesses.
+  1. ONE plain line of who you are: ${whoWeAre}
   2. ONE or TWO lines on what it does for a business like theirs, per the positioning above. If a REAL scraped detail exists, weave it in naturally instead of generic phrasing.
   3. ONE line of productized concreteness: flat setup fee, live inside a week, and they own it.
   4. The ask, low friction: do they want the 90 second demo? Make yes easy ("happy to send it over").
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
-  return `You are writing a cold outreach email on behalf of Aevon, a software company based in the Lower Mainland, BC.
+  return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
 About Aevon:
 - Flagship product: the Aevon Front Desk agent. It runs a business's inbound intake end to end: answers and qualifies every inquiry, drafts replies in the owner's voice, books appointments, files every lead into a simple pipeline board, and follows up with leads that go quiet. Nothing sends without the owner's approval.
 - It is NOT a generic email assistant (Gmail/Outlook already have those). It is wired into how the specific business works: their services, their booking rules, their documents, their pipeline.
 - Productized: $1,500 flat setup, live inside a week. Ongoing running and tuning is $150/month and fully OPTIONAL: cancel anytime or take it in-house. The client owns the software either way.
 - Also builds fully custom apps and AI agents for businesses that need more than the flagship.
-- Target clients: 1-50 employee businesses in the Lower Mainland
+- Target clients: ${targetLine}
 
 Industry context (general knowledge about this type of business — use only to inform tone and question, do not repeat verbatim or state as fact about this specific business):
 ${industryContext}
