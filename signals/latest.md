@@ -1,9 +1,9 @@
 # Aevon warm signals
-generated_at: 2026-07-13T16:57:24.990Z
-window_hours: 72
+generated_at: 2026-07-14T16:00:44.247Z
+window_hours: 24
 
 ## Watchlist activity (Vickers / Jean)
-- Vickers Law Group (Jessica Breukelman): 2 genuine visit session(s), last Mon, Jul 13, 7:44 a.m.
+- none
 
 ## "I'm interested" clicks
 - none
