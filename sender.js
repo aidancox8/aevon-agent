@@ -247,7 +247,7 @@ function toHtml(text, leadId, industry) {
     <table cellpadding="0" cellspacing="0" style="margin-top:18px">
       <tr>
         <td style="padding-right:12px;vertical-align:middle">
-          <img src="https://aevon.ca/logo.svg" width="38" height="38" alt="Aevon" style="display:block;border-radius:8px">
+          <img src="https://aevon.ca/logo-email.png" width="38" height="38" alt="Aevon" style="display:block;border-radius:8px">
         </td>
         <td style="vertical-align:middle">
           <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan Cox</div>
