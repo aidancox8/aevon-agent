@@ -16,8 +16,9 @@ const path = require('path');
 const supabase = require('./lib/supabase');
 
 // Hot leads reported at FIRST genuine visit, not just repeats.
+// Vickers (f424365f) declined 2026-07-17; removed so a stray re-view no longer
+// headlines the briefing. Re-add a lead id here only while it is warm.
 const WATCHLIST = {
-  'f424365f-df30-4aae-88df-ca96f9b23e1e': 'Vickers Law Group (Jessica Breukelman)',
   '9a3d60b0-874b-4347-b232-1e351b0e0c03': 'Jean Seguin / Vancouver Business Brokers',
   '23260e23-b1e3-4deb-9b69-582c92d2be2a': 'Restaurant Business Broker (Jean)',
 };
