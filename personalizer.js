@@ -212,7 +212,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying: include the exact token {{DEMO}} (replaced with a real tracked link at send time), e.g. "here it is if it's easier to just watch: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, an optional $150 a month to run and tune it, and they own it either way. Close with one easy line inviting a reply. No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, an optional $150 a month to run and tune it, and they own it either way. Close with one easy line inviting a reply. No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):
