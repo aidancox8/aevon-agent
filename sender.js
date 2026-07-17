@@ -105,17 +105,14 @@ function emailRisk(email) {
 
 // Pick the best landing page for a lead. Insurance brokerages get the vertical
 // page built for them; everyone else gets the general interactive demos.
-function landingFor(industry, leadId) {
-  const i = industry || '';
-  // Verticals get their landing page (embedded matching reel + CTA). Everyone else
-  // goes straight to the generic Front Desk reel: the follow-up copy promises a
-  // 90-second demo you can just watch, and demo.html (interactive apps) broke that
-  // promise. ?v must precede ref; the reel strips only ref and keeps v.
-  let page = 'agent-reel.html?v=generic&';
-  if (/insurance/i.test(i)) page = 'insurance.html?';
-  else if (/mortgage|lending/i.test(i)) page = 'mortgage.html?';
-  else if (/real estate|realtor|realty/i.test(i)) page = 'realestate.html?';
-  return `https://aevon.ca/${page}ref=${leadId}`;
+function landingFor(industry, leadId, businessName) {
+  // One dynamic engine: the reel maps industry -> the matching demo template and
+  // renders it BRANDED to this business, so every prospect sees the same Front
+  // Desk agent running in their own world. The reel strips ?ref on load and keeps
+  // industry/biz, so ref stays last. Business name is capped + URL-encoded.
+  let q = `industry=${encodeURIComponent(industry || '')}`;
+  if (businessName) q += `&biz=${encodeURIComponent(String(businessName).slice(0, 42))}`;
+  return `https://aevon.ca/agent-reel.html?${q}&ref=${leadId}`;
 }
 
 function vancouverDayStartISO() {
@@ -217,7 +214,7 @@ function isSendableDay() {
 // Plain, left-aligned personal email. No card/wrapper/hero image — a marketing
 // template look is the #1 "this was sent by a bot" tell. Mirrors how a person
 // actually types a 1:1 email, with a simple text signature.
-function toHtml(text, leadId, industry) {
+function toHtml(text, leadId, industry, businessName) {
   const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -236,7 +233,7 @@ function toHtml(text, leadId, industry) {
   // Clean link to the real site, tagged so a visit is attributed to this lead.
   // Not a redirect/masked link — just aevon.ca with a query param — so it carries
   // no deliverability risk while letting us see who was interested enough to look.
-  const siteUrl = leadId ? landingFor(industry, leadId) : 'https://aevon.ca/demo.html';
+  const siteUrl = leadId ? landingFor(industry, leadId, businessName) : 'https://aevon.ca/demo.html';
 
   return `<!DOCTYPE html>
 <html>
@@ -406,7 +403,7 @@ async function run() {
 
     // Replace the {{DEMO}} token (follow-ups) with a clean, ref-tagged link to
     // the interactive demo page. Done at send time because the ref is the lead id.
-    const demoUrl = landingFor(lead.industry, lead.id);
+    const demoUrl = landingFor(lead.industry, lead.id, lead.business_name);
     body = body.replace(/\{\{DEMO\}\}/g, demoUrl);
 
     process.stdout.write(`  [${step === 0 ? 'email' : 'followup ' + step}] ${lead.business_name} <${lead.email}>... `);
@@ -444,7 +441,7 @@ async function run() {
         to: lead.email,
         subject,
         text: body,
-        html: toHtml(body, lead.id, lead.industry),
+        html: toHtml(body, lead.id, lead.industry, lead.business_name),
       });
 
       if (sendError) throw new Error(sendError.message);
