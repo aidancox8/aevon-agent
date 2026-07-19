@@ -6,3 +6,4 @@ enrich.log
 enrich-emails.log
 overnight.log
 personalize30.log
+intake-log.*.jsonl
