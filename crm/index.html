@@ -1432,6 +1432,10 @@
     const base = uniqueSent || 1;
     const pctOf = (n, d) => d ? Math.round(n / d * 100) : 0;
     const replyRate = pctOf(repliedCount, base);
+    // Precise (1-decimal) rates + explicit targets. Goal: 3-5% reply, ~1% positive.
+    // "It's working" bar = 3% reply; below 1% is a warning. Kept live off Supabase.
+    const replyRateStr = base ? (repliedCount / base * 100).toFixed(1) : '0.0';
+    const positiveRateStr = base ? (interested / base * 100).toFixed(1) : '0.0';
     const bounceRate = pctOf(bounced, base);
     const openRate = pctOf(openedLeads, base);
     const clickRate = pctOf(clickedLeads, base);
@@ -1530,7 +1534,8 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:16px">
         ${kpiCard('Total Leads', total.toLocaleString(), `${hasEmail.toLocaleString()} contactable (${pctOf(hasEmail, total)}%)`, { accent: '#6366F1' })}
         ${kpiCard('Emails Sent', uniqueSent.toLocaleString(), `${personalized.toLocaleString()} personalized`, { accent: '#818CF8' })}
-        ${kpiCard('Reply Rate', replyRate + '%', `${repliedCount} ${repliedCount === 1 ? 'reply' : 'replies'} &middot; ${interested} interested`, { accent: '#22C55E', tone: replyRate >= 3 ? 'good' : '' })}
+        ${kpiCard('Reply Rate', replyRateStr + '%', `goal 3-5% &middot; ${repliedCount} ${repliedCount === 1 ? 'reply' : 'replies'} &middot; ${interested} interested`, { accent: '#22C55E', tone: parseFloat(replyRateStr) >= 3 ? 'good' : (parseFloat(replyRateStr) < 1 ? 'warn' : '') })}
+        ${kpiCard('Positive Rate', positiveRateStr + '%', `goal ~1% &middot; ${interested} genuinely interested`, { accent: '#10B981', tone: parseFloat(positiveRateStr) >= 1 ? 'good' : (parseFloat(positiveRateStr) < 0.5 ? 'warn' : '') })}
         ${kpiCard('Conversion Rate', convFromContacted + '%', `${convertedStatus} won &middot; ${convFromReplied}% of replies`, { accent: '#A855F7', tone: convertedStatus > 0 ? 'good' : '' })}
         ${kpiCard('Bounce Rate', bounceRate + '%', `${bounced} bounced${bounceRate >= 5 ? ' &middot; too high' : ' &middot; healthy'}`, { accent: '#EF4444', tone: bounceRate >= 5 ? 'warn' : 'good' })}
         ${kpiCard('Runway', runwayDays + 'd', `${readyQueued.toLocaleString()} queued at ${DAILY}/day`, { accent: '#FB923C', tone: runwayDays <= 3 ? 'warn' : '' })}
