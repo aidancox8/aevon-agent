@@ -55,6 +55,10 @@ const CONFIGS = {
     qualify: 'A good inquiry is a real person in the Lower Mainland with a specific tech problem or setup need. Out of area, vague spam, sales pitches, and recruiters are NOT qualified.',
     bookingLink: 'https://calendar.app.google/7R7srDKzWrvmLQg37',
     signature: '\n\nAidan\nTech Neighbour BC\ntechneighbourbc@gmail.com',
+    // Its own mailbox + OAuth token (from get-gmail-token.js run while logged
+    // into this account), so it never touches Aevon's inbox.
+    gmailUser: process.env.TN_GMAIL_USER || 'techneighbourbc@gmail.com',
+    refreshTokenEnv: 'TN_GMAIL_OAUTH_REFRESH_TOKEN',
   },
   // Fallback so the agent is always runnable for a smoke test against any inbox.
   default: {
@@ -66,11 +70,14 @@ const CONFIGS = {
     qualify: 'A good inquiry is a real prospective customer with a specific need the business can serve.',
     bookingLink: '',
     signature: '',
+    gmailUser: process.env.GMAIL_USER,
+    refreshTokenEnv: 'GMAIL_OAUTH_REFRESH_TOKEN',
   },
 };
 const CFG = CONFIGS[configName] || CONFIGS.default;
 
-const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_USER = CFG.gmailUser;
+const REFRESH_TOKEN = process.env[CFG.refreshTokenEnv];
 const LOOKBACK_DAYS = 3;
 const LOG_PATH = path.join(__dirname, `intake-log.${configName}.jsonl`);
 
@@ -80,7 +87,7 @@ function gmailClient() {
     process.env.GMAIL_OAUTH_CLIENT_ID,
     process.env.GMAIL_OAUTH_CLIENT_SECRET
   );
-  oauth2.setCredentials({ refresh_token: process.env.GMAIL_OAUTH_REFRESH_TOKEN });
+  oauth2.setCredentials({ refresh_token: REFRESH_TOKEN });
   return google.gmail({ version: 'v1', auth: oauth2 });
 }
 function header(payload, name) {
@@ -178,8 +185,8 @@ async function buildRawDraft({ to, subject, inReplyTo, references, body }) {
 
 // ── Main ──────────────────────────────────────────────────────────
 async function run() {
-  if (!process.env.GMAIL_OAUTH_REFRESH_TOKEN) {
-    throw new Error('GMAIL_OAUTH_REFRESH_TOKEN missing. Run: node get-gmail-token.js');
+  if (!REFRESH_TOKEN) {
+    throw new Error(`${CFG.refreshTokenEnv} missing in .env. Authorize this mailbox: log into ${GMAIL_USER}, run get-gmail-token.js, and put the printed token in ${CFG.refreshTokenEnv}.`);
   }
   console.log(`Intake agent for "${CFG.businessName}" (${configName})${DRY ? ' [DRY RUN]' : ''}\n`);
   const gmail = gmailClient();
