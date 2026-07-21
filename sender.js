@@ -306,7 +306,7 @@ async function run() {
   const { data: initialsPool, error: iErr } = await baseFilter(
     supabase.from('leads').select(cols).eq('sequence_step', 0)
   ).order('qualification_score', { ascending: false, nullsFirst: false })
-   .order('scheduled_send_at', { ascending: true }).limit(Math.max(DAILY_CAP * 6, 120));
+   .order('scheduled_send_at', { ascending: true }).limit(Math.max(DAILY_CAP * 20, 400));
   if (iErr) throw new Error(`Supabase fetch (initials) failed: ${iErr.message}`);
 
   // Prefer a real person's inbox over a generic role/catch-all box. Decision-
@@ -329,12 +329,31 @@ async function run() {
   const role  = (initialsPool || []).filter(l =>  isRoleInbox(l.email));
   const initials = [...named, ...role];
 
+  // Region balance: a US test cohort runs alongside the BC backlog. Pure score
+  // ordering lets BC's larger, earlier-scheduled queue take every slot, which
+  // silently starved US for days. Guarantee US a share of the new-lead budget so
+  // the US-vs-BC reply comparison actually gets data. Named-first + score order
+  // is preserved WITHIN each region (initials is already in that order).
+  const US_INITIAL_SHARE = 0.4;
+  const isUSLead = l => / (WA|OR|AZ|CO|TX|CA|NV|IL|GA|FL)$/.test(l.city || '');
+  const usInit = initials.filter(isUSLead);
+  const caInit = initials.filter(l => !isUSLead(l));
+  function regionBalance(budget) {
+    if (!usInit.length || !caInit.length) return initials.slice(0, budget); // one region only
+    const usWant = Math.min(usInit.length, Math.round(budget * US_INITIAL_SHARE));
+    const us = usInit.slice(0, usWant);
+    const ca = caInit.slice(0, budget - us.length);
+    // Backfill from US if CA ran short so we never under-fill the budget.
+    const usFinal = us.length + ca.length < budget ? usInit.slice(0, budget - ca.length) : us;
+    return [...ca, ...usFinal].slice(0, budget);
+  }
+
   // Budget: follow-ups capped at half the cap; unused slots roll to new leads,
   // and unused new-lead slots roll back to follow-ups — never exceed `remaining`.
   const followupBudget = Math.min(followups?.length || 0, Math.ceil(DAILY_CAP * FOLLOWUP_MAX_SHARE));
   const pickedFollowups = (followups || []).slice(0, followupBudget);
   const initialBudget = Math.max(0, remaining - pickedFollowups.length);
-  const pickedInitials = (initials || []).slice(0, initialBudget);
+  const pickedInitials = regionBalance(initialBudget);
   // If new leads didn't use their full share, let extra follow-ups fill the gap.
   let due = [...pickedFollowups, ...pickedInitials];
   if (due.length < remaining) {
