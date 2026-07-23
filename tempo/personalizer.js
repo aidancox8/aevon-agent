@@ -15,7 +15,13 @@ const { createGenerate } = require('../lib/gemini');
 const { scrapeContext, classifyEmail } = require('../lib/contact-finder');
 
 const TABLE = 'tempo_leads';
-const DEMO_URL = 'clinic-scheduler-demo.web.app';
+// Two demo worlds: allied clinics see the allied demo (physios/RMTs/treatment
+// rooms, no on-call); medical groups see the medical demo.
+const DEMO_URL_MEDICAL = 'clinic-scheduler-demo.web.app';
+const DEMO_URL_ALLIED = 'allied-scheduler-demo.web.app';
+function isAlliedLead(industry) {
+  return /physio|rehab|sport|kinesio|occupational|chiro|massage|multidiscip|integrated|wellness|naturopath|concussion/i.test(industry || '');
+}
 const generate = createGenerate(process.env.GEMINI_API_KEY);
 
 function withTimeout(promise, ms, label) {
@@ -66,17 +72,30 @@ function clinicContext(industry) {
 }
 
 function buildPrompt(lead, websiteContent) {
+  const allied = isAlliedLead(lead.industry);
   const ctx = clinicContext(lead.industry);
+
+  // Allied clinics almost all run Jane for PATIENT booking. Tempo never competes
+  // with Jane — it schedules the TEAM (who works, where, when), which Jane's own
+  // help docs say is out of scope for admin/front-desk staff.
+  const positioning = allied
+    ? `Tempo is NOT a patient-booking tool and NOT a Jane replacement (they almost certainly run Jane, and that is fine — Jane books their patients). Tempo schedules their TEAM: it builds the weekly grid of which practitioner is in which treatment room on which day, schedules the front desk and support staff too (something Jane does not do — Jane's own guides tell clinics to use an external calendar for admin staff), sends automatic SMS and email shift reminders, finds cover fast when someone calls in sick (one tap texts every qualified free staff member, first yes fills the shift), syncs time off with payroll and exports payroll-ready hours, and shows room and bed utilization. Built around THEIR clinic — their disciplines, rooms, locations, hours.`
+    : `Tempo is NOT a patient-booking tool or an EMR (they already have those). It schedules STAFF and ROOMS: it builds the weekly grid of which provider is in which room on which day, sends automatic SMS and email shift + on-call reminders, handles shift and on-call cover, syncs time off with payroll, and shows room-utilization stats. It is built around THEIR clinic — their rooms, their provider types, their hours — and can run inside the tools they already use (e.g. Microsoft Teams).`;
+
+  const contract = allied
+    ? `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly practitioner + room schedule, (2) schedules front desk and support staff (which Jane does not cover), (3) automated SMS + email shift reminders and one-tap sick-call cover (text all qualified free staff, first yes takes the shift), (4) time off that syncs with payroll + payroll-ready hours export, (5) room utilization and coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting, Jane integration).`
+    : `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly staff + room schedule, (2) automated SMS + email shift and on-call reminders/confirmations, (3) shift and on-call cover handling, (4) time-off that syncs with payroll, (5) utilization + coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting).`;
+
   const email1Block = `EMAIL 1 (initial outreach, SHOW-THE-PRODUCT approach):
 - Goal: get a reply by offering a short look at ONE specific product, Tempo, described in a clinic's own terms. Do NOT ask open discovery questions. Show the thing and make it concrete.
-- POSITIONING: Tempo is NOT a patient-booking tool or an EMR (they already have those). It schedules STAFF and ROOMS: it builds the weekly grid of which provider is in which room on which day, sends automatic SMS and email shift + on-call reminders, handles shift and on-call cover, syncs time off with payroll, and shows room-utilization stats. It is built around THEIR clinic — their rooms, their provider types, their hours — and can run inside the tools they already use (e.g. Microsoft Teams).
-- HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly staff + room schedule, (2) automated SMS + email shift and on-call reminders/confirmations, (3) shift and on-call cover handling, (4) time-off that syncs with payroll, (5) utilization + coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting).
-- The hook: get their staff + room scheduling OFF spreadsheets.
-- Subject line: lowercase, short (2-5 words), about clinic scheduling / the rota / rooms / spreadsheets. Vary the grammatical form. Fresh and specific.
+- POSITIONING: ${positioning}
+- ${contract}
+- The hook: ${allied ? 'Jane books their patients, but someone still builds the staff schedule by hand every week (and scrambles by text when someone calls in sick). Tempo takes that over.' : 'get their staff + room scheduling OFF spreadsheets.'}
+- Subject line: lowercase, short (2-5 words), about staff scheduling / rooms / coverage / spreadsheets. Never use the word "rota" (Canadian clinics say "schedule"). Vary the grammatical form. Fresh and specific.
 - Body (under 70 words), and DO NOT include any link:
   1. ONE plain line of who you are: Aevon builds Tempo, a staff and room scheduling app made for multi-provider clinics.
   2. ONE or TWO lines on what it does for a clinic like theirs, per the positioning above. If a REAL scraped detail exists (their disciplines, number of providers, locations), weave it in naturally.
-  3. ONE line of concreteness: it is built around their clinic and can live in the tools they already use; it gets the rota off spreadsheets.
+  3. ONE line of concreteness: it is built around their clinic${allied ? ' and sits alongside Jane, never replacing it' : ' and can live in the tools they already use'}; it gets the staff schedule off spreadsheets.
   4. The ask, low friction: do they want a 2-minute look at a version set up like a clinic? Make yes easy ("happy to send it over").
   - No link in email 1. No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, a software company based in the Lower Mainland, BC. Aevon's product for clinics is Tempo.
@@ -105,7 +124,7 @@ Write THREE emails, a lead insight, and a personalization basis.
 ${email1Block}
 
 CRITICAL anti-fabrication rules:
-- An observation about their clinic may be an honest, soft, industry-level truth ("clinics with a few disciplines usually build the rota by hand") — that is fine.
+- An observation about their clinic may be an honest, soft, industry-level truth ("clinics with a few disciplines usually build the staff schedule by hand") — that is fine.
 - But you may ONLY state a CONCRETE, specific fact about THIS clinic (a named discipline, provider count, a second location, specific hours, a named practitioner) if it appears verbatim in the "Scraped from their website" text. If it is not there, you do NOT know it — do not invent it.
 - Never claim to have seen something specific you did not. Inventing specifics reads as a bot and destroys trust.
 
@@ -116,7 +135,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Point them to the live demo at ${DEMO_URL} (write it exactly, as plain text, no markdown link). Frame it as a version set up like a multi-provider clinic (this is true — the demo is a working clinic schedule). Then one plain line: it gets built around their clinic and can run in the tools they already use. Close with one easy line inviting a reply. No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Point them to the live demo at ${allied ? DEMO_URL_ALLIED : DEMO_URL_MEDICAL} (write it exactly, as plain text, no markdown link). Frame it as a version set up like a ${allied ? 'multi-practitioner allied clinic (physio, RMT, chiro)' : 'multi-provider clinic'} (this is true — the demo is a working clinic schedule). Then one plain line: it gets built around their clinic and can run in the tools they already use. Close with one easy line inviting a reply. No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):

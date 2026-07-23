@@ -1,30 +1,37 @@
 # Tempo — the offer (clinic scheduling)
 
-**Company:** Aevon (aevon.ca), Lower Mainland, BC. **Product:** Tempo.
+**Company:** Aevon (aevon.ca), Lower Mainland, BC. **Product:** Tempo (one engine, two presets: **Tempo Clinic** for medical groups, **Tempo Allied** for allied health).
 
 ## One-liner
-Aevon builds **Tempo**, a custom **staff & room scheduling** app for multi-provider clinics — so they can stop running the rota in spreadsheets.
+Aevon builds **Tempo**, a custom **staff & room scheduling** app for multi-provider clinics — so they can stop building the staff schedule in spreadsheets. (Never say "rota" — Canadian clinics say "schedule".)
 
-## What Tempo does (the capability contract — never claim more)
-1. Builds the **weekly staff + room schedule** (which provider is in which room, each day).
-2. **Automated SMS + email** shift and on-call reminders / confirmations.
-3. **Shift and on-call cover** handling.
-4. **Time off that syncs with payroll**.
-5. **Utilization + coverage analytics**.
+## Allied health positioning (MOST of the market — they run Jane)
+Almost every BC allied clinic uses **Jane** for patient booking. Tempo NEVER competes with Jane: **"Jane books your patients. Tempo schedules your team."** Documented wedge: Jane's own guides say admin/front-desk staff can't go on the schedule and recommend "an external calendar" — Tempo is that, purpose-built.
 
-Tailored to each clinic (their rooms, provider types, departments, hours) and can run **inside the tools they already use (e.g. Microsoft Teams)**.
+## Capability contract — ALLIED clinics (never claim more)
+1. Weekly **practitioner + room** schedule (who's in which treatment room, each day).
+2. **Front desk + support staff scheduling** (Jane doesn't do this).
+3. **SMS/email shift reminders** + **one-tap sick-call cover** (texts all qualified free staff; first yes fills the shift).
+4. **Time off synced with payroll** + payroll-ready hours export.
+5. **Room/bed utilization + coverage analytics**.
+No on-call for allied. Never claim a Jane integration.
+
+## Capability contract — MEDICAL groups
+1. Weekly staff + room schedule. 2. SMS/email shift **and on-call** reminders/confirmations. 3. Shift and on-call cover. 4. Payroll-synced time off. 5. Utilization analytics. Runs inside their tools (e.g. MS Teams).
 
 ## What it is NOT
-Not patient booking, not an EMR, not billing/charting. It schedules **staff and rooms** — the thing clinics still do by hand.
+Not patient booking, not an EMR, not billing/charting, not a Jane replacement.
 
 ## Who we target
-Multi-provider Lower Mainland clinics: physio / chiro / multidisciplinary / rehab / sports-med, and medical groups. Solo practitioners are a poor fit.
+Multi-provider Lower Mainland clinics: physio / chiro / multidisciplinary / rehab / sports-med (huge segment, all on Jane), and medical groups. Solo practitioners are a poor fit.
 
 ## Never contact
 **Changepain** and **Artus Health Centre** — excluded automatically by the lead finder.
 
-## The demo (the killer asset)
-Live demo: **clinic-scheduler-demo.web.app** — a working clinic schedule anyone can click through. Email 2 links to it.
+## The demos (the killer asset)
+- Allied clinics: **allied-scheduler-demo.web.app** (physios/RMTs/chiros/kins, treatment rooms, cover finder, no on-call).
+- Medical groups: **clinic-scheduler-demo.web.app**.
+Email 2 links to the matching one automatically (personalizer picks by lead industry).
 
 ## Pricing
 Not fixed yet — set your setup fee + optional monthly before turning the sender on. The current copy leads with the demo and a "built around your clinic" framing, and leaves numbers for the reply/call. (Aevon's Front Desk product uses $1,500 setup + optional $150/mo as a reference point.)
