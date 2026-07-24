@@ -28,6 +28,14 @@ const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 
 // Never prospect these — the user's employer + one explicit exclusion.
 const EXCLUDE_NAMES = ['changepain', 'change pain', 'artus'];
+// National chains run head-office scheduling systems — wrong ICP, skip at intake.
+const CHAIN_NAMES = ['lifemark', 'pt health', 'pthealth', 'cbi health', 'myodetox', 'athletico', 'physiomobility', 'kinatex', 'proactive physiotherapy group'];
+function isChain(name, website) {
+  const n = (name || '').toLowerCase();
+  const w = (website || '').toLowerCase();
+  return CHAIN_NAMES.some(x => n.includes(x) || w.includes(x.replace(/s+/g, '')));
+}
+
 function isExcluded(name, website) {
   const n = (name || '').toLowerCase();
   const w = (website || '').toLowerCase();
