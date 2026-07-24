@@ -24,6 +24,18 @@ function isAlliedLead(industry) {
 }
 const generate = createGenerate(process.env.GEMINI_API_KEY);
 
+const axios = require('axios');
+// Most Jane clinics link janeapp.com for online booking. Only name Jane in copy
+// when we can SEE it on their site — a chain or Cliniko/Juvonno shop must never
+// get 'you run Jane' copy (reads as a mail-merge error and kills trust).
+async function detectJane(website) {
+  if (!website) return false;
+  try {
+    const { data } = await axios.get(website, { timeout: 8000, maxContentLength: 3e6, responseType: 'text', headers: { 'User-Agent': 'Mozilla/5.0' } });
+    return typeof data === 'string' && /janeapp.com|jane.app/i.test(data);
+  } catch { return false; }
+}
+
 function withTimeout(promise, ms, label) {
   let timer;
   const guard = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms); });
@@ -71,7 +83,9 @@ function clinicContext(industry) {
   return 'Clinics with several providers and rooms spend real time each week building the staff and room schedule, arranging cover, and reminding people of their shifts — most of it manual.';
 }
 
-function buildPrompt(lead, websiteContent) {
+function allied0(lead) { return isAlliedLead(lead.industry); }
+
+function buildPrompt(lead, websiteContent, usesJane) {
   const allied = isAlliedLead(lead.industry);
   const ctx = clinicContext(lead.industry);
 
@@ -79,23 +93,23 @@ function buildPrompt(lead, websiteContent) {
   // with Jane — it schedules the TEAM (who works, where, when), which Jane's own
   // help docs say is out of scope for admin/front-desk staff.
   const positioning = allied
-    ? `Tempo is NOT a patient-booking tool and NOT a Jane replacement (they almost certainly run Jane, and that is fine — Jane books their patients). Tempo schedules their TEAM: it builds the weekly grid of which practitioner is in which treatment room on which day, schedules the front desk and support staff too (something Jane does not do — Jane's own guides tell clinics to use an external calendar for admin staff), sends automatic SMS and email shift reminders, finds cover fast when someone calls in sick (one tap texts every qualified free staff member, first yes fills the shift), syncs time off with payroll and exports payroll-ready hours, and shows room and bed utilization. Built around THEIR clinic — their disciplines, rooms, locations, hours.`
+    ? `${usesJane ? `Tempo is NOT a patient-booking tool and NOT a Jane replacement (their site shows they book through Jane, and that is fine — Jane books their patients; you may naturally acknowledge that they run Jane).` : `Tempo is NOT a patient-booking tool and does NOT replace their booking system (whatever they book patients with stays; NEVER name a specific booking product like Jane — we have not verified what they use).`} Tempo schedules their TEAM: it builds the weekly grid of which practitioner is in which treatment room on which day, ${usesJane ? `schedules the front desk and support staff too (something Jane does not do — Jane's own guides tell clinics to use an external calendar for admin staff)` : `schedules the front desk and support staff too (something patient-booking tools leave to a separate calendar)`}, sends automatic SMS and email shift reminders, finds cover fast when someone calls in sick (one tap texts every qualified free staff member, first yes fills the shift), syncs time off with payroll and exports payroll-ready hours, and shows room and bed utilization. Built around THEIR clinic — their disciplines, rooms, locations, hours.`
     : `Tempo is NOT a patient-booking tool or an EMR (they already have those). It schedules STAFF and ROOMS: it builds the weekly grid of which provider is in which room on which day, sends automatic SMS and email shift + on-call reminders, handles shift and on-call cover, syncs time off with payroll, and shows room-utilization stats. It is built around THEIR clinic — their rooms, their provider types, their hours — and can run inside the tools they already use (e.g. Microsoft Teams).`;
 
   const contract = allied
-    ? `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly practitioner + room schedule, (2) schedules front desk and support staff (which Jane does not cover), (3) automated SMS + email shift reminders and one-tap sick-call cover (text all qualified free staff, first yes takes the shift), (4) time off that syncs with payroll + payroll-ready hours export, (5) room utilization and coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting, Jane integration).`
+    ? `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly practitioner + room schedule, (2) schedules front desk and support staff (which patient-booking tools do not cover), (3) automated SMS + email shift reminders and one-tap sick-call cover (text all qualified free staff, first yes takes the shift), (4) time off that syncs with payroll + payroll-ready hours export, (5) room utilization and coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting, Jane integration).`
     : `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly staff + room schedule, (2) automated SMS + email shift and on-call reminders/confirmations, (3) shift and on-call cover handling, (4) time-off that syncs with payroll, (5) utilization + coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting).`;
 
   const email1Block = `EMAIL 1 (initial outreach, SHOW-THE-PRODUCT approach):
 - Goal: get a reply by offering a short look at ONE specific product, Tempo, described in a clinic's own terms. Do NOT ask open discovery questions. Show the thing and make it concrete.
 - POSITIONING: ${positioning}
 - ${contract}
-- The hook: ${allied ? 'Jane books their patients, but someone still builds the staff schedule by hand every week (and scrambles by text when someone calls in sick). Tempo takes that over.' : 'get their staff + room scheduling OFF spreadsheets.'}
+- The hook: ${allied ? (usesJane ? 'Jane' : 'Their booking system') + ' books their patients, but someone still builds the staff schedule by hand every week (and scrambles by text when someone calls in sick). Tempo takes that over.' : 'get their staff + room scheduling OFF spreadsheets.'}
 - Subject line: lowercase, short (2-5 words), about staff scheduling / rooms / coverage / spreadsheets. Never use the word "rota" (Canadian clinics say "schedule"). Vary the grammatical form. Fresh and specific.
 - Body (under 70 words), and DO NOT include any link:
   1. ONE plain line of who you are: Aevon builds Tempo, a staff and room scheduling app made for multi-provider clinics.
   2. ONE or TWO lines on what it does for a clinic like theirs, per the positioning above. If a REAL scraped detail exists (their disciplines, number of providers, locations), weave it in naturally.
-  3. ONE line of concreteness: it is built around their clinic${allied ? ' and sits alongside Jane, never replacing it' : ' and can live in the tools they already use'}; it gets the staff schedule off spreadsheets.
+  3. ONE line of concreteness: it is built around their clinic${allied ? ' and sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ', never replacing it' : ' and can live in the tools they already use'}; it gets the staff schedule off spreadsheets.
   4. The ask, low friction: do they want a 2-minute look at a version set up like a clinic? Make yes easy ("happy to send it over").
   - No link in email 1. No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, a software company based in the Lower Mainland, BC. Aevon's product for clinics is Tempo.
@@ -191,7 +205,9 @@ async function run() {
     try {
       const websiteContent = await withTimeout(scrapeContext(lead.website), 15000, 'scrape').catch(() => null);
       if (websiteContent) process.stdout.write(`(scraped) `);
-      const prompt = buildPrompt(lead, websiteContent);
+      const usesJane = allied0(lead) ? await detectJane(lead.website) : false;
+      if (usesJane) process.stdout.write('(jane) ');
+      const prompt = buildPrompt(lead, websiteContent, usesJane);
       let content = parseJsonObject(await withTimeout(rateLimitedGenerate(prompt), 60000, 'gemini'));
       if (!content || !content.email_subject || !content.email_body)
         content = parseJsonObject(await withTimeout(rateLimitedGenerate(prompt + '\n\nReturn ONLY the JSON object, nothing before or after it.'), 60000, 'gemini'));
