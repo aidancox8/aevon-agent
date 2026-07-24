@@ -74,7 +74,7 @@ function matchLead(index, fromEmail, subject) {
 async function classifyReply(lead, replyText) {
   const allied = /physio|rehab|sport|kinesio|occupational|chiro|massage|multidiscip|integrated|wellness|naturopath|concussion/i.test(lead.industry || '');
   const contract = allied
-    ? 'Tempo schedules the TEAM at allied clinics: weekly practitioner + room schedule, front desk and support staff scheduling (which Jane does not cover), SMS shift reminders + one-tap sick-call cover, payroll-synced time off + hours export, and room utilization analytics. It runs ALONGSIDE Jane, never replacing it. It is NOT patient booking, NOT an EMR, and there is NO Jane integration.'
+    ? 'Tempo schedules the TEAM at allied clinics: weekly practitioner + room schedule, front desk and support staff scheduling (which Jane does not cover), SMS shift reminders + one-tap sick-call cover, payroll-synced time off + hours export, and room utilization analytics. It runs ALONGSIDE their existing patient-booking system, never replacing it. Only mention Jane by name if THEY mentioned it first. It is NOT patient booking, NOT an EMR, and there is NO integration with any booking product.'
     : 'Tempo schedules STAFF and ROOMS for medical groups: weekly staff + room schedule, SMS/email shift and on-call reminders, shift and on-call cover, payroll-synced time off, and utilization analytics. It is NOT patient booking, an EMR, or billing.';
 
   const prompt = `You are Aidan, founder of Aevon, replying to a clinic that responded to your cold outreach about Tempo, Aevon's custom staff and room scheduling app for multi-provider clinics.
