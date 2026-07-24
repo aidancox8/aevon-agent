@@ -19,6 +19,7 @@ const axios = require('axios');
 const supabase = require('../lib/supabase');
 const { createGenerate } = require('../lib/gemini');
 const { findContact } = require('../lib/contact-finder');
+const { dncReason } = require('./dnc');
 
 const TABLE = 'tempo_leads';
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
@@ -33,10 +34,22 @@ function isExcluded(name, website) {
   return EXCLUDE_NAMES.some(x => n.includes(x) || w.includes(x.replace(/\s+/g, '')));
 }
 
-const CITIES = [
+const CITIES_BC = [
   'Vancouver BC', 'Burnaby BC', 'Surrey BC', 'Richmond BC', 'Langley BC',
   'Coquitlam BC', 'Abbotsford BC', 'North Vancouver BC', 'New Westminster BC',
   'Delta BC', 'Port Coquitlam BC', 'West Vancouver BC', 'Maple Ridge BC', 'White Rock BC',
+];
+// National sweep (--region canada): major metros outside the Lower Mainland.
+// Quebec deliberately excluded for now — Bill 96 French-language rules for
+// commercial email make English cold outreach there a compliance question.
+const CITIES_CANADA = [
+  'Victoria BC', 'Kelowna BC', 'Kamloops BC', 'Nanaimo BC',
+  'Calgary AB', 'Edmonton AB', 'Red Deer AB', 'Lethbridge AB',
+  'Saskatoon SK', 'Regina SK', 'Winnipeg MB',
+  'Toronto ON', 'Mississauga ON', 'Brampton ON', 'Hamilton ON', 'Ottawa ON',
+  'London ON', 'Kitchener ON', 'Waterloo ON', 'Guelph ON', 'Burlington ON',
+  'Oakville ON', 'Markham ON', 'Vaughan ON', 'Barrie ON', 'Oshawa ON',
+  'Halifax NS', 'Moncton NB', 'Fredericton NB', 'Charlottetown PE', "St. John's NL",
 ];
 
 // Multi-provider, room-based clinics — the practices whose staff/room scheduling
@@ -82,6 +95,7 @@ function parseArgs() {
     if (args[i] === '--city') result.city = args[++i];
     if (args[i] === '--min-score') result.minScore = parseInt(args[++i], 10);
     if (args[i] === '--pages') result.pages = parseInt(args[++i], 10);
+    if (args[i] === '--region') result.region = args[++i]; // bc (default) | canada | all
   }
   return result;
 }
@@ -173,7 +187,10 @@ function isDuplicate({ names, sites }, businessName, website) {
 async function run() {
   const args = parseArgs();
   const queries = args.query ? [args.query] : SEARCH_QUERIES.slice().sort(() => Math.random() - 0.5);
-  const cities = args.city ? [args.city] : CITIES;
+  const regionCities = args.region === 'canada' ? CITIES_CANADA
+    : args.region === 'all' ? [...CITIES_BC, ...CITIES_CANADA]
+    : CITIES_BC;
+  const cities = args.city ? [args.city] : regionCities;
   const maxPages = args.pages || 1;
   const minScore = args.minScore;
 
@@ -216,7 +233,14 @@ async function run() {
         const scraped = await Promise.all(fresh.map(async place => ({ place, contact: await findContact(place.websiteUri || null) })));
 
         for (const { place, contact } of scraped) {
-          const { email, emailQuality, contactName, contactRole, text } = contact;
+          let { email, emailQuality, contactName, contactRole, text } = contact;
+          // A scraped contact can be a Changepain person moonlighting at this
+          // clinic — strip them at intake so they never enter the pipeline.
+          const dnc = dncReason(contactName, email);
+          if (dnc) {
+            if (dncReason(null, email)) { email = null; emailQuality = null; }
+            contactName = null; contactRole = null;
+          }
           const name = place.displayName?.text || 'Unknown';
           const website = place.websiteUri || null;
           process.stdout.write(`  [${name}]... `);
