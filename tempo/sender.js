@@ -23,8 +23,10 @@ const TABLE = 'tempo_leads';
 const EVENTS = 'tempo_email_events';
 const LIVE = process.argv.includes('--send') || process.env.TEMPO_SEND === '1';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+// Tempo can run on its OWN Resend account + subdomain sender (reputation isolation +
+// separate free quota). Set TEMPO_RESEND_API_KEY / TEMPO_FROM_EMAIL in .env; falls back to Aevon otherwise.
+const resend = new Resend(process.env.TEMPO_RESEND_API_KEY || process.env.RESEND_API_KEY);
+const FROM = process.env.TEMPO_FROM_EMAIL || process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'Aidan from Aevon';
 const FOLLOWUP_DELAY_DAYS = 5;
 const DAILY_CAP = parseInt(process.env.TEMPO_DAILY_CAP || '20', 10);
