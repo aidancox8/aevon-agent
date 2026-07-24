@@ -451,6 +451,10 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_yeGHZBOyEf0wPb-YSCivPg_jA2dB5Kg';
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Campaign switch: default Aevon; ?campaign=tempo shows the Tempo clinic pipeline.
+  const CAMPAIGN = new URLSearchParams(location.search).get('campaign') === 'tempo' ? 'tempo' : 'aevon';
+  const T_LEADS = CAMPAIGN === 'tempo' ? 'tempo_leads' : 'leads';
+  const T_EVENTS = CAMPAIGN === 'tempo' ? 'tempo_email_events' : 'email_events';
   let currentView = 'pipeline';
   let editingCustomerId = null;
 
@@ -482,8 +486,8 @@
   // ── Pipeline ─────────────────────────────────────────────────
   async function renderPipeline() {
     const [{ data: leads }, { data: events }] = await Promise.all([
-      sb.from('leads').select('*').order('scheduled_send_at', { ascending: true, nullsFirst: false }).limit(5000),
-      sb.from('email_events').select('lead_id, event_type').limit(5000),
+      sb.from(T_LEADS).select('*').order('scheduled_send_at', { ascending: true, nullsFirst: false }).limit(5000),
+      sb.from(T_EVENTS).select('lead_id, event_type').limit(5000),
     ]);
 
     const eventMap = {};
@@ -571,10 +575,10 @@
   }
 
   async function renderLeadProfile(id) {
-    const { data: lead, error: leadErr } = await sb.from('leads').select('*').eq('id', id).single();
+    const { data: lead, error: leadErr } = await sb.from(T_LEADS).select('*').eq('id', id).single();
     if (leadErr || !lead) { renderView('pipeline'); return; }
 
-    const { data: events } = await sb.from('email_events').select('*').eq('lead_id', id).order('created_at', { ascending: true });
+    const { data: events } = await sb.from(T_EVENTS).select('*').eq('lead_id', id).order('created_at', { ascending: true });
     const scoreClass = lead.qualification_score >= 8 ? 'score-high' : lead.qualification_score >= 6 ? 'score-mid' : 'score-low';
 
     // Latest reply event with agent classification, if any
@@ -821,8 +825,8 @@
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
     const [{ data: leads }, { data: events }, { data: customers }] = await Promise.all([
-      sb.from('leads').select('id, business_name, status, sequence_step, scheduled_send_at, email_subject, qualification_score, industry, city, last_sent_at').limit(5000),
-      sb.from('email_events').select('event_type, created_at, lead_id, metadata').gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(2000),
+      sb.from(T_LEADS).select('id, business_name, status, sequence_step, scheduled_send_at, email_subject, qualification_score, industry, city, last_sent_at').limit(5000),
+      sb.from(T_EVENTS).select('event_type, created_at, lead_id, metadata').gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(2000),
       sb.from('customers').select('id, status').limit(2000),
     ]);
     const L = leads || [], E = events || [], C = customers || [];
@@ -945,7 +949,7 @@
   // Manual reminders: set a "follow up by" date + note on any lead (e.g. Jean
   // on Tuesday), and see everything owed in one place, overdue first.
   async function renderFollowups() {
-    const { data: leads } = await sb.from('leads')
+    const { data: leads } = await sb.from(T_LEADS)
       .select('id, business_name, industry, city, email, status, followup_due, followup_note, last_sent_at')
       .not('followup_due', 'is', null)
       .order('followup_due', { ascending: true })
@@ -988,7 +992,7 @@
   }
 
   async function clearFollowup(id) {
-    const { error } = await sb.from('leads').update({ followup_due: null, followup_note: null }).eq('id', id);
+    const { error } = await sb.from(T_LEADS).update({ followup_due: null, followup_note: null }).eq('id', id);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     toast('Follow-up cleared', 'success');
     if (currentView === 'followups') renderFollowups();
@@ -999,7 +1003,7 @@
     const due = document.getElementById('followupDue')?.value || null;
     const note = document.getElementById('followupNote')?.value.trim() || null;
     if (!due) { toast('Pick a date first', 'error'); return; }
-    const { error } = await sb.from('leads').update({ followup_due: due, followup_note: note }).eq('id', id);
+    const { error } = await sb.from(T_LEADS).update({ followup_due: due, followup_note: note }).eq('id', id);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     toast('Follow-up set for ' + due, 'success');
     refreshFollowupsBadge();
@@ -1014,13 +1018,13 @@
 
   async function refreshFollowupsBadge() {
     const today = new Date().toLocaleDateString('en-CA');
-    const { data } = await sb.from('leads').select('followup_due').not('followup_due', 'is', null).lte('followup_due', today).limit(500);
+    const { data } = await sb.from(T_LEADS).select('followup_due').not('followup_due', 'is', null).lte('followup_due', today).limit(500);
     updateFollowupsBadge((data || []).length);
   }
 
   // ── Replies Inbox ─────────────────────────────────────────────
   async function renderReplies() {
-    const { data: events } = await sb.from('email_events')
+    const { data: events } = await sb.from(T_EVENTS)
       .select('*, leads(id, business_name, industry, city, email, status)')
       .eq('event_type', 'replied')
       .order('created_at', { ascending: false })
@@ -1112,7 +1116,7 @@
   }
 
   async function refreshRepliesBadge() {
-    const { data } = await sb.from('email_events').select('lead_id, metadata').eq('event_type', 'replied').limit(500);
+    const { data } = await sb.from(T_EVENTS).select('lead_id, metadata').eq('event_type', 'replied').limit(500);
     const seen = new Set(); let n = 0;
     (data || []).forEach(e => {
       if (!e.lead_id || seen.has(e.lead_id)) return;
@@ -1126,8 +1130,8 @@
   // ── Activity Feed ─────────────────────────────────────────────
   async function renderActivity() {
     const [{ data: events }, { data: leads }, { data: customers }, { data: projects }] = await Promise.all([
-      sb.from('email_events').select('*, leads(business_name)').order('created_at', { ascending: false }).limit(100),
-      sb.from('leads').select('id, business_name, created_at, status').order('created_at', { ascending: false }).limit(20),
+      sb.from(T_EVENTS).select('*, leads(business_name)').order('created_at', { ascending: false }).limit(100),
+      sb.from(T_LEADS).select('id, business_name, created_at, status').order('created_at', { ascending: false }).limit(20),
       sb.from('customers').select('id, company_name, created_at, status').order('created_at', { ascending: false }).limit(10),
       sb.from('projects').select('id, name, created_at, status, customers(company_name)').order('created_at', { ascending: false }).limit(10),
     ]);
@@ -1202,7 +1206,7 @@
     document.getElementById('drawerBody').innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
     document.getElementById('drawerActions').innerHTML = '';
 
-    const { data: events } = await sb.from('email_events').select('*').eq('lead_id', id).order('created_at', { ascending: true });
+    const { data: events } = await sb.from(T_EVENTS).select('*').eq('lead_id', id).order('created_at', { ascending: true });
 
     const scoreClass = lead.qualification_score >= 8 ? 'score-high' : lead.qualification_score >= 6 ? 'score-mid' : 'score-low';
 
@@ -1281,7 +1285,7 @@
   }
 
   async function pauseLead(leadId) {
-    const { error } = await sb.from('leads').update({ status: 'paused', scheduled_send_at: null }).eq('id', leadId);
+    const { error } = await sb.from(T_LEADS).update({ status: 'paused', scheduled_send_at: null }).eq('id', leadId);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderLeadProfile(leadId);
   }
@@ -1308,19 +1312,19 @@
     const dt = document.getElementById('queue-dt')?.value;
     if (!dt) { alert('Pick a date first.'); return; }
     const utcIso = new Date(dt).toISOString();
-    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: utcIso }).eq('id', leadId);
+    const { error } = await sb.from(T_LEADS).update({ status: 'queued', scheduled_send_at: utcIso }).eq('id', leadId);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderLeadProfile(leadId);
   }
 
   async function markReplied(leadId, outcome = 'replied') {
     const note = document.getElementById('replyNote')?.value.trim() || null;
-    const { data: lead } = await sb.from('leads').select('sequence_step, last_sent_at').eq('id', leadId).single();
+    const { data: lead } = await sb.from(T_LEADS).select('sequence_step, last_sent_at').eq('id', leadId).single();
     // not_interested pulls them out of all sequences; replied keeps the thread live
     const newStatus = outcome === 'not_interested' ? 'dont_contact' : 'replied';
-    const { error } = await sb.from('leads').update({ status: newStatus, scheduled_send_at: null }).eq('id', leadId);
+    const { error } = await sb.from(T_LEADS).update({ status: newStatus, scheduled_send_at: null }).eq('id', leadId);
     if (error) { alert('Failed to update lead status.'); return; }
-    await sb.from('email_events').insert({
+    await sb.from(T_EVENTS).insert({
       lead_id: leadId,
       event_type: 'replied',
       metadata: {
@@ -1356,7 +1360,7 @@
       lead_id: lead.id,
     });
     if (insertErr) { alert('Failed to create customer: ' + insertErr.message); return; }
-    await sb.from('leads').update({ status: 'converted' }).eq('id', lead.id);
+    await sb.from(T_LEADS).update({ status: 'converted' }).eq('id', lead.id);
     closeDrawer();
     alert(`${lead.business_name} added to Customers.`);
     renderView('customers');
@@ -1380,8 +1384,8 @@
   // ── Analytics ────────────────────────────────────────────────
   async function renderAnalytics() {
     const [{ data: leads }, { data: events }, { data: customers }, { data: invoices }] = await Promise.all([
-      sb.from('leads').select('id, status, industry, city, qualification_score, email, email_quality, email_subject, opened_at, clicked_at, sequence_step, last_sent_at, scheduled_send_at, created_at, source').limit(5000),
-      sb.from('email_events').select('event_type, created_at, lead_id, metadata').order('created_at', { ascending: false }).limit(5000),
+      sb.from(T_LEADS).select('id, status, industry, city, qualification_score, email, email_quality, email_subject, opened_at, clicked_at, sequence_step, last_sent_at, scheduled_send_at, created_at, source').limit(5000),
+      sb.from(T_EVENTS).select('event_type, created_at, lead_id, metadata').order('created_at', { ascending: false }).limit(5000),
       sb.from('customers').select('id, status, created_at').limit(2000),
       sb.from('invoices').select('amount, status, paid_date, created_at').limit(2000),
     ]);
@@ -1851,7 +1855,7 @@
     document.querySelectorAll('.status-picker').forEach(p => p.remove());
     const lead = (window._outreachLeads || []).find(l => l.id === leadId);
     if (lead) lead.status = newStatus;
-    await sb.from('leads').update({ status: newStatus }).eq('id', leadId);
+    await sb.from(T_LEADS).update({ status: newStatus }).eq('id', leadId);
     filterOutreach();
   }
 
@@ -1886,7 +1890,7 @@
     const field = type === 'initial'
       ? { email_subject: subject, email_body: body }
       : { followup_subject: subject, followup_body: body };
-    const { error } = await sb.from('leads').update(field).eq('id', leadId);
+    const { error } = await sb.from(T_LEADS).update(field).eq('id', leadId);
     if (error) { alert('Save failed: ' + error.message); return; }
     // Update view without full reload
     const viewEl = document.getElementById(type + '-view');
@@ -1899,7 +1903,7 @@
 
   async function saveLeadNotes(id) {
     const notes = document.getElementById('leadNotesInput')?.value ?? '';
-    const { error } = await sb.from('leads').update({ notes }).eq('id', id);
+    const { error } = await sb.from(T_LEADS).update({ notes }).eq('id', id);
     const btn = document.getElementById('saveNotesBtn');
     if (btn) { btn.textContent = error ? 'Error!' : 'Saved!'; setTimeout(() => { if (btn) btn.textContent = 'Save Notes'; }, 1500); }
   }
@@ -2220,7 +2224,7 @@
   window._outreachSort = { col: 'qualification_score', dir: 'desc' };
 
   async function renderOutreach() {
-    const { data: leads } = await sb.from('leads')
+    const { data: leads } = await sb.from(T_LEADS)
       .select('id, business_name, industry, city, email, qualification_score, status, scheduled_send_at, last_sent_at, email_subject, notes')
       .order('qualification_score', { ascending: false });
 
@@ -2433,7 +2437,7 @@
     if (newStatus === 'paused') update.scheduled_send_at = null;
 
     btn.disabled = true;
-    const { error } = await sb.from('leads').update(update).eq('id', id);
+    const { error } = await sb.from(T_LEADS).update(update).eq('id', id);
     if (error) { toast('Error: ' + error.message, 'error'); btn.disabled = false; return; }
 
     // Update row in-place — no re-render, no reordering confusion
@@ -2457,7 +2461,7 @@
     const id = btn.dataset.id;
     const name = btn.dataset.name;
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    const { error } = await sb.from('leads').delete().eq('id', id);
+    const { error } = await sb.from(T_LEADS).delete().eq('id', id);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     btn.closest('tr').remove();
     if (window._outreachLeads) window._outreachLeads = window._outreachLeads.filter(l => l.id !== id);
@@ -2466,7 +2470,7 @@
   async function bulkPause() {
     const ids = getSelectedIds();
     if (!ids.length) return;
-    const { error } = await sb.from('leads').update({ status: 'paused', scheduled_send_at: null }).in('id', ids);
+    const { error } = await sb.from(T_LEADS).update({ status: 'paused', scheduled_send_at: null }).in('id', ids);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderOutreach();
   }
@@ -2477,7 +2481,7 @@
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setUTCHours(16, 0, 0, 0);
-    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: tomorrow.toISOString() }).in('id', ids);
+    const { error } = await sb.from(T_LEADS).update({ status: 'queued', scheduled_send_at: tomorrow.toISOString() }).in('id', ids);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderOutreach();
   }
@@ -2488,7 +2492,7 @@
     const sendAt = new Date();
     sendAt.setHours(9, 0, 0, 0);
     if (sendAt < new Date()) sendAt.setTime(Date.now() + 2 * 60 * 1000);
-    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
+    const { error } = await sb.from(T_LEADS).update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     clearSelection();
     renderOutreach();
@@ -2500,7 +2504,7 @@
     const sendAt = new Date();
     sendAt.setDate(sendAt.getDate() + 1);
     sendAt.setHours(9, 0, 0, 0);
-    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
+    const { error } = await sb.from(T_LEADS).update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     clearSelection();
     renderOutreach();
@@ -2513,7 +2517,7 @@
     if (!picker || !picker.value) { alert('Pick a date first.'); return; }
     const [y, m, d] = picker.value.split('-').map(Number);
     const sendAt = new Date(y, m - 1, d, 9, 0, 0, 0);
-    const { error } = await sb.from('leads').update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
+    const { error } = await sb.from(T_LEADS).update({ status: 'queued', scheduled_send_at: sendAt.toISOString() }).in('id', ids);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     clearSelection();
     renderOutreach();
@@ -2523,7 +2527,7 @@
     const ids = getSelectedIds();
     if (!ids.length) return;
     if (!confirm(`Delete ${ids.length} lead(s)? This cannot be undone.`)) return;
-    const { error } = await sb.from('leads').delete().in('id', ids);
+    const { error } = await sb.from(T_LEADS).delete().in('id', ids);
     if (error) { toast('Error: ' + error.message, 'error'); return; }
     renderOutreach();
   }
@@ -2543,7 +2547,7 @@
     const name  = document.getElementById('newLeadName').value.trim();
     const email = document.getElementById('newLeadEmail').value.trim();
     if (!name || !email) { alert('Business name and email are required.'); return; }
-    const { error } = await sb.from('leads').insert({
+    const { error } = await sb.from(T_LEADS).insert({
       business_name: name,
       email,
       industry: document.getElementById('newLeadIndustry').value.trim() || null,
