@@ -141,7 +141,8 @@ function toHtml(text) {
   // Linkify bare https URLs AND the bare demo domain the personalizer writes as plain text.
   const linked = escaped
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#5254cc">$1</a>')
-    .replace(/(^|[\s(])clinic-scheduler-demo\.web\.app/g, `$1<a href="${DEMO_URL}" style="color:#5254cc">clinic-scheduler-demo.web.app</a>`);
+    // Bare demo domains (either demo world) written as plain text by the personalizer.
+    .replace(/(^|[\s(])((?:allied|clinic)-scheduler-demo\.web\.app)/g, '$1<a href="https://$2" style="color:#5254cc">$2</a>');
   const paragraphs = linked.split(/\n\n+/).map(p => `<p style="margin:0 0 14px 0">${p.replace(/\n/g, '<br>')}</p>`).join('');
   return `<!DOCTYPE html>
 <html>
@@ -157,7 +158,7 @@ function toHtml(text) {
         <td style="vertical-align:middle">
           <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan Cox</div>
           <div style="font-size:12px;color:#666666;margin-top:2px">
-            <a href="https://aevon.ca" style="color:#666666;text-decoration:none">aevon.ca</a>
+            <a href="https://aevon.ca/tempo.html" style="color:#666666;text-decoration:none">aevon.ca/tempo</a>
             &nbsp;&middot;&nbsp;
             <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
             &nbsp;&middot;&nbsp;
