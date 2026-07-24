@@ -1,0 +1,36 @@
+name: Tempo - Process Replies
+
+# Drafts-only by design: the reply processor never sends anything, it files
+# intents into tempo_email_events and saves suggested replies to Gmail Drafts.
+# MANUAL-ONLY until the campaign is live; then uncomment the schedule.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '30 16-23 * * 1-5'  # Mon-Fri, hourly offset from the Aevon processor
+
+jobs:
+  replies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Process Tempo replies (drafts only)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+        run: node tempo/reply-processor.js

@@ -1,0 +1,45 @@
+name: Tempo - Send Outreach
+
+# MANUAL-ONLY until the campaign is armed. To go live on autopilot, uncomment the
+# schedule block below. The sender itself also requires --send, so a stray
+# dispatch without it can never email anyone.
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Type SEND to actually send (anything else = dry run)'
+        required: false
+        default: 'dry-run'
+  # schedule:
+  #   - cron: '0 17 * * 1-5'  # Mon-Fri 10am PT, one batch per day
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Tempo sender
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TEMPO_RESEND_API_KEY: ${{ secrets.TEMPO_RESEND_API_KEY }}
+          TEMPO_FROM_EMAIL: ${{ secrets.TEMPO_FROM_EMAIL }}
+          TEMPO_DAILY_CAP: ${{ vars.TEMPO_DAILY_CAP || '20' }}
+        run: |
+          if [ "${{ github.event.inputs.live }}" = "SEND" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            node tempo/sender.js --send
+          else
+            node tempo/sender.js
+          fi
