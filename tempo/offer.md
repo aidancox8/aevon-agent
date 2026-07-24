@@ -33,8 +33,10 @@ Multi-provider Lower Mainland clinics: physio / chiro / multidisciplinary / reha
 - Medical groups: **clinic-scheduler-demo.web.app**.
 Email 2 links to the matching one automatically (personalizer picks by lead industry).
 
-## Pricing
-Not fixed yet — set your setup fee + optional monthly before turning the sender on. The current copy leads with the demo and a "built around your clinic" framing, and leaves numbers for the reply/call. (Aevon's Front Desk product uses $1,500 setup + optional $150/mo as a reference point.)
+## Pricing (SET 2026-07-23 — sender is armable)
+- **Founding rate (start cheap, per Aidan): $900 CAD setup + optional $100/mo** (run, tune, support; cancel anytime or take in-house, never framed as mandatory). Clinic owns it.
+- Standard rate to grow into once there are testimonials: $2,500 setup + $200/mo.
+- Numbers stay OUT of emails 1-2; quote in the reply or call. CAD always.
 
 ## Sequence
 - **Email 1** — who we are + what Tempo does for a clinic like theirs + the spreadsheet hook + a soft "want a 2-min look?" (no link).
