@@ -33,7 +33,7 @@ const CHAIN_NAMES = ['lifemark', 'pt health', 'pthealth', 'cbi health', 'myodeto
 function isChain(name, website) {
   const n = (name || '').toLowerCase();
   const w = (website || '').toLowerCase();
-  return CHAIN_NAMES.some(x => n.includes(x) || w.includes(x.replace(/s+/g, '')));
+  return CHAIN_NAMES.some(x => n.includes(x) || w.includes(x.replace(/\s+/g, '')));
 }
 
 function isExcluded(name, website) {
