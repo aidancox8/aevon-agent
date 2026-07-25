@@ -1,0 +1,33 @@
+name: Tempo - Personalize Leads
+
+# Runs on GitHub's runners so laptop sleep can't kill it. Manual dispatch, plus
+# a daily early-morning run that picks up anything new from sweeps. Exits
+# cleanly when there is nothing left to personalize.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * *'  # 6am PT daily
+
+jobs:
+  personalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Personalize Tempo leads
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: node tempo/personalizer.js --limit 400
