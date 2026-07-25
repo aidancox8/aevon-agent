@@ -229,9 +229,16 @@ async function run() {
   due = due.filter(l => !repliedSet.has(l.id));
   if (!due.length) { console.log('No emails due after reply filter.'); return; }
 
-  // Never send two leads' emails to the same inbox (multi-location groups share addresses).
+  // Never send two leads' emails to the same inbox in one run (multi-location
+  // groups often share one address across their location entries).
   const seenAddr = new Set();
-  due = due.filter(l => { const k = (l.email || '').toLowerCase(); if (seenAddr.has(k)) return false; seenAddr.add(k); return true; });
+  due = due.filter(l => {
+    const k = (l.email || '').toLowerCase();
+    if (seenAddr.has(k)) return false;
+    seenAddr.add(k);
+    return true;
+  });
+
 
   console.log(`${LIVE ? 'Sending' : 'Would send'} ${due.length} email(s) — ${pickedFollowups.length} follow-up, ${due.length - pickedFollowups.length} new | ${sentToday || 0}/${DAILY_CAP} sent today.\n`);
 
