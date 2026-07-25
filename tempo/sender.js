@@ -169,6 +169,7 @@ function toHtml(text) {
         </td>
       </tr>
     </table>
+    <div style="font-size:11px;color:#999999;margin-top:16px">Aevon &middot; Lower Mainland, BC. If you'd rather not hear from me, just reply with a quick no and I won't email again.</div>
   </div>
 </body>
 </html>`;
@@ -285,7 +286,7 @@ async function run() {
         reply_to: 'aidan@aevon.ca',
         to: lead.email,
         subject,
-        text: body,
+        text: body + '\n\n--\nAevon · Lower Mainland, BC. If you would rather not hear from me, just reply with a quick no and I will not email again.',
         html: toHtml(body),
       });
       if (sendError) throw new Error(sendError.message);
