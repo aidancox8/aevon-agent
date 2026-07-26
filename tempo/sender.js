@@ -138,13 +138,15 @@ function vancouverDayStartISO() {
 }
 
 // Plain, left-aligned personal email — identical styling to the Aevon sender.
-function toHtml(text) {
+function toHtml(text, leadId) {
   const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   // Linkify bare https URLs AND the bare demo domain the personalizer writes as plain text.
   const linked = escaped
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#5254cc">$1</a>')
     // Bare demo domains (either demo world) written as plain text by the personalizer.
-    .replace(/(^|[\s(])((?:allied|clinic)-scheduler-demo\.web\.app)/g, '$1<a href="https://$2" style="color:#5254cc">$2</a>');
+    // Tagged with ?ref=<leadId> so a demo visit is attributable to that clinic.
+    .replace(/(^|[\s(])((?:allied|clinic)-scheduler-demo\.web\.app)/g,
+      (m, pre, dom) => `${pre}<a href="https://${dom}/${leadId ? '?ref=' + leadId : ''}" style="color:#5254cc">${dom}</a>`);
   const paragraphs = linked.split(/\n\n+/).map(p => `<p style="margin:0 0 14px 0">${p.replace(/\n/g, '<br>')}</p>`).join('');
   return `<!DOCTYPE html>
 <html>
@@ -287,7 +289,7 @@ async function run() {
         to: lead.email,
         subject,
         text: body + '\n\n--\nAevon · Lower Mainland, BC. If you would rather not hear from me, just reply with a quick no and I will not email again.',
-        html: toHtml(body),
+        html: toHtml(body, lead.id),
       });
       if (sendError) throw new Error(sendError.message);
 

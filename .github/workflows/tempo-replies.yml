@@ -5,8 +5,8 @@ name: Tempo - Process Replies
 # MANUAL-ONLY until the campaign is live; then uncomment the schedule.
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '30 16-23 * * 1-5'  # Mon-Fri, hourly offset from the Aevon processor
+  schedule:
+    - cron: '30 16-23 * * 1-5'  # Mon-Fri hourly, offset from the Aevon processor
 
 jobs:
   replies:
@@ -34,3 +34,12 @@ jobs:
           GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
           GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
         run: node tempo/reply-processor.js
+
+      - name: Park hard bounces (no webhook on the Tempo Resend account)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          TEMPO_RESEND_API_KEY: ${{ secrets.TEMPO_RESEND_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node tempo/check-bounces.js

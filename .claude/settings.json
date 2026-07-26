@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_resend_resend__list-domains",
+      "mcp__plugin_resend_resend__list-webhooks",
+      "mcp__plugin_resend_resend__list-emails",
+      "mcp__plugin_resend_resend__get-email",
+      "mcp__plugin_supabase_supabase__list_projects",
+      "mcp__plugin_supabase_supabase__list_tables",
+      "mcp__plugin_supabase_supabase__get_logs",
+      "mcp__plugin_supabase_supabase__get_project",
+      "mcp__plugin_supabase_supabase__get_project_url",
+      "mcp__plugin_supabase_supabase__list_edge_functions",
+      "mcp__plugin_supabase_supabase__list_migrations",
+      "mcp__claude_ai_Gmail__search_threads",
+      "mcp__claude_ai_Gmail__get_thread",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(claude mcp list *)"
+    ]
+  }
+}
