@@ -162,17 +162,21 @@ function buildPrompt(lead, websiteContent) {
   const targetLine = local
     ? '1-50 employee businesses in the Lower Mainland'
     : '1-50 employee businesses';
-  const email1Block = `EMAIL 1 (initial outreach, SHOW-THE-PRODUCT approach):
-- Goal: get a reply by offering a 90-second demo of ONE specific product, the Aevon Front Desk agent, described in THEIR terms. Do NOT ask open discovery questions (tested for months, near-zero replies). Show the thing and make it concrete.
+  const email1Block = `EMAIL 1 (initial outreach, BUILT-AROUND-YOU approach):
+- THE CORE ARGUMENT, and the spine of this email. Follow this arc:
+    Businesses go looking for software that fits how they actually operate, and never find it, because no two businesses run the same way. So the work ends up back in inboxes and spreadsheets, which is neither efficient nor reliable, and things slip through. Instead of making a business reshape its operations around a piece of software, we build the software around the business's operations.
+  That inversion IS the pitch. Every off-the-shelf tool is something they must conform to. Aevon is the opposite, and it is the one claim no SaaS competitor can make.
+- Goal: get a reply by offering a 90-second demo of ONE specific product, the Aevon Front Desk agent, described in THEIR terms. Do NOT ask open discovery questions (tested for months, near-zero replies). Land the argument above, made specific to THIS business.
 - CRITICAL POSITIONING: this is NOT an email-writing assistant. Gmail and Outlook already ship AI that helps write replies, so NEVER describe it in those terms ("reads your email", "drafts replies for you" as the headline). Sell the WORKER: it runs their intake end to end. It answers and qualifies ${what}, books the appointment or showing, files every lead into a simple pipeline, and follows up with the ones that go quiet. The owner just approves.
 - HARD CAPABILITY CONTRACT: the agent does EXACTLY five things: (1) answers and qualifies inbound inquiries, (2) drafts the replies in the owner's voice, (3) books appointments/showings/calls, (4) files every lead into a pipeline board, (5) follows up with leads that go quiet. Describe ONLY these, phrased for their business. NEVER invent other capabilities (writing reports, checking application status, processing paperwork, integrations you have not been told about). Describe it handling ${what} specifically, do not substitute a different task or a different industry's inquiries.
 - Price in email 1: you may say "$1,500 flat setup, live inside a week, you own it". Do NOT mention the monthly fee in email 1 (the follow-up covers full terms).
 - Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
 - Body (under 70 words), and DO NOT include any link:
   1. ONE plain line of who you are: ${whoWeAre}
-  2. ONE or TWO lines on what it does for a business like theirs, per the positioning above. If a REAL scraped detail exists, weave it in naturally instead of generic phrasing.
-  3. ONE line of productized concreteness: flat setup fee, live inside a week, and they own it.
-  4. The ask, low friction: do they want the 90 second demo? Make yes easy ("happy to send it over").
+  2. THE FIT PROBLEM in their terms: businesses look for software that matches how they actually run and cannot find it, because every one is different. If a REAL scraped detail exists (their services, size, locations), use it HERE to show why a generic tool would not fit THEM specifically.
+  3. THE CONSEQUENCE: so it stays in inboxes and spreadsheets, and things slip. A general truth about businesses like theirs, never an accusation about theirs.
+  4. THE INVERSION plus concreteness, in one line: rather than fitting their business around software, it gets built around their business. Flat setup fee, live inside a week, they own it.
+  5. The ask, low friction: do they want the 90 second demo? Make yes easy ("happy to send it over"). THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 5.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 

@@ -100,19 +100,23 @@ function buildPrompt(lead, websiteContent, usesJane) {
     ? `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly practitioner + room schedule, (2) schedules front desk and support staff (which patient-booking tools do not cover), (3) automated SMS + email shift reminders and one-tap sick-call cover (text all qualified free staff, first yes takes the shift), (4) time off that syncs with payroll + payroll-ready hours export, (5) room utilization and coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting, Jane integration).`
     : `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly staff + room schedule, (2) automated SMS + email shift and on-call reminders/confirmations, (3) shift and on-call cover handling, (4) time-off that syncs with payroll, (5) utilization + coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting).`;
 
-  const email1Block = `EMAIL 1 (initial outreach, SHOW-THE-PRODUCT approach):
-- Goal: get a reply by offering a short look at ONE specific product, Tempo, described in a clinic's own terms. Do NOT ask open discovery questions. Show the thing and make it concrete.
-- POSITIONING: ${positioning}
+  const email1Block = `EMAIL 1 (initial outreach, BUILT-AROUND-YOU approach):
+- THE CORE ARGUMENT, and the spine of this email. Follow this arc:
+    Clinics go looking for scheduling software that fits how they actually run, and never find it, because no two clinics run the same way. So it ends up back in a spreadsheet, which is not efficient and not reliable, and things slip through. Instead of making a clinic reshape its operations around a piece of software, we build the software around the clinic's operations.
+  That inversion IS the pitch. Every competing product is something they must conform to. Tempo is the opposite, and that is the one thing none of the alternatives can claim.
+- Goal: get a reply. Do NOT ask open discovery questions and do NOT dump features. Land the argument above, made specific to THIS clinic.
+- POSITIONING (background, for accuracy — do not recite it as a feature list): ${positioning}
 - ${contract}
-- The hook: ${allied ? (usesJane ? 'Jane' : 'Their booking system') + ' books their patients, but someone still builds the staff schedule by hand every week (and scrambles by text when someone calls in sick). Tempo takes that over.' : 'get their staff + room scheduling OFF spreadsheets.'}
-- Subject line: lowercase, short (2-5 words), about staff scheduling / rooms / coverage / spreadsheets. Never use the word "rota" (Canadian clinics say "schedule"). Vary the grammatical form. Fresh and specific.
-- Body (under 70 words), and DO NOT include any link:
-  1. ONE plain line of who you are: Aevon builds Tempo, a staff and room scheduling app made for multi-provider clinics.
-  2. ONE or TWO lines on what it does for a clinic like theirs, per the positioning above. If a REAL scraped detail exists (their disciplines, number of providers, locations), weave it in naturally.
-  3. WHY IT MATTERS — pick ONE of the arguments below and state it in a single plain line. This is the "why bother" beat; without it the email is just a feature list.
-  4. ONE line of concreteness: it is built around their clinic${allied ? ' and sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ', never replacing it' : ' and can live in the tools they already use'}; it gets the staff schedule off spreadsheets.
-  5. The ask, low friction: do they want a 2-minute look at a version set up like a clinic? Make yes easy ("happy to send it over").
-  - No link in email 1. No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).
+- Subject line: lowercase, short (2-5 words). It should hint at the fit problem or the spreadsheet, not at a feature list. Never use the word "rota" (Canadian clinics say "schedule"). Vary the grammatical form. Fresh and specific.
+- Body (under 75 words), and DO NOT include any link:
+  1. ONE plain line of who you are: Aevon builds Tempo, custom staff and room scheduling for multi-provider clinics.
+  2. THE FIT PROBLEM, in their terms: clinics look for scheduling software that matches how they run and cannot find it, because every clinic is different. If a REAL scraped detail exists (their disciplines, provider count, locations), use it here to show why a generic tool would not fit THEM specifically.
+  3. THE CONSEQUENCE: so it stays in a spreadsheet, and things slip. State it as a general truth about clinics, never as an accusation about theirs.
+  4. THE INVERSION, said plainly: rather than fitting their clinic around software, it gets built around their clinic${allied ? ', and it sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ' rather than replacing it' : ''}.
+  5. The ask, low friction: do they want a 2-minute look at a version set up for a clinic like theirs? Make yes easy ("happy to send it over").
+  - No link in email 1. Do NOT assert their pain as fact. No sign-off (the signature handles that).
+  - Beat 3 replaces the old "why it matters" beat. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
+  - BEAT 5 IS MANDATORY. The email is broken without it. Every single email must end on the ask, phrased as a question, offering a 2-minute look. If you find yourself running out of room, cut from beat 2, never from beat 5.
 
 WHY-IT-MATTERS ARGUMENTS (use exactly one in beat 3, vary which one across emails):
   a) SELF-EVIDENT ARITHMETIC, framed with THEIR numbers, never ours: an unfilled sick day is that room empty for a full day, so the cost of finding cover fast is measured in one practitioner's day of billings. Say it as a plain observation they can check against their own rates. NEVER state a dollar figure, percentage, or hours-saved number.

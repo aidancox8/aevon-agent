@@ -33,10 +33,30 @@ Multi-provider Lower Mainland clinics: physio / chiro / multidisciplinary / reha
 - Medical groups: **clinic-scheduler-demo.web.app**.
 Email 2 links to the matching one automatically (personalizer picks by lead industry).
 
-## Pricing (SET 2026-07-23 — sender is armable)
-- **Founding rate (start cheap, per Aidan): $900 CAD setup + optional $100/mo** (run, tune, support; cancel anytime or take in-house, never framed as mandatory). Clinic owns it.
-- Standard rate to grow into once there are testimonials: $2,500 setup + $200/mo.
-- Numbers stay OUT of emails 1-2; quote in the reply or call. CAD always.
+## Pricing — PILOT RATE (set 2026-07-26, supersedes the $900 founding rate)
+
+**Goal of this phase is not revenue, it is three real builds to learn from and show.**
+
+- **Pilot rate, first 3 clinics only: $500 CAD flat setup, monthly waived for the first year.** Clinic owns it.
+- In exchange (say this plainly, it is what makes the discount make sense rather than look desperate):
+  a testimonial, permission to use them as a reference case, and honest feedback during the build.
+- **Say it is limited to the first 3 and that the rate goes up afterwards.** That is true, and it is what
+  lets you raise the price without it looking like a bait and switch.
+- **After 3 pilots:** $900 setup + optional $100/mo. **Standard, once there are testimonials:** $2,500 + $200/mo.
+- Do NOT go below $500. Free pilots get treated as free, do not prove willingness to pay, and get
+  deprioritized by the client the moment they are busy. A real payment buys their attention.
+- Numbers stay OUT of emails 1-2; quote in the reply or on the call. CAD always.
+
+### Competitor price anchors (verified 2026-07-26)
+- Deputy $5-9/user/month, $30/mo minimum. When I Work $2.50-8/user/month (time tracking is an add-on
+  that inflates real cost 60-80%). Sling has a FREE tier up to 50 users.
+- Amion is ~$449/YEAR flat for physician on-call — **cheaper than Tempo**. Never pitch Tempo as an
+  on-call replacement to an Amion group; pitch it as the layer beside it.
+- The economics only favour Tempo against PER-SEAT tools, where cost rises with every hire and ours
+  does not. "Flat regardless of headcount" is the durable economic line.
+- Because Sling is free for basic scheduling, **Tempo can never sell "scheduling"**. It sells the parts a
+  generic tool structurally cannot do: rooms as a constraint, providers and support staff in one system,
+  qualified-cover, payroll splits, credentials.
 
 ## Sequence
 - **Email 1** — who we are + what Tempo does for a clinic like theirs + the spreadsheet hook + a soft "want a 2-min look?" (no link).
