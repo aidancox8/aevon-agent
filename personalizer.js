@@ -176,7 +176,7 @@ function buildPrompt(lead, websiteContent) {
   2. THE FIT PROBLEM in their terms: businesses look for software that matches how they actually run and cannot find it, because every one is different. If a REAL scraped detail exists (their services, size, locations), use it HERE to show why a generic tool would not fit THEM specifically.
   3. THE CONSEQUENCE: so it stays in inboxes and spreadsheets, and things slip. A general truth about businesses like theirs, never an accusation about theirs.
   4. THE INVERSION plus concreteness, in one line: rather than fitting their business around software, it gets built around their business. Flat setup fee, live inside a week, they own it.
-  5. The ask, low friction: do they want the 90 second demo? Make yes easy ("happy to send it over"). THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 5.
+  5. The ask, and it must be nearly effortless to answer. Ask if they want the 90 second demo, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. A busy owner will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "one word back is plenty"), never the same wording twice. THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 5.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
@@ -216,7 +216,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, an optional $150 a month to run and tune it, and they own it either way. Close with one easy line inviting a reply. No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, an optional $150 a month to run and tune it, and they own it either way. Close by making a reply cost almost nothing: invite a single word back rather than a written response (vary the wording, never repeat a phrasing). No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):

@@ -113,7 +113,7 @@ function buildPrompt(lead, websiteContent, usesJane) {
   2. THE FIT PROBLEM, in their terms: clinics look for scheduling software that matches how they run and cannot find it, because every clinic is different. If a REAL scraped detail exists (their disciplines, provider count, locations), use it here to show why a generic tool would not fit THEM specifically.
   3. THE CONSEQUENCE: so it stays in a spreadsheet, and things slip. State it as a general truth about clinics, never as an accusation about theirs.
   4. THE INVERSION, said plainly: rather than fitting their clinic around software, it gets built around their clinic${allied ? ', and it sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ' rather than replacing it' : ''}.
-  5. The ask, low friction: do they want a 2-minute look at a version set up for a clinic like theirs? Make yes easy ("happy to send it over").
+  5. The ask, and it must be nearly effortless to answer. Ask if they want a 2-minute look at a version set up for a clinic like theirs, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. Clinic owners will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "a one word reply is plenty"), never the same wording twice.
   - No link in email 1. Do NOT assert their pain as fact. No sign-off (the signature handles that).
   - Beat 3 replaces the old "why it matters" beat. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
   - BEAT 5 IS MANDATORY. The email is broken without it. Every single email must end on the ask, phrased as a question, offering a 2-minute look. If you find yourself running out of room, cut from beat 2, never from beat 5.
@@ -161,7 +161,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Point them to the live demo at ${allied ? DEMO_URL_ALLIED : DEMO_URL_MEDICAL} (write it exactly, as plain text, no markdown link). Frame it as a version set up like a ${allied ? 'multi-practitioner allied clinic (physio, RMT, chiro)' : 'multi-provider clinic'} (this is true — the demo is a working clinic schedule). Then one plain line: it gets built around their clinic and can run in the tools they already use. Close with one easy line inviting a reply. No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Point them to the live demo at ${allied ? DEMO_URL_ALLIED : DEMO_URL_MEDICAL} (write it exactly, as plain text, no markdown link). Frame it as a version set up like a ${allied ? 'multi-practitioner allied clinic (physio, RMT, chiro)' : 'multi-provider clinic'} (this is true — the demo is a working clinic schedule). Then one plain line: it gets built around their clinic and can run in the tools they already use. Close by making a reply cost almost nothing: invite a single word back rather than a written response (vary the wording, never repeat a phrasing). No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):
