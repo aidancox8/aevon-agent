@@ -38,6 +38,23 @@ tool." They physically cannot match a bespoke build. That asymmetry is the whole
 - If they want it finished, that is a normal quote (see quote-template.md), or the Front Desk
   productized offer if the process happens to be inbound intake.
 
+## Scaling path (Aidan, 2026-07-26)
+Once intake volume is genuinely high, build intake agents that generate the skeletons. That is what
+makes this offer scale instead of becoming a treadmill, and it doubles as the best possible proof of
+the product: Aevon using its own agents to run Aevon.
+
+**Sequencing matters. Do NOT build the generator first.**
+1. Hand-build the first 3-5 skeletons. Learn what actually converts: how much polish, clickable vs
+   running on their data, which processes are even skeleton-able in a few days.
+2. Extract the parts that repeat into reusable components.
+3. Then have an agent draft from the intake, with Aidan finishing and reviewing before it ships.
+   Keep the review step for a long time.
+
+Rationale: automating before the pattern is known just produces the wrong thing faster, and an
+auto-generated skeleton that feels generic destroys the exact differentiator the offer exists to
+prove. Prospects can tell "he built this for us" from "this came out of a machine", and the whole
+pitch rests on the first.
+
 ## How it shows up
 - NOT in cold email 1 or 2 (those still lead with the built-around-your-operations argument).
 - It is the REPLY offer: when someone answers with interest or a question, the drafted response
