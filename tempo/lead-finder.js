@@ -36,6 +36,24 @@ function isChain(name, website) {
   return CHAIN_NAMES.some(x => n.includes(x) || w.includes(x.replace(/\s+/g, '')));
 }
 
+// Clinics already running a real staff-scheduling product are structurally hard to
+// win: switching means retraining everyone on the system their working life runs on,
+// and Tempo does not out-feature these tools. Detect them and score them down rather
+// than paying to email people who will never switch. Spreadsheet clinics are the market.
+const SCHEDULING_TOOLS = [
+  ['deputy.com', 'Deputy'], ['wheniwork', 'When I Work'], ['when i work', 'When I Work'],
+  ['shiftboard', 'Shiftboard'], ['petalmd', 'PetalMD'], ['petal md', 'PetalMD'],
+  ['amion.com', 'Amion'], ['lightning bolt', 'Lightning Bolt'], ['qgenda', 'QGenda'],
+  ['humanity.com', 'Humanity'], ['7shifts', '7shifts'], ['connecteam', 'Connecteam'],
+  ['joinhomebase', 'Homebase'], ['getsling', 'Sling'], ['shiftadmin', 'ShiftAdmin'],
+  ['planday', 'Planday'], ['shiftcare', 'ShiftCare'],
+];
+function detectSchedulingTool(text) {
+  const t = (text || '').toLowerCase();
+  for (const [needle, label] of SCHEDULING_TOOLS) if (t.includes(needle)) return label;
+  return null;
+}
+
 function isExcluded(name, website) {
   const n = (name || '').toLowerCase();
   const w = (website || '').toLowerCase();
@@ -132,7 +150,7 @@ async function geminiRateLimited(prompt) {
 
 // Score a clinic on FIT FOR TEMPO: does it have multiple providers + rooms whose
 // weekly staff/room schedule is complex enough that a spreadsheet is painful?
-async function qualifyLead(business, websiteText) {
+async function qualifyLead(business, websiteText, existingTool) {
   const prompt = `You are a lead qualifier for Tempo, a custom-built staff and room SCHEDULING app for multi-provider clinics. Score how well this clinic fits Tempo — i.e. how complex and manual their weekly STAFF + ROOM scheduling likely is.
 
 Tempo replaces spreadsheet/paper scheduling. It builds the weekly grid of which provider is in which room on which day, sends SMS/email shift + on-call reminders, handles shift and on-call cover, syncs time off with payroll, and reports on room utilization. So the best fit is a clinic with MULTIPLE practitioners rotating across MULTIPLE rooms/service types.
@@ -155,6 +173,8 @@ SCORE 1-5 (reject):
 - Pure consumer service with one room and one person
 - No website or a placeholder
 - A hospital or enterprise (200+ staff) with dedicated scheduling software/IT
+
+${existingTool ? `ALREADY RUNNING SCHEDULING SOFTWARE: this clinic's site mentions ${existingTool}, a real staff-scheduling product. They are not on spreadsheets, so Tempo's core wedge does not apply, and the switching cost of replacing the system their whole team uses makes them very hard to win. CAP THE SCORE AT 4 and name the tool in the notes.` : ''}
 
 Business details:
 - Name: ${business.name}
@@ -253,7 +273,8 @@ async function run() {
           const website = place.websiteUri || null;
           process.stdout.write(`  [${name}]... `);
 
-          const { score, notes } = await qualifyLead({ name, address: place.formattedAddress, website }, text);
+          const existingTool = detectSchedulingTool(text);
+          const { score, notes } = await qualifyLead({ name, address: place.formattedAddress, website }, text, existingTool);
           if (score < minScore) { console.log(`skip (score ${score}/10: ${notes})`); continue; }
 
           totalQualified++;
@@ -263,7 +284,9 @@ async function run() {
             business_name: name, address: place.formattedAddress || null, phone: place.internationalPhoneNumber || null,
             website, email, email_quality: emailQuality, contact_name: contactName, contact_role: contactRole,
             industry: query, city, status: 'queued', sequence_step: 0,
-            qualification_score: score, qualification_notes: notes, source: 'tempo:' + query,
+            qualification_score: score,
+            qualification_notes: (existingTool ? '[already uses ' + existingTool + '] ' : '') + notes,
+            source: 'tempo:' + query,
           });
           if (insertErr) { console.log(`  (skipped duplicate in DB)`); continue; }
 
