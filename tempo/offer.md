@@ -37,7 +37,13 @@ Email 2 links to the matching one automatically (personalizer picks by lead indu
 
 **Goal of this phase is not revenue, it is three real builds to learn from and show.**
 
-- **Pilot rate, first 3 clinics only: $500 CAD flat setup, monthly waived for the first year.** Clinic owns it.
+- **Pilot offer, first 3 clinics only: built for their clinic, they run it for a month, and they pay
+  $500 CAD only if they keep it.** Monthly waived for the first year. Clinic owns it.
+  - The barrier for a clinic is NOT the money ($500 is a day of one practitioner's billings). It is
+    "will this waste my staff's time and then not work". So remove the RISK, not the price.
+  - Contingent payment beats a lower up-front price: you earn more when it works, it filters for
+    clinics that are genuinely interested rather than just bargain-hunting, and a clinic that uses it
+    for a month and still walks has taught you something worth more than a discounted fee.
 - In exchange (say this plainly, it is what makes the discount make sense rather than look desperate):
   a testimonial, permission to use them as a reference case, and honest feedback during the build.
 - **Say it is limited to the first 3 and that the rate goes up afterwards.** That is true, and it is what
