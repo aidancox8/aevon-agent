@@ -37,8 +37,13 @@ Email 2 links to the matching one automatically (personalizer picks by lead indu
 
 **Goal of this phase is not revenue, it is three real builds to learn from and show.**
 
-- **Pilot offer, first 3 clinics only: built for their clinic, they run it for a month, and they pay
-  $500 CAD only if they keep it.** Monthly waived for the first year. Clinic owns it.
+- **Pilot offer, first 3 clinics only: we set Tempo up around their clinic, they run it FREE for
+  two weeks, then decide. $500 CAD only if they keep it.** Monthly waived for the first year.
+  Clinic owns it.
+  - Call it a PILOT, never a "free trial" — a trial implies self-serve signup, and someone has to
+    configure this around their clinic first. The setup being done FOR them is part of the value.
+  - Two weeks, not a month: a month lets a busy clinic drift without ever really using it. Two
+    weeks forces a verdict while it is still front of mind.
   - The barrier for a clinic is NOT the money ($500 is a day of one practitioner's billings). It is
     "will this waste my staff's time and then not work". So remove the RISK, not the price.
   - Contingent payment beats a lower up-front price: you earn more when it works, it filters for

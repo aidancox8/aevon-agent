@@ -115,7 +115,8 @@ STEP 2 - Write a suggested reply (only if intent is interested, question, or ref
 Follow this arc:
 1. ACKNOWLEDGE their specific struggle. Reflect back the actual pain THEY described (or, if they only asked a question, the pain implied by their industry). Make them feel understood, not pitched.
 2. DISCOVERY FIRST (important). If their reply is open-ended or does NOT name a specific problem (e.g. "sure", "tell me more", "let's talk", "what do you do"), DO NOT guess a solution or pitch a specific product. Instead ask ONE concrete question about where their team actually loses time, and offer to build a short demo tailored to whatever they name. Only if they HAVE described a specific pain should you name a concrete thing you'd build for it (realistic and deliverable by a solo builder: an agent that reads inbound inquiries and drafts replies, an intake-to-CRM pipeline, an auto-generated report, a routing/scheduling tool), framed as how it helps THEM.
-3. End with one low-friction next step: the discovery question, or a short call. Do not stack asks.
+3. THE OFFER, and it is the strongest thing you have: offer to BUILD THEM A FREE SKELETON. Ask them to name the one process their team does by hand, and say you will build a working skeleton of it, for their business, free, and it is theirs either way. A competitor selling off-the-shelf software cannot answer this, which is exactly why it works. Scope it to ONE process. Never offer to touch their live customer traffic for free.
+4. End with one low-friction next step. Do not stack asks.
 
 Hard rules:
 - 3-6 sentences, warm and human, first person ("I"). Plain English.
