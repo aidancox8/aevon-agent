@@ -109,9 +109,17 @@ function buildPrompt(lead, websiteContent, usesJane) {
 - Body (under 70 words), and DO NOT include any link:
   1. ONE plain line of who you are: Aevon builds Tempo, a staff and room scheduling app made for multi-provider clinics.
   2. ONE or TWO lines on what it does for a clinic like theirs, per the positioning above. If a REAL scraped detail exists (their disciplines, number of providers, locations), weave it in naturally.
-  3. ONE line of concreteness: it is built around their clinic${allied ? ' and sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ', never replacing it' : ' and can live in the tools they already use'}; it gets the staff schedule off spreadsheets.
-  4. The ask, low friction: do they want a 2-minute look at a version set up like a clinic? Make yes easy ("happy to send it over").
-  - No link in email 1. No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
+  3. WHY IT MATTERS — pick ONE of the arguments below and state it in a single plain line. This is the "why bother" beat; without it the email is just a feature list.
+  4. ONE line of concreteness: it is built around their clinic${allied ? ' and sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ', never replacing it' : ' and can live in the tools they already use'}; it gets the staff schedule off spreadsheets.
+  5. The ask, low friction: do they want a 2-minute look at a version set up like a clinic? Make yes easy ("happy to send it over").
+  - No link in email 1. No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).
+
+WHY-IT-MATTERS ARGUMENTS (use exactly one in beat 3, vary which one across emails):
+  a) SELF-EVIDENT ARITHMETIC, framed with THEIR numbers, never ours: an unfilled sick day is that room empty for a full day, so the cost of finding cover fast is measured in one practitioner's day of billings. Say it as a plain observation they can check against their own rates. NEVER state a dollar figure, percentage, or hours-saved number.
+  b) THE RECURRING TIME COST: rebuilding the weekly grid by hand is not a one-time cost, it repeats every week for as long as the clinic exists, and it always lands on the person with the least time.
+  ${usesJane ? 'c) THE DOCUMENTED GAP (strongest, only for Jane clinics — this is verifiable from the published Jane guides, so it is safe to state): Jane does not put admin and front-desk staff on the schedule (their guide recommends an external calendar for that), Manage Shifts cannot do biweekly or rotating patterns, and non-percentage pay splits have to be calculated outside Jane in a spreadsheet. Reference at most ONE of these, plainly, as something they have probably run into rather than as a criticism of Jane.' : 'c) THE TWO-SYSTEM PROBLEM: the practitioner schedule and the front-desk/support schedule end up living in different places, so the two drift apart and someone reconciles them by hand.'}
+
+CRITICAL — NO BORROWED STATISTICS: never cite a survey, study, benchmark, industry average, percentage, dollar amount, or "clinics typically save X hours". Industry statistics in cold email are unverifiable, and if the reader challenges one we cannot defend it. Every claim must be either self-evident arithmetic the reader can check against their own clinic, or a fact about their own software's published documentation. This rule outranks persuasiveness.`;
   return `You are writing a cold outreach email on behalf of Aevon, a software company based in the Lower Mainland, BC. Aevon's product for clinics is Tempo.
 
 About the offer:
