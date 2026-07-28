@@ -1,6 +1,6 @@
 # Aevon warm signals
-generated_at: 2026-07-27T16:39:18.816Z
-window_hours: 72
+generated_at: 2026-07-28T16:19:39.047Z
+window_hours: 24
 
 ## Watchlist activity (Vickers / Jean)
 - none
