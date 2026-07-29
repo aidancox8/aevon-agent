@@ -175,7 +175,7 @@ function isBCHoliday({ y, m, d }) {
   if (m === 9  && d === 30) return true; // National Day for Truth and Reconciliation
   if (m === 11 && d === 11) return true; // Remembrance Day
   if (m === 12 && d === 25) return true; // Christmas Day
-  if (m === 12 && d === 26) return true; // Boxing Day
+  // Dec 26 is NOT a BC statutory holiday — do not skip a valid sending day.
 
   // Family Day: 3rd Monday of February
   if (m === 2 && d === firstMonday(y, 2) + 14) return true;

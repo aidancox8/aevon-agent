@@ -100,7 +100,7 @@ function isBCHoliday({ y, m, d }) {
   if (m === 9 && d === 30) return true;
   if (m === 11 && d === 11) return true;
   if (m === 12 && d === 25) return true;
-  if (m === 12 && d === 26) return true;
+  // Dec 26 is NOT a BC statutory holiday — do not skip a valid sending day.
   if (m === 2 && d === firstMonday(y, 2) + 14) return true;
   const easter = getEaster(y);
   const gf = new Date(y, easter.m - 1, easter.d - 2);
