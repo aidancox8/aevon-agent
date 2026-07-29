@@ -1,7 +1,6 @@
 name: Tempo - Send Outreach
 
-# MANUAL-ONLY until the campaign is armed. To go live on autopilot, uncomment the
-# schedule block below. The sender itself also requires --send, so a stray
+# LIVE on autopilot (armed 2026-07-28): runs weekdays at 10am PT. The sender itself also requires --send, so a stray
 # dispatch without it can never email anyone.
 on:
   workflow_dispatch:
@@ -10,8 +9,8 @@ on:
         description: 'Type SEND to actually send (anything else = dry run)'
         required: false
         default: 'dry-run'
-  # schedule:
-  #   - cron: '0 17 * * 1-5'  # Mon-Fri 10am PT, one batch per day
+  schedule:
+    - cron: '0 17 * * 1-5'  # Mon-Fri 10am PT, one batch per day
 
 jobs:
   send:
