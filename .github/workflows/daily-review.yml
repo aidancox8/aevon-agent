@@ -1,0 +1,71 @@
+name: Daily Review
+
+# End-of-day digest across both campaigns: pipeline, what went out, what came back,
+# and anything that needs a human. Read-only — it never sends outreach or edits a lead.
+#
+# 6:05pm PT is deliberately after the last sender run (4pm PT) and the last reply
+# processor pass (4:30pm PT), so the digest covers a complete day.
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Look-back window in days'
+        required: false
+        default: '1'
+  schedule:
+    - cron: '5 1 * * *'  # 01:05 UTC = 6:05pm PT
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build review
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          node daily-review.js --days "${{ github.event.inputs.days || '1' }}" | tee review.txt
+          # Surface it in the Actions run itself, so the digest is readable without email.
+          { echo '```'; cat review.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Email the digest
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: |
+          # Flag the subject when the review found something, so a clean day is ignorable
+          # at a glance and a problem day is not.
+          if grep -q 'NEEDS ATTENTION ([1-9]' review.txt; then
+            SUBJECT="[Daily Review] $(grep -oE 'NEEDS ATTENTION \([0-9]+\)' review.txt | grep -oE '[0-9]+') item(s) need attention"
+          else
+            SUBJECT="[Daily Review] All clear"
+          fi
+          jq -n --arg from "$FROM_EMAIL" --arg subj "$SUBJECT" --rawfile body review.txt \
+            '{from:$from, to:"aidan@aevon.ca", subject:$subj, text:$body}' > payload.json
+          curl -sS -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @payload.json
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"from\":\"$FROM_EMAIL\",\"to\":\"aidan@aevon.ca\",\"subject\":\"[Aevon ALERT] Daily Review failed\",\"text\":\"The Daily Review workflow failed, so today's digest was not produced. This does not affect sending. Check the run: $RUN_URL\"}"
