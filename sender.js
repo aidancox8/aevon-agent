@@ -45,6 +45,45 @@ const FOLLOWUP_DELAY_DAYS = 5;
 // Daily send budget is enforced HERE (not in personalizer) so a high-score
 // lead found today goes out next send, not a month behind the backlog.
 const DAILY_CAP = parseInt(process.env.DAILY_CAP || '30', 10);
+
+// This script emails real prospects the moment it runs. Unlike the Tempo sender it had no
+// guard at all, so `node sender.js` typed while poking around the repo would send live.
+// CI keeps its existing behaviour exactly (GitHub Actions sets CI=true, and the scheduled
+// workflow invokes this bare) so the campaign cannot silently stop; a local run now has to
+// say --send and mean it.
+const IS_CI    = process.env.CI === 'true' || process.env.CI === '1';
+const LIVE     = IS_CI || process.argv.includes('--send');
+if (!LIVE) {
+  console.log('DRY RUN: no email will be sent. Pass --send to send for real.\n');
+}
+
+// Bounce circuit breaker. 5% is the level at which the major providers begin throttling.
+// The window is measured in recent send/bounce events, not days, so a quiet weekend does
+// not distort it.
+const BOUNCE_LIMIT      = parseFloat(process.env.BOUNCE_LIMIT || '0.05');
+const BOUNCE_WINDOW     = parseInt(process.env.BOUNCE_WINDOW || '500', 10);
+const BOUNCE_MIN_SAMPLE = parseInt(process.env.BOUNCE_MIN_SAMPLE || '100', 10);
+
+/** Tell Aidan the sender stopped itself. Silence is the failure mode to avoid here: without
+ *  this the campaign would simply appear to go quiet with no explanation. */
+async function notifyBounceHalt(pct, sentN, bounceN) {
+  const from = process.env.FROM_EMAIL;
+  if (!process.env.RESEND_API_KEY || !from) return;
+  try {
+    await resend.emails.send({
+      from, to: 'aidan@aevon.ca',
+      subject: `[Aevon ALERT] Sending halted, bounce rate ${pct}%`,
+      text: `The Aevon sender stopped before sending.\n\n`
+          + `Bounce rate is ${pct}% (${bounceN} of the last ${sentN} sends), above the `
+          + `${(BOUNCE_LIMIT * 100).toFixed(0)}% limit where mailbox providers start throttling.\n\n`
+          + `Nothing was sent on this run. Outreach stays paused until the list is cleaned, `
+          + `so the sending domain is not damaged further.\n\n`
+          + `Likely cause: unverified or guessed addresses in the queue. Bounces concentrate `
+          + `in the lower email_quality tiers.\n\n`
+          + `To resume for one run without cleaning: set ALLOW_HIGH_BOUNCE=1.`,
+    });
+  } catch { /* the halt matters more than the notification */ }
+}
 // Follow-ups go out first (time-sensitive) but never take more than this share
 // of the daily cap, so new leads always keep at least the rest. Leaned toward
 // new leads (0.3) while the fresh-lead backlog drains; raise toward 0.5 once
@@ -286,6 +325,39 @@ async function run() {
     return;
   }
 
+  // ── Bounce circuit breaker ─────────────────────────────────────────────────
+  // Mailbox providers start throttling, then blocking, a sender that stays above roughly
+  // 5% bounces. Nothing here was watching that, so a batch of bad addresses could quietly
+  // burn the sending domain over a few days and the first visible symptom would be silence.
+  // Measure the recent window rather than all time, so old history neither hides a problem
+  // starting today nor punishes the sender forever for one bad import.
+  {
+    const { data: recent } = await supabase
+      .from('email_events')
+      .select('event_type, created_at')
+      .in('event_type', ['sent', 'bounced'])
+      .order('created_at', { ascending: false })
+      .limit(BOUNCE_WINDOW);
+    const sentN = (recent || []).filter(e => e.event_type === 'sent').length;
+    const bounceN = (recent || []).filter(e => e.event_type === 'bounced').length;
+    const rate = sentN ? bounceN / sentN : 0;
+    if (sentN >= BOUNCE_MIN_SAMPLE && rate > BOUNCE_LIMIT) {
+      const pct = (rate * 100).toFixed(1);
+      console.error(
+        `HALTED: bounce rate ${pct}% over the last ${sentN} sends is above the ${(BOUNCE_LIMIT * 100).toFixed(0)}% limit.\n` +
+        `Sending is paused to protect the domain. Clean the list, then re-run.\n` +
+        `Override for one run with ALLOW_HIGH_BOUNCE=1 if this is understood and intentional.`
+      );
+      if (process.env.ALLOW_HIGH_BOUNCE !== '1') {
+        await notifyBounceHalt(pct, sentN, bounceN);
+        process.exit(1);
+      }
+      console.error('ALLOW_HIGH_BOUNCE=1 set — continuing anyway.');
+    } else if (sentN) {
+      console.log(`Bounce rate ${(rate * 100).toFixed(1)}% over last ${sentN} sends (limit ${(BOUNCE_LIMIT * 100).toFixed(0)}%).`);
+    }
+  }
+
   const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry';
   const baseFilter = q => q
     .eq('status', 'queued')
@@ -454,6 +526,15 @@ async function run() {
     }
 
     try {
+      // A dry run stops here: it reports what it would have done and touches nothing, so
+      // sequence_step, scheduled_send_at and the event log all stay untouched and the lead
+      // is still due on the next real run.
+      if (!LIVE) {
+        console.log(`[dry run] would email ${lead.business_name} <${lead.email}> — "${subject}"`);
+        sent++;
+        continue;
+      }
+
       const { data: sendData, error: sendError } = await resend.emails.send({
         from: `${FROM_NAME} <${FROM}>`,
         reply_to: 'aidan@aevon.ca',
