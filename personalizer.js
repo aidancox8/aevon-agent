@@ -172,11 +172,18 @@ function buildPrompt(lead, websiteContent) {
 - Price in email 1: you may say "$1,500 flat setup, live inside a week, you own it". Do NOT mention the monthly fee in email 1 (the follow-up covers full terms).
 - Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
 - Body (under 70 words), and DO NOT include any link:
-  1. ONE plain line of who you are: ${whoWeAre}
-  2. THE FIT PROBLEM in their terms: businesses look for software that matches how they actually run and cannot find it, because every one is different. If a REAL scraped detail exists (their services, size, locations), use it HERE to show why a generic tool would not fit THEM specifically.
-  3. THE CONSEQUENCE: so it stays in inboxes and spreadsheets, and things slip. A general truth about businesses like theirs, never an accusation about theirs.
-  4. THE INVERSION plus concreteness, in one line: rather than fitting their business around software, it gets built around their business. Flat setup fee, live inside a week, they own it.
-  5. The ask, and it must be nearly effortless to answer. Ask if they want the 90 second demo, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. A busy owner will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "one word back is plenty"), never the same wording twice. THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 5.
+  1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
+     like theirs actually runs. Measured across 400 real sends, opening with the company line made
+     81% of these emails start "Aevon builds AI front desk agents for..." — generic vendor
+     boilerplate, which is exactly what a busy owner deletes, and it buried the one argument that
+     differentiates us. THE FIT PROBLEM in their terms: businesses look for software that matches
+     how they actually run and cannot find it, because every one is different. If a REAL scraped
+     detail exists (their services, size, locations), use it HERE to show why a generic tool would
+     not fit THEM specifically. NEVER begin the email with "Aevon", "We build", "We are", "I'm
+     reaching out", or any variant that leads with the sender.
+  2. THE CONSEQUENCE: so it stays in inboxes and spreadsheets, and things slip. A general truth about businesses like theirs, never an accusation about theirs.
+  3. THE INVERSION plus concreteness, in one line: rather than fitting their business around software, it gets built around their business. This is where you may name who you are, briefly and subordinate to the point (${whoWeAre}). Flat setup fee, live inside a week, they own it.
+  4. The ask, and it must be nearly effortless to answer. Ask if they want the 90 second demo, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. A busy owner will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "one word back is plenty"), never the same wording twice. THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 4.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
@@ -358,7 +365,13 @@ async function run() {
   console.log(`\nDone. Personalized: ${success} | Failed: ${failed}`);
 }
 
-run().catch(err => {
-  console.error('Fatal error:', err.message);
-  process.exit(1);
-});
+// Only run when invoked directly, so the prompt builder can be imported and previewed
+// without the module writing generated copy to the database as a side effect of require().
+if (require.main === module) {
+  run().catch(err => {
+    console.error('Fatal error:', err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { buildPrompt };
