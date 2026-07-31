@@ -60,6 +60,10 @@ if (!LIVE) {
 // Bounce circuit breaker. 5% is the level at which the major providers begin throttling.
 // The window is measured in recent send/bounce events, not days, so a quiet weekend does
 // not distort it.
+// The PT hours the send workflow is scheduled to run (cron '0 16-23 * * 1-5' = 9am-4pm PT).
+// Used to pace the daily cap across runs; keep in step with .github/workflows/send-outreach.yml.
+const SEND_HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
+
 const BOUNCE_LIMIT      = parseFloat(process.env.BOUNCE_LIMIT || '0.05');
 const BOUNCE_WINDOW     = parseInt(process.env.BOUNCE_WINDOW || '500', 10);
 const BOUNCE_MIN_SAMPLE = parseInt(process.env.BOUNCE_MIN_SAMPLE || '100', 10);
@@ -319,11 +323,34 @@ async function run() {
     .eq('event_type', 'sent')
     .gte('created_at', dayStart);
 
-  const remaining = DAILY_CAP - (sentToday || 0);
-  if (remaining <= 0) {
+  const dailyRemaining = DAILY_CAP - (sentToday || 0);
+  if (dailyRemaining <= 0) {
     console.log(`Daily cap reached (${sentToday}/${DAILY_CAP} sent today). Done.`);
     return;
   }
+
+  // Spread the day's cap across the remaining scheduled runs instead of letting the first
+  // one take everything. The hourly schedule already existed but did nothing: run one
+  // consumed the whole cap in about a minute and runs two through eight exited immediately.
+  //
+  // The reason to fix it is the bounce breaker below, not deliverability. One burst gives
+  // the breaker a single look per day, taken just before the batch it cannot stop; slicing
+  // gives it a checkpoint every hour, so a day that starts bouncing badly halts partway
+  // instead of after all of it has gone.
+  //
+  // Dividing by runs *remaining* makes this self-correcting: a missed or delayed run leaves
+  // a bigger slice for the next, and the final run of the window flushes whatever is left,
+  // so the daily total still lands on DAILY_CAP.
+  const remaining = (() => {
+    const hour = parseInt(new Date().toLocaleString('en-US', {
+      timeZone: 'America/Vancouver', hour: '2-digit', hour12: false,
+    }), 10);
+    const runsLeft = SEND_HOURS.filter(h => h >= hour).length;
+    if (runsLeft <= 1) return dailyRemaining;          // last run, or off-schedule: flush
+    const slice = Math.ceil(dailyRemaining / runsLeft);
+    console.log(`Pacing: ${slice} this run (${dailyRemaining} left of ${DAILY_CAP}, ${runsLeft} run(s) to go).`);
+    return slice;
+  })();
 
   // ── Bounce circuit breaker ─────────────────────────────────────────────────
   // Mailbox providers start throttling, then blocking, a sender that stays above roughly
