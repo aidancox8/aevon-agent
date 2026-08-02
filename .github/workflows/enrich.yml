@@ -4,13 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       limit:
-        description: 'Max no-email leads to re-scrape (blank = all)'
+        description: 'Max no-email leads to hunt (blank = the daily default)'
         required: false
         default: ''
+      table:
+        description: 'Which campaign: leads (Aevon) or tempo_leads'
+        required: false
+        default: 'leads'
+  schedule:
+    # 03:20 UTC = 8:20pm PT, after the sender has finished for the day. A lead with no
+    # address can never be contacted, so this grinds through the backlog nightly instead of
+    # needing someone to remember to run it.
+    - cron: '20 3 * * *'
 
 jobs:
   enrich:
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
 
@@ -22,12 +32,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Enrich no-email leads
+      # Uses the deep hunter, not enrich-emails.js. enrich-emails re-runs the same
+      # contact-finder that lead-finder already tried at discovery, so on leads that failed
+      # once it recovers almost nothing: measured head to head on the same backlog, 11 of 530
+      # against 438 of 765. The hunter decodes obfuscated addresses, reads JSON-LD, scans raw
+      # HTML before stripping and probes contact paths directly.
+      #
+      # Resumable by construction, since it only selects leads with a null email, so a run
+      # that is cut short simply continues the next night.
+      - name: Hunt emails for leads that have none
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node enrich-emails.js ${{ inputs.limit != '' && format('--limit {0}', inputs.limit) || '' }}
+        run: |
+          node tempo/hunt-emails.js \
+            --table "${{ inputs.table || 'leads' }}" \
+            --limit "${{ inputs.limit != '' && inputs.limit || '1200' }}"
+
+      # Tempo's list is far smaller, so it finishes quickly and is worth keeping topped up
+      # in the same pass rather than needing its own schedule.
+      - name: Hunt emails for Tempo leads
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node tempo/hunt-emails.js --table tempo_leads --limit 200
 
       - name: Alert on failure
         if: failure()
