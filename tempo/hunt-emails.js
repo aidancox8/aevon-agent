@@ -22,7 +22,23 @@ const cheerio = require('cheerio');
 const supabase = require('../lib/supabase');
 const { classifyEmail } = require('../lib/contact-finder');
 
-const TABLE = 'tempo_leads';
+// Works against either campaign's lead table. This deep hunt recovers far more than the
+// first-pass contact-finder that lead-finder and enrich-emails use: measured side by side on
+// the same kind of backlog, 60% versus 2%, because enrich-emails re-runs the very scraper
+// that already failed at discovery while this one decodes obfuscation, reads JSON-LD, scans
+// raw HTML before stripping, and probes common contact paths directly.
+//   node tempo/hunt-emails.js                    Tempo (default)
+//   node tempo/hunt-emails.js --table leads      Aevon
+const TABLE = (() => {
+  const i = process.argv.indexOf('--table');
+  const t = i > -1 ? process.argv[i + 1] : 'tempo_leads';
+  if (!['leads', 'tempo_leads'].includes(t)) throw new Error(`--table must be leads or tempo_leads, got "${t}"`);
+  return t;
+})();
+const LIMIT = (() => {
+  const i = process.argv.indexOf('--limit');
+  return i > -1 ? parseInt(process.argv[i + 1], 10) : null;
+})();
 const DRY = process.argv.includes('--dry-run');
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
@@ -184,9 +200,11 @@ async function run() {
     .select('id, business_name, website')
     .is('email', null)
     .not('website', 'is', null)
-    .order('qualification_score', { ascending: false });
+    .order('qualification_score', { ascending: false })
+    .limit(LIMIT || 100000);
   if (error) throw new Error(error.message);
-  console.log(`[Tempo] Hunting emails for ${rows.length} clinics without one...${DRY ? ' (dry run)' : ''}\n`);
+  const label = TABLE === 'leads' ? 'Aevon' : 'Tempo';
+  console.log(`[${label}] Hunting emails for ${rows.length} lead(s) without one...${DRY ? ' (dry run)' : ''}\n`);
 
   let updated = 0;
   for (const row of rows) {
