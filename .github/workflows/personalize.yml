@@ -39,6 +39,27 @@ jobs:
         # cleanly instead of grinding into GitHub's 6h kill as "cancelled".
         run: node personalizer.js ${{ github.event_name == 'schedule' && '--limit 450' || (inputs.limit != '' && format('--limit {0}', inputs.limit) || '') }}
 
+      # Rewrite copy left over from an older prompt. personalizer.js only writes for leads
+      # that have none, so a prompt change otherwise takes effect only on new leads while a
+      # months-long backlog keeps sending the old wording.
+      #
+      # Runs after the personalizer and shares the same daily Gemini budget, so the limit is
+      # deliberately modest. It is also a no-op once nothing stale is left, and safe to
+      # re-run: it selects only leads whose copy still has the defect, so each day resumes
+      # where the last stopped. A failure here must not fail the workflow, because fresh
+      # personalization matters more than backfilling old copy.
+      - name: Refresh stale copy
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_AGENT: ${{ secrets.GEMINI_API_KEY_AGENT }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node regen-copy.js --limit ${{ vars.REGEN_DAILY_LIMIT || '150' }}
+
       - name: Alert on failure
         if: failure()
         env:
