@@ -47,7 +47,7 @@ const CAMPAIGNS = [
 
 async function review(c, warnings) {
   const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step');
-  const events = await readAll(c.events, 'event_type,created_at');
+  const events = await readAll(c.events, 'event_type,created_at,metadata');
 
   const withEmail = leads.filter(l => l.email);
   const sent      = leads.filter(l => l.last_sent_at);
@@ -60,8 +60,16 @@ async function review(c, warnings) {
   const recentBy = recent.reduce((a, e) => { a[e.event_type] = (a[e.event_type] || 0) + 1; return a; }, {});
 
   const nSent = ev('sent').length, nDeliv = ev('delivered').length;
-  const nBounce = ev('bounced').length, nClick = ev('clicked').length;
+  const nBounce = ev('bounced').length;
   const nReply = ev('replied').length, nOpen = ev('opened').length;
+
+  // 'clicked' is not an email click. Every one of these is written by the track-visit edge
+  // function when someone loads a landing page with ?ref=<leadId>, and carries no
+  // resend_email_id. Reporting them as clicks reads as email engagement and understates
+  // them: reaching the site is a warmer signal than opening a message.
+  const clickEvents = events.filter(e => e.event_type === 'clicked');
+  const nVisit = clickEvents.filter(e => (e.metadata || {}).source === 'site-visit').length;
+  const nMailClick = clickEvents.length - nVisit;
 
   console.log(`\n── ${c.label}  (${c.sub}) ${'─'.repeat(Math.max(0, 34 - c.sub.length))}`);
   console.log(`   list        ${leads.length} leads · ${withEmail.length} with email · ${leads.length - withEmail.length} without`);
@@ -80,7 +88,7 @@ async function review(c, warnings) {
     const tracked = nDeliv > 0 || nBounce > 0;
     console.log(`   lifetime    sent ${nSent} · delivered ${tracked ? pct(nDeliv, nSent) : 'not tracked'}` +
                 ` · bounced ${tracked ? pct(nBounce, nSent) : 'not tracked'}` +
-                ` · clicked ${pct(nClick, nSent)} · replied ${pct(nReply, nSent)} (${nReply})`);
+                ` · site visits ${pct(nVisit, nSent)} · replied ${pct(nReply, nSent)} (${nReply})`);
     if (!tracked && nSent >= 10) {
       warnings.push(`${c.label}: ${nSent} sends with no delivery or bounce events recorded — deliverability is unmonitored, so a blocked domain would look identical to a healthy one.`);
     }
@@ -93,8 +101,14 @@ async function review(c, warnings) {
   if (noEmail.length) {
     warnings.push(`${c.label}: ${noEmail.length} queued lead(s) have no address and can never send (${pct(noEmail.length, leads.length)} of the list). Run the email hunter or drop them.`);
   }
-  if (nSent > 100 && nOpen === 0 && nClick > 0) {
-    warnings.push(`${c.label}: ${nClick} clicks but zero open events — open tracking is off at the provider, so engagement is invisible.`);
+  // The Resend webhook delivers 'delivered' and 'bounced' but no open or click events, so
+  // email-level engagement is unmeasured. Worth knowing, but not urgent: site visits are
+  // tracked independently and are the better signal anyway, which is why this only fires
+  // when there is no engagement data of any kind.
+  if (nSent > 100 && nOpen === 0 && nMailClick === 0) {
+    warnings.push(nVisit > 0
+      ? `${c.label}: no open or click events from the email provider (the webhook only carries delivered and bounced). Site visits still tracked (${nVisit}), so this is a gap in email-level detail, not a blind spot.`
+      : `${c.label}: no open, click or site-visit data at all — there is no way to tell whether anyone is engaging.`);
   }
   // A weekday with no send by evening means the cron did not fire.
   const dow = new Date().toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
