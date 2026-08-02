@@ -447,9 +447,15 @@ async function run() {
     return [...ca, ...usFinal].slice(0, budget);
   }
 
-  // Budget: follow-ups capped at half the cap; unused slots roll to new leads,
-  // and unused new-lead slots roll back to follow-ups — never exceed `remaining`.
-  const followupBudget = Math.min(followups?.length || 0, Math.ceil(DAILY_CAP * FOLLOWUP_MAX_SHARE));
+  // Budget: follow-ups take their share of THIS run, unused slots roll to new leads, and
+  // unused new-lead slots roll back to follow-ups, never exceeding `remaining`.
+  //
+  // This must scale off `remaining`, not DAILY_CAP. Once the cap was paced across the hourly
+  // runs, `remaining` became a per-run slice (~11) while this still reserved a whole day's
+  // worth of follow-ups (85 * 0.3 = 26). That left initialBudget at max(0, 11 - 26) = 0, so
+  // every slot went to follow-ups and new-lead outreach silently stopped: one full send day
+  // went out as 83 follow-ups and zero initials with ~3k leads sitting due.
+  const followupBudget = Math.min(followups?.length || 0, Math.ceil(remaining * FOLLOWUP_MAX_SHARE));
   const pickedFollowups = (followups || []).slice(0, followupBudget);
   const initialBudget = Math.max(0, remaining - pickedFollowups.length);
   const pickedInitials = regionBalance(initialBudget);
