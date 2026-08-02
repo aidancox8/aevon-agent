@@ -30,6 +30,30 @@ const FROM = process.env.TEMPO_FROM_EMAIL || process.env.FROM_EMAIL || 'onboardi
 const FROM_NAME = 'Aidan from Aevon';
 const FOLLOWUP_DELAY_DAYS = 5;
 const DAILY_CAP = parseInt(process.env.TEMPO_DAILY_CAP || '20', 10);
+
+// Bounce guard. Tighter than Aevon's 5% because this domain has no sending history to
+// absorb a bad run, and a lower sample floor because daily volume is 20, not 85.
+const BOUNCE_LIMIT      = parseFloat(process.env.TEMPO_BOUNCE_LIMIT || '0.04');
+const BOUNCE_WINDOW     = parseInt(process.env.TEMPO_BOUNCE_WINDOW || '200', 10);
+const BOUNCE_MIN_SAMPLE = parseInt(process.env.TEMPO_BOUNCE_MIN_SAMPLE || '40', 10);
+
+/** Say why sending stopped. A campaign that silently goes quiet is the failure mode here. */
+async function notifyBounceHalt(pct, sentN, bounceN) {
+  if (!FROM) return;
+  try {
+    await resend.emails.send({
+      from: `${FROM_NAME} <${FROM}>`, to: 'aidan@aevon.ca',
+      subject: `[Tempo ALERT] Sending halted, bounce rate ${pct}%`,
+      text: `The Tempo sender stopped before sending.\n\n`
+          + `Bounce rate is ${pct}% (${bounceN} of the last ${sentN} sends), above the `
+          + `${(BOUNCE_LIMIT * 100).toFixed(0)}% limit set for this domain.\n\n`
+          + `Nothing was sent on this run. tempo.aevon.ca is a new sending domain with no `
+          + `reputation buffer, so outreach stays paused until the list is cleaned.\n\n`
+          + `Likely cause: recently hunted addresses. Generic inboxes bounce far more than `
+          + `named contacts.\n\nTo resume for one run without cleaning: ALLOW_HIGH_BOUNCE=1.`,
+    });
+  } catch { /* the halt matters more than the notification */ }
+}
 const FOLLOWUP_MAX_SHARE = 0.4;
 const DEMO_URL = 'https://clinic-scheduler-demo.web.app';
 
@@ -193,6 +217,38 @@ async function run() {
 
   const remaining = DAILY_CAP - (sentToday || 0);
   if (remaining <= 0) { console.log(`Daily cap reached (${sentToday}/${DAILY_CAP}).`); return; }
+
+  // ── Bounce circuit breaker ─────────────────────────────────────────────────
+  // Aevon's sender got this first, which was backwards: tempo.aevon.ca is the newer domain
+  // with no sending history to absorb a bad run, and the list just gained 118 hunted
+  // addresses skewing generic, the tier that bounces around 10% on the Aevon data. A new
+  // domain that bounces hard early is the one that gets filtered, and the only visible
+  // symptom would be replies quietly never arriving.
+  //
+  // The threshold is tighter than Aevon's 5% precisely because there is no reputation
+  // buffer here, and the sample floor is lower because the daily volume is 20, not 85.
+  {
+    const { data: recent } = await supabase.from(EVENTS)
+      .select('event_type')
+      .in('event_type', ['sent', 'bounced'])
+      .order('created_at', { ascending: false })
+      .limit(BOUNCE_WINDOW);
+    const sentN = (recent || []).filter(e => e.event_type === 'sent').length;
+    const bounceN = (recent || []).filter(e => e.event_type === 'bounced').length;
+    const rate = sentN ? bounceN / sentN : 0;
+    if (sentN >= BOUNCE_MIN_SAMPLE && rate > BOUNCE_LIMIT) {
+      const pct = (rate * 100).toFixed(1);
+      console.error(
+        `HALTED: bounce rate ${pct}% over the last ${sentN} sends exceeds the ` +
+        `${(BOUNCE_LIMIT * 100).toFixed(0)}% limit for this domain.\n` +
+        `Nothing was sent. Clean the list before resuming, or set ALLOW_HIGH_BOUNCE=1 for one run.`
+      );
+      if (process.env.ALLOW_HIGH_BOUNCE !== '1') { await notifyBounceHalt(pct, sentN, bounceN); process.exit(1); }
+      console.error('ALLOW_HIGH_BOUNCE=1 set, continuing anyway.');
+    } else if (sentN) {
+      console.log(`Bounce rate ${(rate * 100).toFixed(1)}% over last ${sentN} sends (limit ${(BOUNCE_LIMIT * 100).toFixed(0)}%).`);
+    }
+  }
 
   const cols = 'id, business_name, email, contact_name, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at';
   const baseFilter = q => q.eq('status', 'queued').not('email_subject', 'is', null).not('email', 'is', null).lte('scheduled_send_at', now);
