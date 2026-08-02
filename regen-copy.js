@@ -85,7 +85,15 @@ const opensWithUs = b => /^(aevon|we (build|are)|i'?m reaching)/i.test(String(b 
     .is('last_sent_at', null)
     .not('email', 'is', null)
     .not('email_subject', 'is', null)
+    // Must match the sender's initial-pick order exactly (sender.js: score desc, then
+    // scheduled_send_at asc). Only three distinct scores exist across ~3k un-sent leads
+    // (9: 126, 8: 1152, 7: 1697), so sorting by score alone leaves the database free to
+    // return each huge tier in arbitrary order. Rewriting then lands on leads that are not
+    // the ones about to send, and old copy keeps going out for weeks while the backlog
+    // technically shrinks. With the tiebreaker aligned, the next leads to send are always
+    // the ones already rewritten.
     .order('qualification_score', { ascending: false, nullsFirst: false })
+    .order('scheduled_send_at', { ascending: true })
     .limit(LIMIT * 6);
   if (error) throw new Error(error.message);
   if (!pool?.length) { console.log('Nothing to regenerate.'); return; }
