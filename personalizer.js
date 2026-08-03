@@ -154,8 +154,8 @@ function buildPrompt(lead, websiteContent) {
   // BC leads get the local framing; US leads get a neutral one. NEVER imply
   // being local to a US lead's area — that would be a fabrication.
   const whoWeAre = local
-    ? 'Aevon builds AI front desk agents for Lower Mainland businesses.'
-    : 'Aevon builds AI front desk agents for small businesses.';
+    ? 'Aevon builds custom software for Lower Mainland businesses.'
+    : 'Aevon builds custom software for small businesses.';
   const companyLine = local
     ? 'a software company based in the Lower Mainland, BC'
     : 'a software company (do NOT claim to be local to the lead\'s city or state, and do not volunteer the company\'s location; simply omit geography)';
@@ -166,18 +166,19 @@ function buildPrompt(lead, websiteContent) {
 - THE CORE ARGUMENT, and the spine of this email. Follow this arc:
     Businesses go looking for software that fits how they actually operate, and never find it, because no two businesses run the same way. So the work ends up back in inboxes and spreadsheets, which is neither efficient nor reliable, and things slip through. Instead of making a business reshape its operations around a piece of software, we build the software around the business's operations.
   That inversion IS the pitch. Every off-the-shelf tool is something they must conform to. Aevon is the opposite, and it is the one claim no SaaS competitor can make.
-- Goal: get a reply by offering a 90-second demo of ONE specific product, the Aevon Front Desk agent, described in THEIR terms. Do NOT ask open discovery questions (tested for months, near-zero replies). Land the argument above, made specific to THIS business.
-- CRITICAL POSITIONING: this is NOT an email-writing assistant. Gmail and Outlook already ship AI that helps write replies, so NEVER describe it in those terms ("reads your email", "drafts replies for you" as the headline). Sell the WORKER: it runs their intake end to end. It answers and qualifies ${what}, books the appointment or showing, files every lead into a simple pipeline, and follows up with the ones that go quiet. The owner just approves.
-- HARD CAPABILITY CONTRACT. This bounds what you may CLAIM. It is not a list to recite.
-  The agent does exactly five things: (1) answers and qualifies inbound inquiries, (2) drafts
-  replies in the owner's voice, (3) books appointments/showings/calls, (4) files leads into a
-  pipeline board, (5) follows up with leads that go quiet. NEVER invent anything beyond these
-  (no reports, no status checks, no paperwork processing, no unstated integrations), and keep
-  it about ${what} specifically rather than another industry's inquiries.
-  CRITICAL: name ONE of the five, the one that matters most to THIS business. Listing three
-  or more is a feature dump, and a comma-separated run of capabilities is the clearest signal
-  to a reader that software wrote the email. "It reads every quote request and drafts the
-  reply" lands. "It qualifies, books, files, and follows up" does not.
+- Goal: get a reply by offering to build them something free. Do NOT ask open discovery questions with nothing attached (tested for months, near-zero replies) — the free build IS what makes the question worth answering. Land the argument above, made specific to THIS business.
+- CRITICAL POSITIONING: never describe this as an email or writing assistant. Gmail and Outlook already ship those, so that framing puts Aevon next to free tools it cannot beat. What is being sold is a thing that DOES a job the business currently does by hand, built to their rules, owned by them.
+- WHAT YOU MAY CLAIM. There is no product with a feature list, so do not invent one. The
+  honest claim is narrow: something gets built that does ONE manual job the way they already
+  do it, and they own it. Never promise an integration, a platform, a dashboard suite, or
+  anything named. You do not yet know what they need, and the whole point of the email is to
+  find out.
+  Point at ONE plausible manual job as an illustration, drawn from what their site actually
+  shows, and phrase it as a guess rather than a claim ("something that reads every quote
+  request and drafts the reply" not "our agent qualifies, books, files and follows up"). A
+  comma-separated run of capabilities is the clearest signal to a reader that software wrote
+  the email, and here it would also be a promise about a product that does not exist.
+  For this business a reasonable illustration is ${what}, but only if their site supports it.
 - NEVER mention price in email 1. No setup fee, no monthly, no dollar figure at all. The offer
   here is free work, so a price line contradicts it and turns a note into a sales page. Terms
   come up once they reply.
@@ -234,7 +235,7 @@ function buildPrompt(lead, websiteContent) {
 - Body (under 55 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
      like theirs actually runs. Measured across 400 real sends, opening with the company line made
-     81% of these emails start "Aevon builds AI front desk agents for..." — generic vendor
+     81% of these emails opened by naming the company and what it sells, which is generic vendor
      boilerplate, which is exactly what a busy owner deletes, and it buried the one argument that
      differentiates us. THE FIT PROBLEM in their terms: businesses look for software that matches
      how they actually run and cannot find it, because every one is different. If a REAL scraped
@@ -275,10 +276,15 @@ function buildPrompt(lead, websiteContent) {
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
 About Aevon:
-- Flagship product: the Aevon Front Desk agent. It runs a business's inbound intake end to end: answers and qualifies every inquiry, drafts replies in the owner's voice, books appointments, files every lead into a simple pipeline board, and follows up with leads that go quiet. Nothing sends without the owner's approval.
-- It is NOT a generic email assistant (Gmail/Outlook already have those). It is wired into how the specific business works: their services, their booking rules, their documents, their pipeline.
-- Productized: $1,500 flat setup, live inside a week. Ongoing running and tuning is $150/month and fully OPTIONAL: cancel anytime or take it in-house. The client owns the software either way.
-- Also builds fully custom apps and AI agents for businesses that need more than the flagship.
+- Aevon builds custom software and AI agents around how one specific business already works,
+  rather than selling a product they have to adapt to. That is the entire proposition, and it
+  is the one thing a SaaS company structurally cannot offer.
+- There is no flagship product to pitch. Do NOT name a product, and do NOT describe a fixed
+  feature set. What gets built depends on what the business says it does by hand.
+- Typical work: taking a repetitive manual process (reading and sorting inbound inquiries,
+  drafting the same replies, chasing documents, re-keying between systems, producing the same
+  report weekly) and building something that does it, shaped to their rules.
+- Client owns the code outright. No seat fees, no lock-in.
 - Target clients: ${targetLine}
 
 Industry context (general knowledge about this type of business — use only to inform tone and question, do not repeat verbatim or state as fact about this specific business):
@@ -310,7 +316,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Then name the terms in one plain line: $1,500 flat setup, live in about a week, an optional $150 a month to run and tune it, and they own it either way. Close by making a reply cost almost nothing: invite a single word back rather than a written response (vary the wording, never repeat a phrasing). No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Repeat the free-build offer in one plain line, since this is the beat that converts: name the one thing they do by hand and it gets built for them, theirs either way. Do NOT name a price. There is no fixed product to price any more, and what a finished build costs depends entirely on what they ask for, so a number here would be invented. Close by making a reply cost almost nothing: invite a single word back rather than a written response (vary the wording, never repeat a phrasing). No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):

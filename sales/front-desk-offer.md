@@ -42,3 +42,21 @@ The $150/mo covers API usage with margin.
 ## Scope guardrails (protect the week and the price)
 Included: one inbox, one calendar, one pipeline board, up to 3 document templates,
 one brand voice. More brands/inboxes/integrations = custom quote (see quote-template.md).
+
+---
+
+## RETIRED as the lead offer (2026-08-03)
+
+Aidan: "get rid of the whole Front Desk thing. i can still build it, but its not rly that
+strong of a sell imo."
+
+The reasoning in this file still holds and is worth keeping: a product with no track record
+loses to cheaper products with years of one. That was already the argument for the free
+skeleton. Retiring Front Desk simply finishes the thought, because a productized flagship and
+a bespoke-build pitch were always going to contradict each other in the same email.
+
+The build itself is real and can still be sold to anyone who asks for exactly that. It is no
+longer named in outreach, on the website nav, or in the sitemap. frontdesk.html stays live
+but noindex, so links already sent out do not break.
+
+Current lead offer: sales/free-skeleton-offer.md.
