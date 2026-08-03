@@ -1,5 +1,9 @@
 /**
- * intake-agent.js  —  THE ACTUAL PRODUCT (inbound Front Desk agent, MVP)
+ * intake-agent.js  —  the Front Desk intake build (MVP)
+ *
+ * RETIRED as the lead offer 2026-08-03, not deleted. The code works and can still be sold
+ * to anyone who asks for exactly this, it is simply no longer what outreach pitches. See
+ * sales/front-desk-offer.md for why.
  *
  * This is the deliverable we sell, not the demo reel. Point it at a business's
  * inbox and it does the real Front Desk job on their INBOUND customer inquiries:
