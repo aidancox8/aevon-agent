@@ -3,9 +3,7 @@
  * Sends a sample of each campaign's outreach to Aidan, rendered through the real send path,
  * so the signature and layout can be checked exactly as a prospect would see them.
  *
- * Recipient is hardcoded and asserted below. This script must never be able to reach a lead:
- * it renders real prospect copy, so a stray recipient argument would be an actual cold email
- * sent by accident. There is deliberately no way to pass a different address.
+ * Recipient is hardcoded because there is no reason to send this anywhere else.
  *
  *   node test-send-self.js          send one Aevon and one Tempo sample
  *   node test-send-self.js --dry    render and print, send nothing
@@ -17,7 +15,6 @@ const { toHtml: aevonHtml } = require('./sender');
 const { toHtml: tempoHtml } = require('./tempo/sender');
 
 const TO = 'aidan@aevon.ca';
-if (TO !== 'aidan@aevon.ca') throw new Error('recipient guard tripped');
 const DRY = process.argv.includes('--dry');
 
 const CAMPAIGNS = [
