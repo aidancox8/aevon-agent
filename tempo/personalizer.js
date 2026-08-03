@@ -133,10 +133,19 @@ function buildPrompt(lead, websiteContent, usesJane) {
      subordinate to the point. Name ONE thing it does, the one that matters most to THIS
      clinic, never a list. A comma-separated run of capabilities is the clearest signal to a
      reader that software wrote the email.
-  3. The ask, and it must be nearly effortless to answer. Ask if they want a 2-minute look at a version set up for a clinic like theirs, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. Clinic owners will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "a one word reply is plenty"), never the same wording twice.
+  3. THE OFFER, and it is the whole point of the email: you will set Tempo up around THEIR
+     clinic, their rooms, their disciplines, their hours, and they run it free for two weeks
+     before deciding anything. Say it plainly and briefly.
+     Call it a pilot, NEVER a "free trial". A trial sounds like self-serve signup for generic
+     software; this is someone building it for them, which is the entire difference and the
+     one thing a booking platform cannot answer.
+     Do NOT mention price, any dollar figure, or what happens after the two weeks. That is a
+     conversation for after they reply.
+     Invite a one-word reply, a plain "yes" is enough. Clinic owners will not write a
+     paragraph to a stranger. Vary the phrasing every time, never reuse a formula.
   - No link in email 1. Do NOT assert their pain as fact. No sign-off (the signature handles that).
   - The consequence beat was folded into beat 1. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
-  - BEAT 3 IS MANDATORY. The email is broken without it. Every single email must end on the ask, phrased as a question, offering a 2-minute look. If you find yourself running out of room, cut from beat 1, never from beat 3.
+  - BEAT 3 IS MANDATORY. The email is broken without it. Every single email must end on the offer, phrased as a question: two weeks free, set up around their clinic. If you find yourself running out of room, cut from beat 1, never from beat 3.
 
 WHY-IT-MATTERS ARGUMENTS (use exactly one in beat 3, vary which one across emails):
   a) SELF-EVIDENT ARITHMETIC, framed with THEIR numbers, never ours: an unfilled sick day is that room empty for a full day, so the cost of finding cover fast is measured in one practitioner's day of billings. Say it as a plain observation they can check against their own rates. NEVER state a dollar figure, percentage, or hours-saved number.

@@ -178,7 +178,9 @@ function buildPrompt(lead, websiteContent) {
   or more is a feature dump, and a comma-separated run of capabilities is the clearest signal
   to a reader that software wrote the email. "It reads every quote request and drafts the
   reply" lands. "It qualifies, books, files, and follows up" does not.
-- Price in email 1: you may say "$1,500 flat setup, live inside a week, you own it". Do NOT mention the monthly fee in email 1 (the follow-up covers full terms).
+- NEVER mention price in email 1. No setup fee, no monthly, no dollar figure at all. The offer
+  here is free work, so a price line contradicts it and turns a note into a sales page. Terms
+  come up once they reply.
 - Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
 - HOW IT MUST SOUND. This matters more than any beat below. Read the email back and ask
   whether a busy owner would believe a person typed it in ninety seconds. If it reads like a
@@ -210,7 +212,14 @@ function buildPrompt(lead, websiteContent) {
      You MAY name the flat setup fee and that they own it, but only if it fits naturally in
      a short sentence. Leaving price for the follow-up is better than a cramped email: a
      price line dragged in by force is what turns this from a note into a sales page.
-  3. The ask, and it must be nearly effortless to answer. Ask if they want the 90 second demo, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. A busy owner will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "one word back is plenty"), never the same wording twice. THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 3.
+  3. THE OFFER, and it is the whole point of the email: you will build them a working version
+     of ONE thing they do by hand, for their business, free, and it is theirs either way.
+     Say it plainly and briefly. This is the one thing a software company cannot answer,
+     because they can only offer a free trial of something generic, so never soften it into
+     "a demo" or "a quick look" — those are what everyone else sends.
+     Ask them to name the one manual job worth killing. A short reply is all it should cost:
+     naming a process, not writing a paragraph. Vary the phrasing every time, never reuse a
+     formula. THIS BEAT IS MANDATORY. If you run out of room, cut from beat 2, never beat 3.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 

@@ -59,3 +59,18 @@ pitch rests on the first.
 - NOT in cold email 1 or 2 (those still lead with the built-around-your-operations argument).
 - It is the REPLY offer: when someone answers with interest or a question, the drafted response
   offers to build the skeleton. That is where it converts a reply into a project.
+
+## Cost ceiling (set 2026-08-03)
+The free build must cost **nothing but time**. Aidan is willing to spend the hours; he is not
+funding someone else's infrastructure to win a lead.
+
+Hard limits on a free skeleton:
+- ONE process. Not a system, not a multi-part product.
+- Sample or historical data they send over. Never wired into production data.
+- No paid APIs, no metered services, no licences, no hosting that bills.
+- No live integration into anything that charges per call.
+- Nothing that carries an ongoing running cost after it is handed over.
+
+If what they ask for needs any of the above, say so plainly and offer to scope the paid
+version instead. Agreeing to build it free anyway turns a lead offer into an unpaid project
+with a bill attached, which is the opposite of the point.
