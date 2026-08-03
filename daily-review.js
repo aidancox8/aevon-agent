@@ -15,6 +15,7 @@
  *      and makes the bounce rate look catastrophic.
  */
 const supabase = require('./lib/supabase');
+const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
 
 const DAYS = (() => {
   const i = process.argv.indexOf('--days');
@@ -110,9 +111,12 @@ async function review(c, warnings) {
       ? `${c.label}: no open or click events from the email provider (the webhook only carries delivered and bounced). Site visits still tracked (${nVisit}), so this is a gap in email-level detail, not a blind spot.`
       : `${c.label}: no open, click or site-visit data at all — there is no way to tell whether anyone is engaging.`);
   }
-  // A weekday with no send by evening means the cron did not fire.
+  // A weekday with no send by evening means the cron did not fire. Statutory holidays have
+  // to be excluded or this cries wolf on every one of them: the senders skip holidays by
+  // design, so flagging that as a fault trains you to ignore the warning. Reuses the same
+  // holiday table the senders use, rather than a second copy that can drift from it.
   const dow = new Date().toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
-  const isWeekday = !['Sat', 'Sun'].includes(dow);
+  const isWeekday = !['Sat', 'Sun'].includes(dow) && !isBCHoliday(getVancouverDate());
   if (isWeekday && sentToday.length === 0 && untouched.length > 0) {
     warnings.push(`${c.label}: nothing sent today (${dow}) despite ${untouched.length} leads ready — check the send workflow ran.`);
   }
