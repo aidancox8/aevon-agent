@@ -170,7 +170,7 @@ function addressOf(headerValue) {
 
 // ── Draft creation ────────────────────────────────────────────────
 
-const SIGNATURE = `\n\nAidan Cox\nAevon\nBook a call: https://calendar.app.google/7R7srDKzWrvmLQg37`;
+const SIGNATURE = `\n\nAidan\nAevon\nBook a call: https://calendar.app.google/7R7srDKzWrvmLQg37`;
 
 async function buildRawDraft({ to, subject, inReplyTo, references, body }) {
   const replySubject = /^re:/i.test(subject || '') ? subject : `Re: ${subject || ''}`;

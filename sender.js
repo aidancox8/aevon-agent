@@ -290,7 +290,7 @@ function toHtml(text, leadId, industry, businessName) {
           <img src="https://aevon.ca/logo-email.png" width="38" height="38" alt="Aevon" style="display:block;border-radius:8px">
         </td>
         <td style="vertical-align:middle">
-          <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan Cox</div>
+          <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan</div>
           <div style="font-size:12px;color:#666666;margin-top:2px">
             <a href="${siteUrl}" style="color:#666666;text-decoration:none">aevon.ca</a>
             &nbsp;&middot;&nbsp;

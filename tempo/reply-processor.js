@@ -146,7 +146,7 @@ function addressOf(headerValue) {
   return (m ? m[1] : headerValue).trim().toLowerCase();
 }
 
-const SIGNATURE = `\n\nAidan Cox\nAevon · aevon.ca/tempo\nBook a call: https://calendar.app.google/7R7srDKzWrvmLQg37`;
+const SIGNATURE = `\n\nAidan\nAevon · aevon.ca/tempo\nBook a call: https://calendar.app.google/7R7srDKzWrvmLQg37`;
 
 async function buildRawDraft({ to, subject, inReplyTo, references, body }) {
   const replySubject = /^re:/i.test(subject || '') ? subject : `Re: ${subject || ''}`;
