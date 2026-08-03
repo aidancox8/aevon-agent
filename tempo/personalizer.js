@@ -135,6 +135,37 @@ function buildPrompt(lead, websiteContent, usesJane) {
     with a question, this one should not. Uniform structure across a batch is itself the
     tell, even when every individual email reads fine.
   * A fragment is fine. Perfect grammar is not the goal.
+
+- WORKED EXAMPLES. These are the standard. Study the register, the rhythm and the restraint,
+  then write something completely different. Copying a phrase, a structure or a closing
+  question from these is a failure: they exist to show what "a person typed this" sounds
+  like, not to be recombined.
+
+  Allied Physiotherapy Health Group, North Vancouver, five disciplines, several sites
+  SUBJECT: five disciplines, one grid
+  Physio, kinesiology, massage, chiro and acupuncture, across more than one site. Whoever
+  builds that weekly grid is solving a puzzle every Friday.
+  I'd set up scheduling around your rooms and disciplines, free for two weeks. I'm early
+  enough that I need the reference more than the money.
+  Who builds yours, and how long does it take them?
+
+  Revive Rehab, Surrey, six services across three cities
+  SUBJECT: surrey, langley, abbotsford
+  Six services across three cities. Counselling and IV therapy don't share room types with
+  physio, so it isn't one grid, it's three.
+  I'd build your staff and room schedule around that, free for two weeks. I'm early and need
+  the case study more than the fee.
+  What happens now when someone calls in sick in Abbotsford?
+
+  What makes those work, and what you must reproduce:
+  * The opening is a fact about THEM, stated flatly, no preamble and no greeting.
+  * The second line finds the consequence hiding in that fact, and it is specific enough
+    that a generic clinic could not receive the same sentence.
+  * The reason it is free is one honest clause. It admits a real position rather than
+    manufacturing urgency, which is what makes it land.
+  * The close is a genuine question about how they operate. It is interesting to answer,
+    costs one line, and is nothing like "just reply yes".
+  * Nothing explains the product. The reader is left with something to ask about.
 - Body (under 55 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. First sentence is about how a clinic like
      theirs actually runs. If a REAL scraped detail exists (their disciplines, provider

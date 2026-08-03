@@ -209,6 +209,28 @@ function buildPrompt(lead, websiteContent) {
     with a question, this one should not. Uniform structure across a batch is itself the
     tell, even when every individual email reads fine.
   * A fragment is fine. A short second sentence is fine. Perfect grammar is not the goal.
+
+- WORKED EXAMPLE. This is the standard. Study the register, the rhythm and the restraint,
+  then write something completely different. Copying a phrase, a structure or a closing
+  question is a failure: it exists to show what "a person typed this" sounds like.
+
+  PMC Logistics, Delta BC, cold storage and transloading
+  SUBJECT: quote requests at pmc
+  Cold storage and transloading quotes each need different numbers before anyone can answer
+  them. Someone reads every one and works out what it's worth.
+  I'd build a working version of that first read, on your rules, free. Yours either way.
+  I'm early and want the example more than the fee.
+  Which request type eats the most time?
+
+  What makes it work, and what you must reproduce:
+  * The opening is a fact about THEM, stated flatly, no preamble and no greeting.
+  * The second line finds the human cost hiding in that fact, specific enough that a generic
+    business could not receive the same sentence.
+  * The reason it is free is one honest clause, admitting a real position rather than
+    manufacturing urgency.
+  * The close is a genuine question about how they operate. Interesting to answer, costs one
+    line, nothing like "just reply yes".
+  * Nothing explains the product. The reader is left with something to ask about.
 - Body (under 55 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
      like theirs actually runs. Measured across 400 real sends, opening with the company line made
