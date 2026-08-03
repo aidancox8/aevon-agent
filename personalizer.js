@@ -168,10 +168,33 @@ function buildPrompt(lead, websiteContent) {
   That inversion IS the pitch. Every off-the-shelf tool is something they must conform to. Aevon is the opposite, and it is the one claim no SaaS competitor can make.
 - Goal: get a reply by offering a 90-second demo of ONE specific product, the Aevon Front Desk agent, described in THEIR terms. Do NOT ask open discovery questions (tested for months, near-zero replies). Land the argument above, made specific to THIS business.
 - CRITICAL POSITIONING: this is NOT an email-writing assistant. Gmail and Outlook already ship AI that helps write replies, so NEVER describe it in those terms ("reads your email", "drafts replies for you" as the headline). Sell the WORKER: it runs their intake end to end. It answers and qualifies ${what}, books the appointment or showing, files every lead into a simple pipeline, and follows up with the ones that go quiet. The owner just approves.
-- HARD CAPABILITY CONTRACT: the agent does EXACTLY five things: (1) answers and qualifies inbound inquiries, (2) drafts the replies in the owner's voice, (3) books appointments/showings/calls, (4) files every lead into a pipeline board, (5) follows up with leads that go quiet. Describe ONLY these, phrased for their business. NEVER invent other capabilities (writing reports, checking application status, processing paperwork, integrations you have not been told about). Describe it handling ${what} specifically, do not substitute a different task or a different industry's inquiries.
+- HARD CAPABILITY CONTRACT. This bounds what you may CLAIM. It is not a list to recite.
+  The agent does exactly five things: (1) answers and qualifies inbound inquiries, (2) drafts
+  replies in the owner's voice, (3) books appointments/showings/calls, (4) files leads into a
+  pipeline board, (5) follows up with leads that go quiet. NEVER invent anything beyond these
+  (no reports, no status checks, no paperwork processing, no unstated integrations), and keep
+  it about ${what} specifically rather than another industry's inquiries.
+  CRITICAL: name ONE of the five, the one that matters most to THIS business. Listing three
+  or more is a feature dump, and a comma-separated run of capabilities is the clearest signal
+  to a reader that software wrote the email. "It reads every quote request and drafts the
+  reply" lands. "It qualifies, books, files, and follows up" does not.
 - Price in email 1: you may say "$1,500 flat setup, live inside a week, you own it". Do NOT mention the monthly fee in email 1 (the follow-up covers full terms).
 - Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
-- Body (under 70 words), and DO NOT include any link:
+- HOW IT MUST SOUND. This matters more than any beat below. Read the email back and ask
+  whether a busy owner would believe a person typed it in ninety seconds. If it reads like a
+  landing page paragraph, it has failed, and dense corporate register is the single most
+  common failure:
+  * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
+  * Use contractions. "cannot" is "can't", "it is" is "it's". Always.
+  * Write as I, not as Aevon or we. One person emailing another.
+  * Concrete over abstract. "someone reads every inquiry and decides if it's real" beats
+    "intake remains trapped in shared inboxes".
+  * BANNED, these are the exact tells that make it sound generated: "often find", "rather
+    than", "remains", "it usually ends up", "the nuance of", "streamline", "leverage",
+    "solution", "seamless", "robust", "in today's", "we understand", "reach out",
+    "I hope this finds you", "cutting-edge", "tailored solutions", "pain points".
+  * A fragment is fine. A short second sentence is fine. Perfect grammar is not the goal.
+- Body (under 55 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
      like theirs actually runs. Measured across 400 real sends, opening with the company line made
      81% of these emails start "Aevon builds AI front desk agents for..." — generic vendor
@@ -181,9 +204,13 @@ function buildPrompt(lead, websiteContent) {
      detail exists (their services, size, locations), use it HERE to show why a generic tool would
      not fit THEM specifically. NEVER begin the email with "Aevon", "We build", "We are", "I'm
      reaching out", or any variant that leads with the sender.
-  2. THE CONSEQUENCE: so it stays in inboxes and spreadsheets, and things slip. A general truth about businesses like theirs, never an accusation about theirs.
-  3. THE INVERSION plus concreteness, in one line: rather than fitting their business around software, it gets built around their business. This is where you may name who you are, briefly and subordinate to the point (${whoWeAre}). Flat setup fee, live inside a week, they own it.
-  4. The ask, and it must be nearly effortless to answer. Ask if they want the 90 second demo, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. A busy owner will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "one word back is plenty"), never the same wording twice. THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 4.
+  2. WHAT YOU DO ABOUT IT, in one plain sentence, said as a person rather than a company:
+     you build the thing around how they already work instead of making them fit a tool.
+     Name who you are here, briefly and subordinate to the point (${whoWeAre}).
+     You MAY name the flat setup fee and that they own it, but only if it fits naturally in
+     a short sentence. Leaving price for the follow-up is better than a cramped email: a
+     price line dragged in by force is what turns this from a note into a sales page.
+  3. The ask, and it must be nearly effortless to answer. Ask if they want the 90 second demo, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. A busy owner will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "one word back is plenty"), never the same wording twice. THIS BEAT IS MANDATORY — the email is broken without it. If you run out of room, cut from beat 2, never beat 3.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 

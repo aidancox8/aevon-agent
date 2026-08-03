@@ -384,4 +384,10 @@ async function run() {
   if (!LIVE) console.log('\nThis was a dry run. Set pricing in tempo/offer.md, then run: node tempo/sender.js --send');
 }
 
-run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
+// Only run when invoked directly, so the render path can be imported and previewed
+// without the module firing a live send as a side effect of require().
+if (require.main === module) {
+  run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
+}
+
+module.exports = { toHtml };

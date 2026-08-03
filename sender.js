@@ -634,7 +634,13 @@ async function run() {
   console.log(`\nDone. Sent: ${sent} | Failed: ${failed}`);
 }
 
-run().catch(err => {
-  console.error('Fatal error:', err.message);
-  process.exit(1);
-});
+// Only run when invoked directly. Requiring this module used to execute a live send as a
+// side effect, which made the render path impossible to preview without risking real mail.
+if (require.main === module) {
+  run().catch(err => {
+    console.error('Fatal error:', err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { toHtml };

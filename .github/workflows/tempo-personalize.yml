@@ -31,3 +31,17 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: node tempo/personalizer.js --limit 400
+
+      # Rewrite copy still using the older opener. tempo/personalizer.js only writes for
+      # leads that have none, so a prompt change otherwise reaches new leads only while the
+      # existing queue keeps sending the old wording for weeks.
+      - name: Refresh stale Tempo copy
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_AGENT: ${{ secrets.GEMINI_API_KEY_AGENT }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node regen-copy.js --table tempo_leads --limit 120

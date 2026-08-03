@@ -97,8 +97,8 @@ function buildPrompt(lead, websiteContent, usesJane) {
     : `Tempo is NOT a patient-booking tool or an EMR (they already have those). It schedules STAFF and ROOMS: it builds the weekly grid of which provider is in which room on which day, sends automatic SMS and email shift + on-call reminders, handles shift and on-call cover, syncs time off with payroll, and shows room-utilization stats. It is built around THEIR clinic — their rooms, their provider types, their hours — and can run inside the tools they already use (e.g. Microsoft Teams).`;
 
   const contract = allied
-    ? `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly practitioner + room schedule, (2) schedules front desk and support staff (which patient-booking tools do not cover), (3) automated SMS + email shift reminders and one-tap sick-call cover (text all qualified free staff, first yes takes the shift), (4) time off that syncs with payroll + payroll-ready hours export, (5) room utilization and coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting, Jane integration).`
-    : `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly staff + room schedule, (2) automated SMS + email shift and on-call reminders/confirmations, (3) shift and on-call cover handling, (4) time-off that syncs with payroll, (5) utilization + coverage analytics. Describe ONLY these, phrased for their clinic. NEVER invent other capabilities (patient booking, EMR, billing, charting).`;
+    ? `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly practitioner + room schedule, (2) schedules front desk and support staff (which patient-booking tools do not cover), (3) automated SMS + email shift reminders and one-tap sick-call cover (text all qualified free staff, first yes takes the shift), (4) time off that syncs with payroll + payroll-ready hours export, (5) room utilization and coverage analytics. This bounds what you may CLAIM; it is NOT a list to recite. Name ONE of them, the one that matters most to THIS clinic, phrased in their words. NEVER invent other capabilities (patient booking, EMR, billing, charting, Jane integration).`
+    : `HARD CAPABILITY CONTRACT: Tempo does EXACTLY these things: (1) builds the weekly staff + room schedule, (2) automated SMS + email shift and on-call reminders/confirmations, (3) shift and on-call cover handling, (4) time-off that syncs with payroll, (5) utilization + coverage analytics. This bounds what you may CLAIM; it is NOT a list to recite. Name ONE of them, the one that matters most to THIS clinic, phrased in their words. NEVER invent other capabilities (patient booking, EMR, billing, charting).`;
 
   const email1Block = `EMAIL 1 (initial outreach, BUILT-AROUND-YOU approach):
 - THE CORE ARGUMENT, and the spine of this email. Follow this arc:
@@ -108,15 +108,35 @@ function buildPrompt(lead, websiteContent, usesJane) {
 - POSITIONING (background, for accuracy — do not recite it as a feature list): ${positioning}
 - ${contract}
 - Subject line: lowercase, short (2-5 words). It should hint at the fit problem or the spreadsheet, not at a feature list. Never use the word "rota" (Canadian clinics say "schedule"). Vary the grammatical form. Fresh and specific.
-- Body (under 75 words), and DO NOT include any link:
-  1. ONE plain line of who you are: Aevon builds Tempo, custom staff and room scheduling for multi-provider clinics.
-  2. THE FIT PROBLEM, in their terms: clinics look for scheduling software that matches how they run and cannot find it, because every clinic is different. If a REAL scraped detail exists (their disciplines, provider count, locations), use it here to show why a generic tool would not fit THEM specifically.
-  3. THE CONSEQUENCE: so it stays in a spreadsheet, and things slip. State it as a general truth about clinics, never as an accusation about theirs.
-  4. THE INVERSION, said plainly: rather than fitting their clinic around software, it gets built around their clinic${allied ? ', and it sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ' rather than replacing it' : ''}.
-  5. The ask, and it must be nearly effortless to answer. Ask if they want a 2-minute look at a version set up for a clinic like theirs, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. Clinic owners will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "a one word reply is plenty"), never the same wording twice.
+- HOW IT MUST SOUND. This matters more than any beat below. Read it back and ask whether a
+  busy clinic owner would believe a person typed it in ninety seconds. If it reads like a
+  landing page paragraph it has failed, and dense corporate register is the usual cause:
+  * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
+  * Use contractions. "cannot" is "can't", "it is" is "it's". Always.
+  * Write as I, not as Aevon or we. One person emailing another.
+  * Concrete over abstract. "someone rebuilds the grid every Friday" beats "the weekly time
+    cost of rebuilding the schedule is a cycle that never ends".
+  * BANNED, these are the exact tells that make it sound generated: "often find", "rather
+    than", "remains", "it usually ends up", "the nuance of", "streamline", "leverage",
+    "solution", "seamless", "robust", "in today's", "we understand", "reach out",
+    "I hope this finds you", "cutting-edge", "tailored solutions", "pain points".
+  * Never open with "Hi there" or any greeting to nobody. Open in their world.
+  * A fragment is fine. Perfect grammar is not the goal.
+- Body (under 55 words), and DO NOT include any link:
+  1. OPEN IN THEIR WORLD, never with who you are. First sentence is about how a clinic like
+     theirs actually runs. If a REAL scraped detail exists (their disciplines, provider
+     count, locations), use it HERE so it is obvious a generic tool would not fit THEM.
+     NEVER begin with "Aevon", "I'm Aidan", "We build", "Hi there", or any variant leading
+     with the sender.
+  2. WHAT YOU DO ABOUT IT, one plain sentence, as a person not a company: it gets built
+     around their clinic instead of the other way around${allied ? ', and it sits alongside ' + (usesJane ? 'Jane' : 'their booking system') + ' rather than replacing it' : ''}. Name Tempo here, briefly and
+     subordinate to the point. Name ONE thing it does, the one that matters most to THIS
+     clinic, never a list. A comma-separated run of capabilities is the clearest signal to a
+     reader that software wrote the email.
+  3. The ask, and it must be nearly effortless to answer. Ask if they want a 2-minute look at a version set up for a clinic like theirs, and EXPLICITLY invite a one-word reply — a plain "yes" is enough, they do not need to write anything back. Clinic owners will not compose a paragraph to a stranger, so the reply has to cost them a single word. Phrase it naturally and vary it (for example "just reply yes and I'll send it", "a one word reply is plenty"), never the same wording twice.
   - No link in email 1. Do NOT assert their pain as fact. No sign-off (the signature handles that).
-  - Beat 3 replaces the old "why it matters" beat. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
-  - BEAT 5 IS MANDATORY. The email is broken without it. Every single email must end on the ask, phrased as a question, offering a 2-minute look. If you find yourself running out of room, cut from beat 2, never from beat 5.
+  - The consequence beat was folded into beat 1. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
+  - BEAT 3 IS MANDATORY. The email is broken without it. Every single email must end on the ask, phrased as a question, offering a 2-minute look. If you find yourself running out of room, cut from beat 1, never from beat 3.
 
 WHY-IT-MATTERS ARGUMENTS (use exactly one in beat 3, vary which one across emails):
   a) SELF-EVIDENT ARITHMETIC, framed with THEIR numbers, never ours: an unfilled sick day is that room empty for a full day, so the cost of finding cover fast is measured in one practitioner's day of billings. Say it as a plain observation they can check against their own rates. NEVER state a dollar figure, percentage, or hours-saved number.
@@ -250,4 +270,10 @@ async function run() {
   console.log(`\nDone. Personalized: ${success} | Failed: ${failed}`);
 }
 
-run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
+// Only run when invoked directly, so copy can be previewed without the module writing
+// generated content to the database as a side effect of require().
+if (require.main === module) {
+  run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
+}
+
+module.exports = { buildPrompt };

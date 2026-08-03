@@ -21,7 +21,17 @@ require('dotenv').config();
 const supabase = require('./lib/supabase');
 const { createGenerate } = require('./lib/gemini');
 const { scrapeContext } = require('./lib/contact-finder');
-const { buildPrompt } = require('./personalizer');
+// Either campaign. Their buildPrompt signatures differ slightly (Tempo takes a usesJane
+// flag), so the call is normalised below rather than duplicating this whole script.
+const TABLE = (() => {
+  const i = process.argv.indexOf('--table');
+  const t = i > -1 ? process.argv[i + 1] : 'leads';
+  if (!['leads', 'tempo_leads'].includes(t)) throw new Error('--table must be leads or tempo_leads');
+  return t;
+})();
+const buildPrompt = TABLE === 'tempo_leads'
+  ? (lead, site) => require('./tempo/personalizer').buildPrompt(lead, site, false)
+  : require('./personalizer').buildPrompt;
 
 const generate = createGenerate(process.env.GEMINI_API_KEY);
 const arg = (flag, dflt) => {
@@ -75,11 +85,16 @@ function parseJsonObject(raw) {
 }
 
 const noDash = s => (s == null ? s : String(s).replace(/\s*[—–]\s*/g, ', '));
-const opensWithUs = b => /^(aevon|we (build|are)|i'?m reaching)/i.test(String(b || '').trim());
+// Both campaigns' old openers. Aevon's led with the company name; Tempo's led with a
+// greeting to nobody then a self-introduction ("Hi there. I'm Aidan from Aevon, where we
+// build Tempo..."). A detector matching only the first would report Tempo as already clean
+// and quietly skip its entire backlog.
+const opensWithUs = b => /^(aevon\b|we (build|are)\b|i'?m reaching|hi there|hello there|hi,? i'?m|i'?m aidan|my name is)/i
+  .test(String(b || '').trim());
 
 (async () => {
   const { data: pool, error } = await supabase
-    .from('leads')
+    .from(TABLE)
     .select('id, business_name, industry, city, website, email, contact_name, contact_role, qualification_score, lead_insights, email_body')
     .eq('status', 'queued')
     .is('last_sent_at', null)
@@ -129,7 +144,7 @@ const opensWithUs = b => /^(aevon|we (build|are)|i'?m reaching)/i.test(String(b 
 
       // scheduled_send_at is deliberately left alone: these leads already hold a slot in the
       // queue and rescheduling them would reshuffle send order for no reason.
-      const { error: upErr } = await supabase.from('leads').update({
+      const { error: upErr } = await supabase.from(TABLE).update({
         email_subject: noDash(content.email_subject),
         email_body: noDash(content.email_body),
         followup_subject: noDash(content.followup_subject),
