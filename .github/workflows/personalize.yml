@@ -39,7 +39,12 @@ jobs:
         # cleanly instead of grinding into GitHub's 6h kill as "cancelled".
         run: node personalizer.js ${{ github.event_name == 'schedule' && '--limit 450' || (inputs.limit != '' && format('--limit {0}', inputs.limit) || '') }}
 
-      # Rewrite copy left over from an older prompt. personalizer.js only writes for leads
+      # Rewrite copy left over from an older prompt. Rate set against how long the backlog
+      # takes to clear, not against comfort: at 150 a night the 3,254 stale Aevon emails
+      # needed 22 nights, so a two-week read on the new copy would mostly have measured the
+      # old copy. At 300 it clears in 11. Gemini free tier is 500 requests a day shared with
+      # the personalizer above, and OpenRouter picks up the overflow, so a busy day degrades
+      # to a slower run rather than a failed one. personalizer.js only writes for leads
       # that have none, so a prompt change otherwise takes effect only on new leads while a
       # months-long backlog keeps sending the old wording.
       #
@@ -58,7 +63,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node regen-copy.js --limit ${{ vars.REGEN_DAILY_LIMIT || '150' }}
+        run: node regen-copy.js --limit ${{ vars.REGEN_DAILY_LIMIT || '300' }}
 
       - name: Alert on failure
         if: failure()
