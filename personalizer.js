@@ -186,7 +186,10 @@ function buildPrompt(lead, websiteContent) {
   whether a busy owner would believe a person typed it in ninety seconds. If it reads like a
   landing page paragraph, it has failed, and dense corporate register is the single most
   common failure:
-  * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
+  * Under 65 words total. No sentence longer than 20 words. Most should be much shorter.
+  * The reason it is free should be a clause, not a sentence. Four or five words folded into
+    the offer ("while I am building a track record", "I am early and taking on a few") does
+    the job. It must be present, but it must not cost you the whole word budget.
   * Use contractions. "cannot" is "can't", "it is" is "it's". Always.
   * Write as I, not as Aevon or we. One person emailing another.
   * Concrete over abstract. "someone reads every inquiry and decides if it's real" beats
@@ -196,7 +199,7 @@ function buildPrompt(lead, websiteContent) {
     "solution", "seamless", "robust", "in today's", "we understand", "reach out",
     "I hope this finds you", "cutting-edge", "tailored solutions", "pain points".
   * A fragment is fine. A short second sentence is fine. Perfect grammar is not the goal.
-- Body (under 55 words), and DO NOT include any link:
+- Body (under 65 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
      like theirs actually runs. Measured across 400 real sends, opening with the company line made
      81% of these emails start "Aevon builds AI front desk agents for..." — generic vendor
@@ -217,6 +220,13 @@ function buildPrompt(lead, websiteContent) {
      Say it plainly and briefly. This is the one thing a software company cannot answer,
      because they can only offer a free trial of something generic, so never soften it into
      "a demo" or "a quick look" — those are what everyone else sends.
+     SAY WHY IT IS FREE, in a handful of words. This is mandatory and the email fails without
+     it. Free work from a stranger reads as a scam or as desperation, and the reason is the
+     only thing that makes it credible. The true reason: he is early, building a track record,
+     and is taking on a small number of these. Make it sound limited rather than a standing
+     offer, because it is: it ends once he has the workload. Never invent clients, a client
+     count, a deadline, or a numbered spot ("only 3 left") — there are no clients yet and a
+     fake scarcity line is exactly what a scam looks like.
      Ask them to name the one manual job worth killing. A short reply is all it should cost:
      naming a process, not writing a paragraph. Vary the phrasing every time, never reuse a
      formula. THIS BEAT IS MANDATORY. If you run out of room, cut from beat 2, never beat 3.

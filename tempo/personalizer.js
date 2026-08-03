@@ -111,7 +111,10 @@ function buildPrompt(lead, websiteContent, usesJane) {
 - HOW IT MUST SOUND. This matters more than any beat below. Read it back and ask whether a
   busy clinic owner would believe a person typed it in ninety seconds. If it reads like a
   landing page paragraph it has failed, and dense corporate register is the usual cause:
-  * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
+  * Under 65 words total. No sentence longer than 20 words. Most should be much shorter.
+  * The reason it is free should be a clause, not a sentence. Four or five words folded into
+    the offer ("while I am building a track record", "I am early and taking on a few") does
+    the job. It must be present, but it must not cost you the whole word budget.
   * Use contractions. "cannot" is "can't", "it is" is "it's". Always.
   * Write as I, not as Aevon or we. One person emailing another.
   * Concrete over abstract. "someone rebuilds the grid every Friday" beats "the weekly time
@@ -122,7 +125,7 @@ function buildPrompt(lead, websiteContent, usesJane) {
     "I hope this finds you", "cutting-edge", "tailored solutions", "pain points".
   * Never open with "Hi there" or any greeting to nobody. Open in their world.
   * A fragment is fine. Perfect grammar is not the goal.
-- Body (under 55 words), and DO NOT include any link:
+- Body (under 65 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. First sentence is about how a clinic like
      theirs actually runs. If a REAL scraped detail exists (their disciplines, provider
      count, locations), use it HERE so it is obvious a generic tool would not fit THEM.
@@ -139,6 +142,12 @@ function buildPrompt(lead, websiteContent, usesJane) {
      Call it a pilot, NEVER a "free trial". A trial sounds like self-serve signup for generic
      software; this is someone building it for them, which is the entire difference and the
      one thing a booking platform cannot answer.
+     SAY WHY IT IS FREE, in a handful of words, and treat this as mandatory. Free setup from
+     a stranger reads as a scam, and the reason is what makes it credible. The true reason:
+     he is early, building a track record with the first few clinics, and it is limited
+     rather than a standing offer. Never invent a client count, a deadline, or a numbered
+     spot ("2 places left") — there are no clinics on it yet and fake scarcity is exactly
+     what a scam sounds like.
      Do NOT mention price, any dollar figure, or what happens after the two weeks. That is a
      conversation for after they reply.
      Invite a one-word reply, a plain "yes" is enough. Clinic owners will not write a
