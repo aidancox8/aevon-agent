@@ -30,6 +30,10 @@ function parseJsonObject(raw) {
 
 const BOT_TELLS = /often find|rather than|remains |it usually ends up|the nuance of|streamline|leverage|seamless|robust|in today's|we understand|reach out|pain points|hi there/i;
 
+// The stock AI cold-email closes. Escaped question marks matter here: "sound good?" without
+// the backslash makes the d optional and matches half the language.
+const BOT_CLOSES = /just reply yes|reply yes and|one word back|one word reply is plenty|sound good\?|worth a look\?|let me know if you'?re interested|would you be open to|no pressure|happy to share more|thoughts\?/i;
+
 (async () => {
   const { data } = await supabase.from('tempo_leads')
     .select('id, business_name, industry, city, website, email_subject, email_body')
@@ -49,7 +53,7 @@ const BOT_TELLS = /often find|rather than|remains |it usually ends up|the nuance
     body.split('\n').forEach(l => console.log('   ' + l));
     const words = body.split(/\s+/).filter(Boolean).length;
     const longest = Math.max(...body.split(/[.!?]/).map(s => s.split(/\s+/).filter(Boolean).length));
-    console.log(`\n   words ${words} ${words <= 55 ? 'ok' : 'OVER'} | longest sentence ${longest} ${longest <= 20 ? 'ok' : 'OVER'} | bot tells: ${BOT_TELLS.test(body) ? 'FOUND: ' + body.match(BOT_TELLS)[0] : 'none'}`);
+    console.log(`\n   words ${words} ${words <= 55 ? 'ok' : 'OVER'} | longest sentence ${longest} ${longest <= 20 ? 'ok' : 'OVER'} | close: ${BOT_CLOSES.test(body) ? "TEMPLATE: "+body.match(BOT_CLOSES)[0] : "ok"} | bot tells: ${BOT_TELLS.test(body) ? 'FOUND: ' + body.match(BOT_TELLS)[0] : 'none'}`);
   }
   console.log('\n' + '='.repeat(68) + '\n');
 })().catch(e => { console.error('preview failed:', e.message); process.exit(1); });

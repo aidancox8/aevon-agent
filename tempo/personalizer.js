@@ -111,7 +111,7 @@ function buildPrompt(lead, websiteContent, usesJane) {
 - HOW IT MUST SOUND. This matters more than any beat below. Read it back and ask whether a
   busy clinic owner would believe a person typed it in ninety seconds. If it reads like a
   landing page paragraph it has failed, and dense corporate register is the usual cause:
-  * Under 65 words total. No sentence longer than 20 words. Most should be much shorter.
+  * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
   * The reason it is free should be a clause, not a sentence. Four or five words folded into
     the offer ("while I am building a track record", "I am early and taking on a few") does
     the job. It must be present, but it must not cost you the whole word budget.
@@ -124,8 +124,18 @@ function buildPrompt(lead, websiteContent, usesJane) {
     "solution", "seamless", "robust", "in today's", "we understand", "reach out",
     "I hope this finds you", "cutting-edge", "tailored solutions", "pain points".
   * Never open with "Hi there" or any greeting to nobody. Open in their world.
+  * INTRIGUE, not explanation. The goal is that they want to know more, which means
+    leaving something unsaid. Two things create it: a detail specific enough that they
+    wonder how you knew, and brevity. An email that explains the whole product answers
+    every question and there is no reason to reply. Say less than feels comfortable.
+  * The FIRST sentence must contain something true about THEIR business that you could only
+    know by looking: their disciplines, locations, services, the mix they run. A sentence
+    that would fit any business in their industry is a wasted opening.
+  * Do NOT use the same shape every time. If the last email opened with a fact and closed
+    with a question, this one should not. Uniform structure across a batch is itself the
+    tell, even when every individual email reads fine.
   * A fragment is fine. Perfect grammar is not the goal.
-- Body (under 65 words), and DO NOT include any link:
+- Body (under 55 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. First sentence is about how a clinic like
      theirs actually runs. If a REAL scraped detail exists (their disciplines, provider
      count, locations), use it HERE so it is obvious a generic tool would not fit THEM.
@@ -150,8 +160,18 @@ function buildPrompt(lead, websiteContent, usesJane) {
      what a scam sounds like.
      Do NOT mention price, any dollar figure, or what happens after the two weeks. That is a
      conversation for after they reply.
-     Invite a one-word reply, a plain "yes" is enough. Clinic owners will not write a
-     paragraph to a stranger. Vary the phrasing every time, never reuse a formula.
+     HOW TO CLOSE. The reply has to be cheap, but the close must not sound like a template.
+     BANNED outright, these are the most recognisable machine-written closes in existence:
+     "just reply yes", "reply yes and I'll send it", "one word back is plenty", "a one word
+     reply is plenty", "sound good?", "worth a look?", "let me know if you're interested",
+     "would you be open to", "no pressure", "happy to share more", "thoughts?".
+     Write a close a clinic owner would believe a person typed. A real question about how
+     they run, or a plain concrete offer with a timeframe. Good shapes, do NOT copy verbatim:
+       "Want me to set it up for your rooms and see?"
+       "Who builds the grid at your place, and how long does it take them?"
+       "Say the word and I'll have your first week built by Friday."
+     Vary the SHAPE, not just the words. If several emails in a row end the same way, the
+     wording is not the problem, the formula is.
   - No link in email 1. Do NOT assert their pain as fact. No sign-off (the signature handles that).
   - The consequence beat was folded into beat 1. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
   - BEAT 3 IS MANDATORY. The email is broken without it. Every single email must end on the offer, phrased as a question: two weeks free, set up around their clinic. If you find yourself running out of room, cut from beat 1, never from beat 3.

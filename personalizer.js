@@ -186,7 +186,7 @@ function buildPrompt(lead, websiteContent) {
   whether a busy owner would believe a person typed it in ninety seconds. If it reads like a
   landing page paragraph, it has failed, and dense corporate register is the single most
   common failure:
-  * Under 65 words total. No sentence longer than 20 words. Most should be much shorter.
+  * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
   * The reason it is free should be a clause, not a sentence. Four or five words folded into
     the offer ("while I am building a track record", "I am early and taking on a few") does
     the job. It must be present, but it must not cost you the whole word budget.
@@ -198,8 +198,18 @@ function buildPrompt(lead, websiteContent) {
     than", "remains", "it usually ends up", "the nuance of", "streamline", "leverage",
     "solution", "seamless", "robust", "in today's", "we understand", "reach out",
     "I hope this finds you", "cutting-edge", "tailored solutions", "pain points".
+  * INTRIGUE, not explanation. The goal is that they want to know more, which means
+    leaving something unsaid. Two things create it: a detail specific enough that they
+    wonder how you knew, and brevity. An email that explains the whole product answers
+    every question and there is no reason to reply. Say less than feels comfortable.
+  * The FIRST sentence must contain something true about THEIR business that you could only
+    know by looking: their disciplines, locations, services, the mix they run. A sentence
+    that would fit any business in their industry is a wasted opening.
+  * Do NOT use the same shape every time. If the last email opened with a fact and closed
+    with a question, this one should not. Uniform structure across a batch is itself the
+    tell, even when every individual email reads fine.
   * A fragment is fine. A short second sentence is fine. Perfect grammar is not the goal.
-- Body (under 65 words), and DO NOT include any link:
+- Body (under 55 words), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
      like theirs actually runs. Measured across 400 real sends, opening with the company line made
      81% of these emails start "Aevon builds AI front desk agents for..." — generic vendor
@@ -209,12 +219,11 @@ function buildPrompt(lead, websiteContent) {
      detail exists (their services, size, locations), use it HERE to show why a generic tool would
      not fit THEM specifically. NEVER begin the email with "Aevon", "We build", "We are", "I'm
      reaching out", or any variant that leads with the sender.
-  2. WHAT YOU DO ABOUT IT, in one plain sentence, said as a person rather than a company:
-     you build the thing around how they already work instead of making them fit a tool.
-     Name who you are here, briefly and subordinate to the point (${whoWeAre}).
-     You MAY name the flat setup fee and that they own it, but only if it fits naturally in
-     a short sentence. Leaving price for the follow-up is better than a cramped email: a
-     price line dragged in by force is what turns this from a note into a sales page.
+  2. WHO YOU ARE, and keep it to a clause, not a sentence (${whoWeAre}). It exists so they
+     know the email is not a scam, nothing more. Do NOT explain the product, the approach,
+     or how it works. The offer in beat 3 already says what you do, so explaining it here
+     is the single biggest source of wasted words, and an email that explains everything has
+     nothing left to be curious about. If it fits in five words, use five words.
   3. THE OFFER, and it is the whole point of the email: you will build them a working version
      of ONE thing they do by hand, for their business, free, and it is theirs either way.
      Say it plainly and briefly. This is the one thing a software company cannot answer,
@@ -227,9 +236,19 @@ function buildPrompt(lead, websiteContent) {
      offer, because it is: it ends once he has the workload. Never invent clients, a client
      count, a deadline, or a numbered spot ("only 3 left") — there are no clients yet and a
      fake scarcity line is exactly what a scam looks like.
-     Ask them to name the one manual job worth killing. A short reply is all it should cost:
-     naming a process, not writing a paragraph. Vary the phrasing every time, never reuse a
-     formula. THIS BEAT IS MANDATORY. If you run out of room, cut from beat 2, never beat 3.
+     HOW TO CLOSE. The reply has to be cheap, but the close must not sound like a template.
+     BANNED outright, these are the most recognisable machine-written closes in existence:
+     "just reply yes", "reply yes and I'll send it", "one word back is plenty", "a one word
+     reply is plenty", "sound good?", "worth a look?", "let me know if you're interested",
+     "would you be open to", "no pressure", "happy to share more", "thoughts?".
+     Write a close a person would actually type. Ask a real question about their work, or
+     make a plain concrete offer with a timeframe. Good shapes, do NOT copy these verbatim:
+       "Which one would you get rid of first?"
+       "Tell me which job it is and I'll have something by Friday."
+       "What's the one you'd hand over tomorrow?"
+     Vary the SHAPE, not just the words. If several emails in a row end the same way, the
+     wording is not the problem, the formula is. THIS BEAT IS MANDATORY. If you run out of
+     room, cut from beat 2, never beat 3.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
