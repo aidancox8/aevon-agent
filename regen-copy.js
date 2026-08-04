@@ -49,6 +49,13 @@ const GAP = 4600;
 let lastCall = 0;
 let consecutiveFailures = 0;
 
+// Give up once the API is clearly done for the day rather than backing off forever. Without
+// this the first scheduled run ground for five and a half hours against an exhausted daily
+// quota and was killed by the job timeout, which meant the whole step accomplished nothing
+// AND reported as cancelled rather than failed, so the alert never fired.
+const MAX_CONSECUTIVE_FAILURES = parseInt(process.env.REGEN_MAX_FAILURES || '8', 10);
+class QuotaExhausted extends Error {}
+
 async function rateLimited(prompt) {
   const wait = GAP - (Date.now() - lastCall);
   if (wait > 0) await new Promise(r => setTimeout(r, wait));
@@ -59,9 +66,12 @@ async function rateLimited(prompt) {
     return out;
   } catch (e) {
     consecutiveFailures++;
-    // Back off progressively. A burst of failures usually means the per-minute limit was
-    // tripped, and hammering it just extends the outage.
-    const backoff = Math.min(60000, 5000 * consecutiveFailures);
+    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+      throw new QuotaExhausted(`${consecutiveFailures} calls failed in a row, stopping`);
+    }
+    // Back off progressively. A short burst usually means the per-minute limit was tripped,
+    // and hammering it just extends the outage. Capped low so a doomed run ends quickly.
+    const backoff = Math.min(20000, 4000 * consecutiveFailures);
     console.log(`\n  (api error, waiting ${Math.round(backoff / 1000)}s: ${e.message.slice(0, 60)})`);
     await new Promise(r => setTimeout(r, backoff));
     throw e;
@@ -89,8 +99,16 @@ const noDash = s => (s == null ? s : String(s).replace(/\s*[—–]\s*/g, ', '))
 // greeting to nobody then a self-introduction ("Hi there. I'm Aidan from Aevon, where we
 // build Tempo..."). A detector matching only the first would report Tempo as already clean
 // and quietly skip its entire backlog.
-const opensWithUs = b => /^(aevon\b|we (build|are)\b|i'?m reaching|hi there|hello there|hi,? i'?m|i'?m aidan|my name is)/i
-  .test(String(b || '').trim());
+const OLD_OPENER = /^(aevon\b|we (build|are)\b|i'?m reaching|hi there|hello there|hi,? i'?m|i'?m aidan|my name is)/i;
+// Copy is also stale if it quotes the retired product's pricing. Only three leads currently
+// have a clean opener AND a price, but checking one and not the other would leave them
+// invisible to every future pass, and a live email quoting $1,500 now contradicts an offer
+// of free work.
+const OLD_PRICE = /\$1,?500|\$150\b|150\s*\/\s*mo/i;
+const opensWithUs = b => {
+  const t = String(b || '').trim();
+  return OLD_OPENER.test(t) || OLD_PRICE.test(t);
+};
 
 (async () => {
   const { data: pool, error } = await supabase
@@ -130,7 +148,10 @@ const opensWithUs = b => /^(aevon\b|we (build|are)\b|i'?m reaching|hi there|hell
       const site = lead.website ? await scrapeContext(lead.website).catch(() => null) : null;
       let content = null;
       for (let a = 0; a < 2 && !content; a++) {
-        const raw = await rateLimited(buildPrompt(lead, site)).catch(() => null);
+        const raw = await rateLimited(buildPrompt(lead, site)).catch(e => {
+          if (e instanceof QuotaExhausted) throw e;
+          return null;
+        });
         const p = parseJsonObject(raw);
         if (p?.email_subject && p?.email_body) content = p;
       }
@@ -158,6 +179,11 @@ const opensWithUs = b => /^(aevon\b|we (build|are)\b|i'?m reaching|hi there|hell
       console.log(`ok ${nowClean ? '' : '(still opens with sender)'}`);
       ok++;
     } catch (e) {
+      if (e instanceof QuotaExhausted) {
+        console.log(`STOPPING: ${e.message}`);
+        console.log('The API budget looks spent. The next scheduled run continues where this stopped.');
+        break;
+      }
       console.log(`FAILED (${e.message})`);
       failed++;
     }
