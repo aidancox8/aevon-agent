@@ -112,11 +112,40 @@ function autoresponderReason(subject, body) {
   return null;
 }
 
+/**
+ * Explicit opt-outs, decided without the model.
+ *
+ * Every outbound email now promises "reply no and I won't email you again". Honouring that
+ * cannot depend on an LLM call: if the model is rate-limited, or returns 'other' for a bare
+ * "no", the lead stays queued and receives two more follow-ups after asking to be left alone.
+ * That is the one failure here that is genuinely indefensible, so it gets a deterministic path.
+ *
+ * Two shapes, deliberately kept apart. Removal language counts anywhere in the message.
+ * A bare "no" only counts when the whole reply is that short, so "no, we handle it in house,
+ * but what would you build?" is not read as a decline.
+ */
+const OPT_OUT_PHRASE = /\b(unsubscribe|remove me|take me off|stop emailing|stop contacting|do not (contact|email)|don'?t (contact|email) me|no longer wish|opt me out|lose my (email|address)|not interested)\b/i;
+const BARE_DECLINE = /^(no|nope|nah|pass|no thanks|no thank you|not interested|no interest)[.!]?$/i;
+
+function optOutReason(body) {
+  const text = String(body || '').trim();
+  if (OPT_OUT_PHRASE.test(text)) return 'explicit opt-out language';
+  // Strip a leading salutation so "No thanks" and "Hi Aidan, no thanks" behave the same.
+  const stripped = text.replace(/^(hi|hey|hello)[^,\n]{0,20}[,.]?\s*/i, '').trim();
+  if (BARE_DECLINE.test(stripped)) return 'replied with a bare decline';
+  return null;
+}
+
 async function classifyReply(lead, replyText, subject) {
   // Decide autoresponders here rather than asking the model. It costs nothing, it cannot be
   // talked out of it, and a wrong answer means drafting a reply to a robot.
   const auto = autoresponderReason(subject, replyText);
   if (auto) return { intent: 'auto_reply', reason: auto, suggested_reply: '' };
+
+  // An opt-out is a promise we printed in the email. Never route it through the model.
+  const out = optOutReason(replyText);
+  if (out) return { intent: 'not_interested', reason: out, suggested_reply: '' };
+
   return classifyReplyWithModel(lead, replyText);
 }
 
@@ -342,7 +371,7 @@ async function run() {
   console.log(`\nDone. Matched: ${matched} | Drafts: ${drafted} | Unmatched: ${unmatched} | Skipped: ${skipped}`);
 }
 
-module.exports = { autoresponderReason };
+module.exports = { autoresponderReason, optOutReason };
 
 // Only run when invoked directly. Requiring this module used to execute a full inbox pass as
 // a side effect, so simply importing the autoresponder guard kicked off a live run against 21

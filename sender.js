@@ -255,30 +255,18 @@ function isSendableDay() {
   return { ok: true };
 }
 
-// CASL s.6(2) requires an unsubscribe mechanism in every commercial electronic message,
-// with no exception for implied consent. There was none here across ~3,000 sends. It is the
-// cheapest violation to commit and the one the CRTC has penalised on its own: Compu-Finder
-// was fined over 87 messages purely for broken unsubscribe links, and s.20(4) sets the
-// individual maximum at $1M per violation.
+// A plain sentence, not an unsubscribe button. A List-Unsubscribe header makes Gmail render
+// its own "Unsubscribe" control beside the sender name, which marks the message as bulk and
+// undermines the one thing this copy is trying to do: read like a person typed it. The
+// sentence gives the recipient the same out without the bulk-mail tell.
 //
-// A reply-based opt-out is honoured for real, not just displayed: reply-processor moves
-// anyone who asks straight to dont_contact. The List-Unsubscribe header matters
-// independently of the law, because Gmail and Outlook read it as a legitimate-sender signal
-// and it gives an annoyed recipient a one-click alternative to hitting "report spam".
-const UNSUB_TEXT = 'Not relevant? Reply "stop" and I won\'t contact you again.';
-const UNSUB_MAILTO = 'mailto:aidan@aevon.ca?subject=unsubscribe';
+// This is a promise, so reply-processor honours it deterministically: optOutReason() moves
+// anyone who replies "no" straight to dont_contact without waiting on a model call.
+const UNSUB_TEXT = "Not interested? Just reply no and I won't email you again.";
 
-/** Headers every outbound cold email carries. */
-function outboundHeaders() {
-  return {
-    'List-Unsubscribe': `<${UNSUB_MAILTO}>`,
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  };
-}
-
-/** Append the opt-out line to the plain-text part, if the copy does not already carry one. */
+/** Append the opt-out line to the body, if the copy does not already carry one. */
 function withUnsubText(body) {
-  if (/reply "?stop"?|unsubscribe/i.test(body)) return body;
+  if (/reply no\b|unsubscribe/i.test(body)) return body;
   return `${body.trimEnd()}\n\n${UNSUB_TEXT}`;
 }
 
@@ -329,9 +317,7 @@ function toHtml(text, leadId, industry, businessName) {
         </td>
       </tr>
     </table>
-    <div style="font-size:11px;color:#999999;margin-top:14px">
-      <a href="${UNSUB_MAILTO}" style="color:#999999">${UNSUB_TEXT}</a>
-    </div>
+    <div style="font-size:12px;color:#888888;margin-top:14px">${UNSUB_TEXT}</div>
   </div>
 </body>
 </html>`;
@@ -613,7 +599,6 @@ async function run() {
         subject,
         text: withUnsubText(body),
         html: toHtml(body, lead.id, lead.industry, lead.business_name),
-        headers: outboundHeaders(),
       });
 
       if (sendError) throw new Error(sendError.message);
