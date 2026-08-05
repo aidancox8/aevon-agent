@@ -1,7 +1,14 @@
 /**
  * sender.js
- * Sends due emails via Resend (HTML format with open/click tracking),
- * stores Resend email IDs for webhook correlation, updates lead state.
+ * Sends due emails via Resend, stores Resend email IDs for webhook correlation,
+ * updates lead state.
+ *
+ * Open and click tracking are OFF on the aevon.ca domain and should stay off. Hunter's 31M
+ * send dataset puts replies at 7.4% without tracking against 4.4% with it: the pixel is a
+ * third-party image load that filters read as bulk mail, and click tracking rewrites every
+ * link through a redirect domain, which would defeat the clean aevon.ca link below. Nothing
+ * is lost by leaving them off, because Apple Mail Privacy Protection and Gmail's image proxy
+ * fabricate opens anyway, and our real engagement signal is the ?ref= visit tracking.
  */
 
 require('dotenv').config();
