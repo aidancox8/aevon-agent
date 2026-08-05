@@ -16,6 +16,7 @@
  */
 const supabase = require('./lib/supabase');
 const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
+const { classifyVisits } = require('./lib/visit-quality');
 
 const DAYS = (() => {
   const i = process.argv.indexOf('--days');
@@ -84,7 +85,7 @@ async function auditQueuedCopy(c, warnings) {
 
 async function review(c, warnings) {
   const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step');
-  const events = await readAll(c.events, 'event_type,created_at,metadata');
+  const events = await readAll(c.events, 'event_type,created_at,metadata,lead_id');
 
   const withEmail = leads.filter(l => l.email);
   const sent      = leads.filter(l => l.last_sent_at);
@@ -108,6 +109,20 @@ async function review(c, warnings) {
   const nVisit = clickEvents.filter(e => (e.metadata || {}).source === 'site-visit').length;
   const nMailClick = clickEvents.length - nVisit;
 
+  // Roughly half of recorded visits are corporate mail filters fetching the link before the
+  // recipient sees the email. Reporting the raw count as engagement doubles the apparent
+  // interest and, worse, would put businesses on a warm list who never looked at anything.
+  const visitsByLead = {};
+  clickEvents.forEach(e => { (visitsByLead[e.lead_id] = visitsByLead[e.lead_id] || []).push(e); });
+  const firstSentByLead = {};
+  events.filter(e => e.event_type === 'sent').forEach(e => {
+    if (!firstSentByLead[e.lead_id] || e.created_at < firstSentByLead[e.lead_id]) {
+      firstSentByLead[e.lead_id] = e.created_at;
+    }
+  });
+  const humanVisitors = Object.entries(visitsByLead)
+    .filter(([id, vs]) => classifyVisits(vs, firstSentByLead[id]).human);
+
   console.log(`\n── ${c.label}  (${c.sub}) ${'─'.repeat(Math.max(0, 34 - c.sub.length))}`);
   console.log(`   list        ${leads.length} leads · ${withEmail.length} with email · ${leads.length - withEmail.length} without`);
   console.log(`   progress    ${sent.length} contacted · ${untouched.length} still to reach`);
@@ -125,7 +140,7 @@ async function review(c, warnings) {
     const tracked = nDeliv > 0 || nBounce > 0;
     console.log(`   lifetime    sent ${nSent} · delivered ${tracked ? pct(nDeliv, nSent) : 'not tracked'}` +
                 ` · bounced ${tracked ? pct(nBounce, nSent) : 'not tracked'}` +
-                ` · site visits ${pct(nVisit, nSent)} · replied ${pct(nReply, nSent)} (${nReply})`);
+                ` · real visitors ${humanVisitors.length} of ${Object.keys(visitsByLead).length} (rest are mail scanners) · replied ${pct(nReply, nSent)} (${nReply})`);
     if (!tracked && nSent >= 10) {
       warnings.push(`${c.label}: ${nSent} sends with no delivery or bounce events recorded — deliverability is unmonitored, so a blocked domain would look identical to a healthy one.`);
     }
@@ -144,7 +159,7 @@ async function review(c, warnings) {
   // when there is no engagement data of any kind.
   if (nSent > 100 && nOpen === 0 && nMailClick === 0) {
     warnings.push(nVisit > 0
-      ? `${c.label}: no open or click events from the email provider (the webhook only carries delivered and bounced). Site visits still tracked (${nVisit}), so this is a gap in email-level detail, not a blind spot.`
+      ? `${c.label}: no open or click events from the email provider (the webhook only carries delivered and bounced). Real visitors still tracked (${humanVisitors.length}), so this is a gap in email-level detail, not a blind spot.`
       : `${c.label}: no open, click or site-visit data at all — there is no way to tell whether anyone is engaging.`);
   }
   // A weekday with no send by evening means the cron did not fire. Statutory holidays have
