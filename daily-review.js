@@ -17,6 +17,25 @@
 const supabase = require('./lib/supabase');
 const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
 const { classifyVisits } = require('./lib/visit-quality');
+const { isActiveSegment } = require('./lib/segments');
+const { autoresponderReason } = require('./reply-processor');
+
+/**
+ * Was this 'replied' event written by a person?
+ *
+ * 26 of the first 40 recorded replies were out-of-office notices, so the raw count runs about
+ * three times high and points the wrong way on which industries respond: healthcare read as a
+ * 1.83% responder on the raw count when not one human there has ever written back.
+ *
+ * Two filters, because neither is enough alone. The stored intent misses replies classified
+ * before the autoresponder gate existed, five of which are still labelled 'referral' or
+ * 'other' while carrying the subject "Automatic reply:". Re-running the gate catches those.
+ */
+function isHumanReply(e) {
+  const m = e.metadata || {};
+  if (m.intent === 'auto_reply') return false;
+  return !autoresponderReason(m.subject, m.body || m.snippet || '');
+}
 
 const DAYS = (() => {
   const i = process.argv.indexOf('--days');
@@ -44,7 +63,10 @@ async function readAll(table, cols) {
 
 const CAMPAIGNS = [
   { label: 'TEMPO', sub: 'clinic scheduling', leads: 'tempo_leads', events: 'tempo_email_events', perDay: 20, sendDays: 'Mon-Fri' },
-  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri' },
+  // perDay must track the DAILY_CAP secret (40) or the runway estimate lies. segmented=true
+  // means new sequences only start in the industries that have replied, so the runway has to
+  // count those leads and not the whole queue.
+  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 40, sendDays: 'Mon-Fri', segmented: true },
 ];
 
 /**
@@ -84,7 +106,7 @@ async function auditQueuedCopy(c, warnings) {
 }
 
 async function review(c, warnings) {
-  const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step');
+  const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step,industry');
   const events = await readAll(c.events, 'event_type,created_at,metadata,lead_id');
 
   const withEmail = leads.filter(l => l.email);
@@ -99,7 +121,10 @@ async function review(c, warnings) {
 
   const nSent = ev('sent').length, nDeliv = ev('delivered').length;
   const nBounce = ev('bounced').length;
-  const nReply = ev('replied').length, nOpen = ev('opened').length;
+  const replyEvents = ev('replied');
+  const humanReplies = replyEvents.filter(isHumanReply);
+  const nReply = humanReplies.length, nOpen = ev('opened').length;
+  const nAutoReply = replyEvents.length - nReply;
 
   // 'clicked' is not an email click. Every one of these is written by the track-visit edge
   // function when someone loads a landing page with ?ref=<leadId>, and carries no
@@ -126,9 +151,23 @@ async function review(c, warnings) {
   console.log(`\n── ${c.label}  (${c.sub}) ${'─'.repeat(Math.max(0, 34 - c.sub.length))}`);
   console.log(`   list        ${leads.length} leads · ${withEmail.length} with email · ${leads.length - withEmail.length} without`);
   console.log(`   progress    ${sent.length} contacted · ${untouched.length} still to reach`);
-  if (untouched.length && c.perDay) {
-    const days = Math.ceil(untouched.length / c.perDay);
-    console.log(`   runway      ~${days} send-days left at ${c.perDay}/day (${c.sendDays})`);
+
+  // Runway must count only leads the sender will actually pick up. Measuring it against the
+  // whole queue overstated it by more than double once the paused industries were excluded,
+  // which is exactly the kind of comfortable number that hides an imminent dry campaign.
+  const reachable = c.segmented ? untouched.filter(l => isActiveSegment(l.industry)) : untouched;
+  if (reachable.length && c.perDay) {
+    const days = Math.ceil(reachable.length / c.perDay);
+    const note = c.segmented && reachable.length !== untouched.length
+      ? ` · ${untouched.length - reachable.length} more in paused industries`
+      : '';
+    console.log(`   runway      ~${days} send-days left at ${c.perDay}/day (${c.sendDays})${note}`);
+  }
+  if (c.segmented && reachable.length && reachable.length < c.perDay * 10) {
+    warnings.push(`${c.label}: only ${reachable.length} leads left in the industries that reply (~${Math.ceil(reachable.length / c.perDay)} send-days). Find more in financial/professional, legal, marketing or real estate before it goes quiet.`);
+  }
+  if (c.segmented && reachable.length === 0 && untouched.length) {
+    warnings.push(`${c.label}: no leads left in any industry that has ever replied, though ${untouched.length} remain in paused ones. Either add leads or reconsider the segment filter in lib/segments.js.`);
   }
   console.log(`   today       ${sentToday.length} sent`);
   console.log(`   last ${String(DAYS).padEnd(2)}d    ` +
@@ -140,7 +179,8 @@ async function review(c, warnings) {
     const tracked = nDeliv > 0 || nBounce > 0;
     console.log(`   lifetime    sent ${nSent} · delivered ${tracked ? pct(nDeliv, nSent) : 'not tracked'}` +
                 ` · bounced ${tracked ? pct(nBounce, nSent) : 'not tracked'}` +
-                ` · real visitors ${humanVisitors.length} of ${Object.keys(visitsByLead).length} (rest are mail scanners) · replied ${pct(nReply, nSent)} (${nReply})`);
+                ` · real visitors ${humanVisitors.length} of ${Object.keys(visitsByLead).length} (rest are mail scanners)` +
+                ` · replied ${pct(nReply, nSent)} (${nReply} human${nAutoReply ? `, ${nAutoReply} auto` : ''})`);
     if (!tracked && nSent >= 10) {
       warnings.push(`${c.label}: ${nSent} sends with no delivery or bounce events recorded — deliverability is unmonitored, so a blocked domain would look identical to a healthy one.`);
     }
