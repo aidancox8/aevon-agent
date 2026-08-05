@@ -89,7 +89,38 @@ function matchLead(index, fromEmail, subject) {
 
 // ── Classification ────────────────────────────────────────────────
 
-async function classifyReply(lead, replyText) {
+/**
+ * Autoresponder subjects, checked before the model sees anything.
+ *
+ * An out-of-office that names a colleague reads as genuine human content, and the classifier
+ * fell for exactly that: a message titled "Automatic reply: bousfield & associates intake"
+ * mentioned that Randy was away and to contact Neil, so it was scored as a referral and a
+ * reply was drafted opening "Hi Neil" but addressed to Randy. Sending that would have been
+ * embarrassing, and it wasted a draft on a robot.
+ *
+ * The subject line is unambiguous where the body is not, so this decides first and the model
+ * never gets the chance to be clever about it.
+ */
+const AUTORESPONDER_SUBJECT = /^(re:\s*)?(automatic reply|auto[- ]?reply|out of office|ooo\b|autoresponse|automatic response|away from (the )?office|vacation reply|undeliverable|delivery status notification|mail delivery|returned mail|delivery has failed)/i;
+
+/** Body phrasings that only appear in an autoresponder. */
+const AUTORESPONDER_BODY = /\b(i am (currently )?out of the office|i'm (currently )?out of the office|thank you for your (email|message)[,.]? (i|we) (am|are) currently (away|out)|this is an automated (reply|response|message)|do not reply to this (email|message)|your message has been received and)/i;
+
+function autoresponderReason(subject, body) {
+  if (AUTORESPONDER_SUBJECT.test(String(subject || '').trim())) return 'subject is an autoresponder';
+  if (AUTORESPONDER_BODY.test(String(body || ''))) return 'body is an autoresponder';
+  return null;
+}
+
+async function classifyReply(lead, replyText, subject) {
+  // Decide autoresponders here rather than asking the model. It costs nothing, it cannot be
+  // talked out of it, and a wrong answer means drafting a reply to a robot.
+  const auto = autoresponderReason(subject, replyText);
+  if (auto) return { intent: 'auto_reply', reason: auto, suggested_reply: '' };
+  return classifyReplyWithModel(lead, replyText);
+}
+
+async function classifyReplyWithModel(lead, replyText) {
   const prompt = `You are Aidan, founder of Aevon, replying to someone who responded to your cold outreach. Aevon builds custom software and AI agents for Lower Mainland BC businesses (1-99 staff) drowning in repetitive manual work. Clients pay once and own it. No subscriptions.
 
 The reply came from this business:
@@ -120,6 +151,15 @@ Follow this arc:
 4. End with one low-friction next step. Do not stack asks.
 
 Hard rules:
+- NEVER claim a prior conversation, relationship or history that is not in the reply above.
+  Not "I have been speaking with", not "following up on our chat", not "as discussed", not
+  "thanks for your time last week". This has already gone wrong: an out-of-office saying a
+  colleague was away produced a draft opening "I have been speaking with Randy", when the
+  only contact had been one unanswered cold email. That is a lie in writing to a stranger,
+  and it destroys the trust the email exists to build. The ONLY shared history you may refer
+  to is the cold email you sent and anything they actually wrote back.
+- Write to the person whose address this is going to. If the reply mentions a colleague, do
+  NOT address the colleague: you are replying to the sender, not to whoever they named.
 - 3-6 sentences, warm and human, first person ("I"). Plain English.
 - No buzzwords (leverage, streamline, synergy, unlock, supercharge), no em dashes, no exclamation overload.
 - Do NOT overpromise, invent facts about their business, quote a price, or guarantee outcomes/timelines.
@@ -245,7 +285,8 @@ async function run() {
     const parsed = await simpleParser(Buffer.from(raw.data.raw, 'base64'));
     const replyText = parsed.text || (parsed.html ? parsed.html.replace(/<[^>]+>/g, ' ') : '') || full.data.snippet || '';
 
-    const { intent, reason, suggested_reply } = await classifyReply(lead, replyText);
+    const replySubject = header(full.data.payload, 'Subject') || '';
+    const { intent, reason, suggested_reply } = await classifyReply(lead, replyText, replySubject);
 
     const newStatus = statusForIntent(intent);
     if (newStatus) {
@@ -301,7 +342,14 @@ async function run() {
   console.log(`\nDone. Matched: ${matched} | Drafts: ${drafted} | Unmatched: ${unmatched} | Skipped: ${skipped}`);
 }
 
-run().catch(err => {
-  console.error('Fatal error:', err.message);
-  process.exit(1);
-});
+module.exports = { autoresponderReason };
+
+// Only run when invoked directly. Requiring this module used to execute a full inbox pass as
+// a side effect, so simply importing the autoresponder guard kicked off a live run against 21
+// real messages.
+if (require.main === module) {
+  run().catch(err => {
+    console.error('Fatal error:', err.message);
+    process.exit(1);
+  });
+}

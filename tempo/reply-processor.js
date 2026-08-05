@@ -17,6 +17,7 @@ const { simpleParser } = require('mailparser');
 const MailComposer = require('nodemailer/lib/mail-composer');
 const supabase = require('../lib/supabase');
 const { createGenerate } = require('../lib/gemini');
+const { autoresponderReason } = require('../reply-processor');
 const { dncReason } = require('./dnc');
 
 const generate = createGenerate(process.env.GEMINI_API_KEY);
@@ -71,7 +72,15 @@ function matchLead(index, fromEmail, subject) {
   return { lead: null, via: null };
 }
 
-async function classifyReply(lead, replyText) {
+async function classifyReply(lead, replyText, subject) {
+  // Same gate as the Aevon processor: decide autoresponders deterministically so an
+  // out-of-office naming a colleague can never be read as a referral.
+  const auto = autoresponderReason(subject, replyText);
+  if (auto) return { intent: 'auto_reply', reason: auto, suggested_reply: '' };
+  return classifyReplyWithModel(lead, replyText);
+}
+
+async function classifyReplyWithModel(lead, replyText) {
   const allied = /physio|rehab|sport|kinesio|occupational|chiro|massage|multidiscip|integrated|wellness|naturopath|concussion/i.test(lead.industry || '');
   const contract = allied
     ? 'Tempo schedules the TEAM at allied clinics: weekly practitioner + room schedule, front desk and support staff scheduling (which Jane does not cover), SMS shift reminders + one-tap sick-call cover, payroll-synced time off + hours export, and room utilization analytics. It runs ALONGSIDE their existing patient-booking system, never replacing it. Only mention Jane by name if THEY mentioned it first. It is NOT patient booking, NOT an EMR, and there is NO integration with any booking product.'
@@ -107,6 +116,12 @@ STEP 2 - Write a suggested reply (only if intent is interested, question, or ref
 4. End with one low-friction next step. Never stack asks.
 
 Hard rules:
+- NEVER claim a prior conversation, relationship or history that is not in the reply above.
+  Not "I have been speaking with", not "as discussed", not "following up on our chat". The
+  only shared history you may reference is the cold email sent and what they actually wrote
+  back. Inventing one is a lie in writing to a stranger.
+- Reply to the person whose address this is going to. If they mention a colleague, do not
+  address the colleague.
 - 3-6 sentences, warm and human, first person. Plain English, no buzzwords, no em dashes.
 - Never invent facts about their clinic, never promise timelines, never claim a Jane integration.
 - No sign-off (added separately).
@@ -207,7 +222,8 @@ async function run() {
     const parsed = await simpleParser(Buffer.from(raw.data.raw, 'base64'));
     const replyText = parsed.text || (parsed.html ? parsed.html.replace(/<[^>]+>/g, ' ') : '') || full.data.snippet || '';
 
-    const { intent, reason, suggested_reply } = await classifyReply(lead, replyText);
+    const replySubject = header(full.data.payload, 'Subject') || '';
+    const { intent, reason, suggested_reply } = await classifyReply(lead, replyText, replySubject);
 
     const newStatus = statusForIntent(intent);
     if (newStatus) {
@@ -264,7 +280,11 @@ async function run() {
   console.log(`\nDone. Matched: ${matched} | Drafts: ${drafted} | Unmatched (left to Aevon processor): ${unmatched} | Skipped: ${skipped}`);
 }
 
-run().catch(err => {
-  console.error('Fatal error:', err.message);
-  process.exit(1);
-});
+// Only run when invoked directly, so importing anything from this file cannot start a live
+// inbox pass as a side effect.
+if (require.main === module) {
+  run().catch(err => {
+    console.error('Fatal error:', err.message);
+    process.exit(1);
+  });
+}
