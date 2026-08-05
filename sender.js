@@ -19,6 +19,7 @@ const dns = require('dns').promises;
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
 const { applyAsk } = require('./lib/offer');
+const { isActiveSegment } = require('./lib/segments');
 
 // Cached MX check: a domain with no mail server (and no A-record fallback) will
 // hard-bounce. Skipping it protects the young domain's sender reputation, which
@@ -448,8 +449,17 @@ async function run() {
     const local = String(email || '').split('@')[0].toLowerCase().replace(/[._-]?\d+$/, '');
     return ROLE_INBOXES.has(local) || ROLE_INBOXES.has(local.replace(/[._-]/g, ''));
   };
-  const named = (initialsPool || []).filter(l => !isRoleInbox(l.email));
-  const role  = (initialsPool || []).filter(l =>  isRoleInbox(l.email));
+  // Only start new sequences into industries that have ever produced a human reply.
+  // 883 emails into trades, healthcare, logistics and "other" produced zero, and 2,111 more
+  // were queued behind them, which was 55% of the remaining list. See lib/segments.js for the
+  // table. Applied to initials only: a lead already mid-sequence still gets its follow-ups,
+  // because dropping someone after one email is worse than finishing the three.
+  const eligible = (initialsPool || []).filter(l => isActiveSegment(l.industry));
+  const skipped = (initialsPool || []).length - eligible.length;
+  if (skipped) console.log(`Segment filter: skipped ${skipped} lead(s) in paused industries.`);
+
+  const named = eligible.filter(l => !isRoleInbox(l.email));
+  const role  = eligible.filter(l =>  isRoleInbox(l.email));
   const initials = [...named, ...role];
 
   // Region balance: a US test cohort runs alongside the BC backlog. Pure score
