@@ -40,9 +40,13 @@ function stripPrice(text) {
   }).filter(Boolean);
 
   const out = cleanedParas.join('\n\n').trim();
-  // If stripping gutted the email, say so rather than sending three words. The caller skips
-  // these and leaves them for regen-copy to rewrite properly.
-  if (out.split(/\s+/).filter(Boolean).length < 18) return { tooShort: true, text: out };
+  // How much has to survive depends on whether the ask is separate. A body carrying {{ASK}}
+  // gets roughly twenty more words at send time, so the personalized part only needs to
+  // stand on its own; a body without the token has to be a whole email by itself. Using the
+  // stricter bar for both left 227 emails permanently stuck, still quoting a retired price.
+  const words = out.replace('{{ASK}}', '').split(/\s+/).filter(Boolean).length;
+  const floor = out.includes('{{ASK}}') ? 12 : 18;
+  if (words < floor) return { tooShort: true, text: out };
   return { text: out };
 }
 
@@ -61,16 +65,19 @@ function stripPrice(text) {
 
   let changed = 0, skipped = 0, untouched = 0;
   for (const r of rows) {
+    // Each field stands alone. Treating them as all-or-nothing meant one short follow-up,
+    // where the price WAS most of the sentence, blocked cleaning the first email too, so 227
+    // leads kept quoting a retired price in the email that actually goes out first.
     const patch = {};
-    let gutted = false;
+    let anyGutted = false;
     for (const field of ['email_body', 'followup_body', 'followup2_body']) {
       const res = stripPrice(r[field]);
       if (!res) continue;
-      if (res.tooShort) { gutted = true; break; }
+      if (res.tooShort) { anyGutted = true; continue; }
       patch[field] = res.text;
     }
-    if (gutted) { skipped++; continue; }
-    if (!Object.keys(patch).length) { untouched++; continue; }
+    if (!Object.keys(patch).length) { if (anyGutted) skipped++; else untouched++; continue; }
+    if (anyGutted) skipped++;
 
     if (DRY) {
       if (changed < 2) {

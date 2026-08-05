@@ -46,6 +46,42 @@ const CAMPAIGNS = [
   { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri' },
 ];
 
+/**
+ * Read what the queue actually says, not just how many rows it has.
+ *
+ * Every count in this report looked healthy on the day 372 of 400 queued emails were still
+ * pitching a retired offer and quoting a price that no longer applied. Row counts cannot see
+ * that. This samples the copy itself and compares it against what the offer is supposed to
+ * be, so a prompt change that never reached the backlog shows up the next morning instead of
+ * after someone happens to read a sent email.
+ */
+async function auditQueuedCopy(c, warnings) {
+  const rows = await readAll(c.leads, 'status,email,email_body,last_sent_at');
+  const queued = rows.filter(l => l.status === 'queued' && l.email && !l.last_sent_at && l.email_body);
+  if (queued.length < 20) return;
+
+  // Only OUR retired prices. Matching any dollar figure flagged an email that quoted the
+  // prospect's own pricing back to them, which is personalization working, not a defect.
+  const priced   = queued.filter(l => /\$\s?1,?500\b|\$\s?150\b|150\s*\/\s*mo/i.test(l.email_body));
+  const demo     = queued.filter(l => /90[- ]?second demo|\bwatch a demo\b|reply with ['"]?yes/i.test(l.email_body));
+  const untokened = queued.filter(l => !l.email_body.includes('{{ASK}}'));
+
+  const pctOf = n => `${((n / queued.length) * 100).toFixed(0)}%`;
+  console.log(`   queue copy  ${queued.length} unsent · ${pctOf(queued.length - untokened.length)} carry the live offer token`);
+
+  if (priced.length) {
+    warnings.push(`${c.label}: ${priced.length} queued email(s) quote a price (${pctOf(priced.length)}). The offer is free work, so these contradict it. Run strip-price.js.`);
+  }
+  if (demo.length) {
+    warnings.push(`${c.label}: ${demo.length} queued email(s) still ask people to watch a demo (${pctOf(demo.length)}), which is not the current offer. Run swap-ask.js.`);
+  }
+  // A large untokenized share means new copy is being written with the offer baked in again,
+  // which is exactly how the queue drifted from the offer in the first place.
+  if (untokened.length > queued.length * 0.2) {
+    warnings.push(`${c.label}: ${untokened.length} queued email(s) (${pctOf(untokened.length)}) have no {{ASK}} token, so they will not pick up an offer change. Run tokenize-asks.js.`);
+  }
+}
+
 async function review(c, warnings) {
   const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step');
   const events = await readAll(c.events, 'event_type,created_at,metadata');
@@ -132,7 +168,7 @@ async function review(c, warnings) {
   console.log('='.repeat(66));
 
   for (const c of CAMPAIGNS) {
-    try { await review(c, warnings); }
+    try { await review(c, warnings); await auditQueuedCopy(c, warnings); }
     catch (e) { console.log(`\n── ${c.label}\n   ! ${e.message}`); warnings.push(`${c.label}: review failed — ${e.message}`); }
   }
 
