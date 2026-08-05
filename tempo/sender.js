@@ -17,6 +17,7 @@ const { Resend } = require('resend');
 const dns = require('dns').promises;
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('../lib/supabase');
+const { applyAsk } = require('../lib/offer');
 const { dncReason } = require('./dnc');
 
 const TABLE = 'tempo_leads';
@@ -305,7 +306,11 @@ async function run() {
   for (const lead of due) {
     const step = lead.sequence_step;
     const subject = step === 2 ? lead.followup2_subject : step === 1 ? lead.followup_subject : lead.email_subject;
-    const body = step === 2 ? lead.followup2_body : step === 1 ? lead.followup_body : lead.email_body;
+    let body = step === 2 ? lead.followup2_body : step === 1 ? lead.followup_body : lead.email_body;
+    // The offer is applied at send time, not baked in when the copy was written. See
+    // lib/offer.js: stored copy outlives decisions, so an offer change used to require
+    // regenerating thousands of emails and in practice simply never reached the queue.
+    if (body) body = applyAsk(body, 'tempo', step, lead.id);
     if (!subject || !body) {
       if (step >= 1 && LIVE) await supabase.from(TABLE).update({ status: 'dont_contact', scheduled_send_at: null }).eq('id', lead.id);
       continue;

@@ -177,32 +177,14 @@ function buildPrompt(lead, websiteContent, usesJane) {
      subordinate to the point. Name ONE thing it does, the one that matters most to THIS
      clinic, never a list. A comma-separated run of capabilities is the clearest signal to a
      reader that software wrote the email.
-  3. THE OFFER, and it is the whole point of the email: you will set Tempo up around THEIR
-     clinic, their rooms, their disciplines, their hours, and they run it free for two weeks
-     before deciding anything. Say it plainly and briefly.
-     Call it a pilot, NEVER a "free trial". A trial sounds like self-serve signup for generic
-     software; this is someone building it for them, which is the entire difference and the
-     one thing a booking platform cannot answer.
-     SAY WHY IT IS FREE, in a handful of words, and treat this as mandatory. Free setup from
-     a stranger reads as a scam, and the reason is what makes it credible. The true reason:
-     he is early, building a track record with the first few clinics, and it is limited
-     rather than a standing offer. Never invent a client count, a deadline, or a numbered
-     spot ("2 places left") — there are no clinics on it yet and fake scarcity is exactly
-     what a scam sounds like.
-     Do NOT mention price, any dollar figure, or what happens after the two weeks. That is a
-     conversation for after they reply.
-     HOW TO CLOSE. The reply has to be cheap, but the close must not sound like a template.
-     BANNED outright, these are the most recognisable machine-written closes in existence:
-     "just reply yes", "reply yes and I'll send it", "one word back is plenty", "a one word
-     reply is plenty", "sound good?", "worth a look?", "let me know if you're interested",
-     "would you be open to", "no pressure", "happy to share more", "thoughts?".
-     Write a close a clinic owner would believe a person typed. A real question about how
-     they run, or a plain concrete offer with a timeframe. Good shapes, do NOT copy verbatim:
-       "Want me to set it up for your rooms and see?"
-       "Who builds the grid at your place, and how long does it take them?"
-       "Say the word and I'll have your first week built by Friday."
-     Vary the SHAPE, not just the words. If several emails in a row end the same way, the
-     wording is not the problem, the formula is.
+  3. THE ASK. Do NOT write one. End the body with the exact token {{ASK}} on its own, and
+     nothing after it.
+     The offer and the closing question are substituted at send time from lib/offer.js. This
+     is deliberate: the offer used to be written into every email here, so changing it meant
+     regenerating thousands of pre-written emails, which never actually happened. Anything
+     you write about the pilot, what it costs, or what to reply will be stale the moment the
+     offer moves. Write ONLY the part that is genuinely about this clinic, then {{ASK}}.
+     Never mention price, a dollar figure, a trial, or what happens after the pilot.
   - No link in email 1. Do NOT assert their pain as fact. No sign-off (the signature handles that).
   - The consequence beat was folded into beat 1. Do NOT also add a separate cost-of-doing-nothing line, and never say anything like "every unstaffed shift is a lost day of billings" — the spreadsheet consequence already carries the weight.
   - BEAT 3 IS MANDATORY. The email is broken without it. Every single email must end on the offer, phrased as a question: two weeks free, set up around their clinic. If you find yourself running out of room, cut from beat 1, never from beat 3.

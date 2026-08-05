@@ -11,6 +11,7 @@ const dns = require('dns').promises;
 // hijacks NXDOMAIN (which would otherwise make dead domains look reachable).
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
+const { applyAsk } = require('./lib/offer');
 
 // Cached MX check: a domain with no mail server (and no A-record fallback) will
 // hard-bounce. Skipping it protects the young domain's sender reputation, which
@@ -529,6 +530,13 @@ async function run() {
     // the interactive demo page. Done at send time because the ref is the lead id.
     const demoUrl = landingFor(lead.industry, lead.id, lead.business_name);
     body = body.replace(/\{\{DEMO\}\}/g, demoUrl);
+
+    // The offer is applied here, not baked in at generation time. Stored copy outlives
+    // decisions: the offer changed to a free build and days later most of the queue was
+    // still pitching a demo and a $1,500 fee, because nothing rewrites 3,000 emails on a
+    // whim. Substituting at send time means editing lib/offer.js changes every unsent email
+    // instantly, backlog included.
+    body = applyAsk(body, 'aevon', step, lead.id);
 
     process.stdout.write(`  [${step === 0 ? 'email' : 'followup ' + step}] ${lead.business_name} <${lead.email}>... `);
 

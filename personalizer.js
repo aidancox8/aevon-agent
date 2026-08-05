@@ -232,7 +232,7 @@ function buildPrompt(lead, websiteContent) {
   * The close is a genuine question about how they operate. Interesting to answer, costs one
     line, nothing like "just reply yes".
   * Nothing explains the product. The reader is left with something to ask about.
-- Body (under 55 words), and DO NOT include any link:
+- Body (under 45 words BEFORE the {{ASK}} token, which does not count toward the limit), and DO NOT include any link:
   1. OPEN IN THEIR WORLD, never with who you are. The first sentence must be about how a business
      like theirs actually runs. Measured across 400 real sends, opening with the company line made
      81% of these emails opened by naming the company and what it sells, which is generic vendor
@@ -247,31 +247,16 @@ function buildPrompt(lead, websiteContent) {
      or how it works. The offer in beat 3 already says what you do, so explaining it here
      is the single biggest source of wasted words, and an email that explains everything has
      nothing left to be curious about. If it fits in five words, use five words.
-  3. THE OFFER, and it is the whole point of the email: you will build them a working version
-     of ONE thing they do by hand, for their business, free, and it is theirs either way.
-     Say it plainly and briefly. This is the one thing a software company cannot answer,
-     because they can only offer a free trial of something generic, so never soften it into
-     "a demo" or "a quick look" — those are what everyone else sends.
-     SAY WHY IT IS FREE, in a handful of words. This is mandatory and the email fails without
-     it. Free work from a stranger reads as a scam or as desperation, and the reason is the
-     only thing that makes it credible. The true reason: he is early, building a track record,
-     and is taking on a small number of these. Make it sound limited rather than a standing
-     offer, because it is: it ends once he has the workload. Never invent clients, a client
-     count, a deadline, or a numbered spot ("only 3 left") — there are no clients yet and a
-     fake scarcity line is exactly what a scam looks like.
-     HOW TO CLOSE. The reply has to be cheap, but the close must not sound like a template.
-     BANNED outright, these are the most recognisable machine-written closes in existence:
-     "just reply yes", "reply yes and I'll send it", "one word back is plenty", "a one word
-     reply is plenty", "sound good?", "worth a look?", "let me know if you're interested",
-     "would you be open to", "no pressure", "happy to share more", "thoughts?".
-     Write a close a person would actually type. Ask a real question about their work, or
-     make a plain concrete offer with a timeframe. Good shapes, do NOT copy these verbatim:
-       "Which one would you get rid of first?"
-       "Tell me which job it is and I'll have something by Friday."
-       "What's the one you'd hand over tomorrow?"
-     Vary the SHAPE, not just the words. If several emails in a row end the same way, the
-     wording is not the problem, the formula is. THIS BEAT IS MANDATORY. If you run out of
-     room, cut from beat 2, never beat 3.
+  3. THE ASK. Do NOT write one. End the body with the exact token {{ASK}} on its own, and
+     nothing after it.
+     The offer and the closing question are substituted at send time from lib/offer.js. This
+     is deliberate: the offer used to be written into every email here, so changing it meant
+     regenerating thousands of pre-written emails, which never actually happened. Days after
+     the offer became a free build, 372 of 400 queued emails were still pitching a demo and
+     ~3,000 still quoted a $1,500 fee that no longer applied. Anything you write here about
+     price, a demo, a free build, or what to reply will be stale the moment the offer moves.
+     So write ONLY the part that is genuinely about this business, then {{ASK}}.
+     Never mention price, a demo, a trial, or what it costs anywhere in the body.
   - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
