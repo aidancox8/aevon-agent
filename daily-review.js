@@ -17,7 +17,7 @@
 const supabase = require('./lib/supabase');
 const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
 const { classifyVisits } = require('./lib/visit-quality');
-const { isActiveSegment } = require('./lib/segments');
+const { isWorthSending } = require('./lib/segments');
 const { autoresponderReason } = require('./reply-processor');
 
 /**
@@ -106,7 +106,7 @@ async function auditQueuedCopy(c, warnings) {
 }
 
 async function review(c, warnings) {
-  const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step,industry');
+  const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step,industry,email_quality');
   const events = await readAll(c.events, 'event_type,created_at,metadata,lead_id');
 
   const withEmail = leads.filter(l => l.email);
@@ -155,11 +155,11 @@ async function review(c, warnings) {
   // Runway must count only leads the sender will actually pick up. Measuring it against the
   // whole queue overstated it by more than double once the paused industries were excluded,
   // which is exactly the kind of comfortable number that hides an imminent dry campaign.
-  const reachable = c.segmented ? untouched.filter(l => isActiveSegment(l.industry)) : untouched;
+  const reachable = c.segmented ? untouched.filter(isWorthSending) : untouched;
   if (reachable.length && c.perDay) {
     const days = Math.ceil(reachable.length / c.perDay);
     const note = c.segmented && reachable.length !== untouched.length
-      ? ` · ${untouched.length - reachable.length} more in paused industries`
+      ? ` · ${untouched.length - reachable.length} more in paused industries or on generic addresses`
       : '';
     console.log(`   runway      ~${days} send-days left at ${c.perDay}/day (${c.sendDays})${note}`);
   }
@@ -202,14 +202,28 @@ async function review(c, warnings) {
       ? `${c.label}: no open or click events from the email provider (the webhook only carries delivered and bounced). Real visitors still tracked (${humanVisitors.length}), so this is a gap in email-level detail, not a blind spot.`
       : `${c.label}: no open, click or site-visit data at all — there is no way to tell whether anyone is engaging.`);
   }
-  // A weekday with no send by evening means the cron did not fire. Statutory holidays have
-  // to be excluded or this cries wolf on every one of them: the senders skip holidays by
-  // design, so flagging that as a fault trains you to ignore the warning. Reuses the same
-  // holiday table the senders use, rather than a second copy that can drift from it.
+  // A weekday with no send by evening means the cron did not fire. Two things have to be
+  // excluded or this cries wolf and trains you to ignore it.
+  //
+  // Statutory holidays: the senders skip them by design. Reuses the same holiday table they
+  // use rather than a second copy that can drift from it.
+  //
+  // Time of day: this warning is written for the 6:05pm PT digest, but the script gets run by
+  // hand at any hour, and before the first send of the day "nothing sent" is just true rather
+  // than wrong. GitHub's scheduler is also badly unpunctual here. send-outreach is cron'd
+  // hourly from 16:00 UTC, but across two weeks the 16:00 run has never once fired and the
+  // first run of the day lands between 17:21 and 17:43 UTC, with only 5 of the 8 scheduled
+  // runs happening at all. Noon PT clears that drift with room to spare.
+  const FIRST_SEND_EXPECTED_BY_PT = 12;
   const dow = new Date().toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
+  const hourPT = parseInt(new Date().toLocaleString('en-US', { timeZone: TZ, hour: '2-digit', hour12: false }), 10);
   const isWeekday = !['Sat', 'Sun'].includes(dow) && !isBCHoliday(getVancouverDate());
   if (isWeekday && sentToday.length === 0 && untouched.length > 0) {
-    warnings.push(`${c.label}: nothing sent today (${dow}) despite ${untouched.length} leads ready — check the send workflow ran.`);
+    if (hourPT >= FIRST_SEND_EXPECTED_BY_PT) {
+      warnings.push(`${c.label}: nothing sent today (${dow}) despite ${untouched.length} leads ready — check the send workflow ran.`);
+    } else {
+      console.log(`   note        nothing sent yet, but it is only ${hourPT}:00 PT and the first run usually lands ~10:30. Not flagged.`);
+    }
   }
   if (untouched.length === 0 && withEmail.length) {
     warnings.push(`${c.label}: every emailable lead has been contacted. The campaign is out of runway — add leads or it goes quiet.`);

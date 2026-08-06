@@ -19,7 +19,7 @@ const dns = require('dns').promises;
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
 const { applyAsk } = require('./lib/offer');
-const { isActiveSegment } = require('./lib/segments');
+const { isActiveSegment, isSendableAddress, isWorthSending } = require('./lib/segments');
 
 // Cached MX check: a domain with no mail server (and no A-record fallback) will
 // hard-bounce. Skipping it protects the young domain's sender reputation, which
@@ -410,7 +410,7 @@ async function run() {
     }
   }
 
-  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry';
+  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry, email_quality';
   const baseFilter = q => q
     .eq('status', 'queued')
     .not('email_subject', 'is', null)
@@ -430,7 +430,11 @@ async function run() {
   const { data: initialsPool, error: iErr } = await baseFilter(
     supabase.from('leads').select(cols).eq('sequence_step', 0)
   ).order('qualification_score', { ascending: false, nullsFirst: false })
-   .order('scheduled_send_at', { ascending: true }).limit(Math.max(DAILY_CAP * 20, 400));
+  // Pool has to be much larger than the cap now that the eligibility filter below rejects
+  // roughly three quarters of it (paused industries plus generic addresses). At the old
+  // 20x the top-800 by score yielded only 200 eligible, which still covers a 40/day run but
+  // leaves no margin if either rule tightens.
+   .order('scheduled_send_at', { ascending: true }).limit(Math.max(DAILY_CAP * 40, 800));
   if (iErr) throw new Error(`Supabase fetch (initials) failed: ${iErr.message}`);
 
   // Prefer a real person's inbox over a generic role/catch-all box. Decision-
@@ -449,14 +453,16 @@ async function run() {
     const local = String(email || '').split('@')[0].toLowerCase().replace(/[._-]?\d+$/, '');
     return ROLE_INBOXES.has(local) || ROLE_INBOXES.has(local.replace(/[._-]/g, ''));
   };
-  // Only start new sequences into industries that have ever produced a human reply.
-  // 883 emails into trades, healthcare, logistics and "other" produced zero, and 2,111 more
-  // were queued behind them, which was 55% of the remaining list. See lib/segments.js for the
-  // table. Applied to initials only: a lead already mid-sequence still gets its follow-ups,
-  // because dropping someone after one email is worse than finishing the three.
-  const eligible = (initialsPool || []).filter(l => isActiveSegment(l.industry));
-  const skipped = (initialsPool || []).length - eligible.length;
-  if (skipped) console.log(`Segment filter: skipped ${skipped} lead(s) in paused industries.`);
+  // Only start new sequences with leads worth the send: an industry that has produced a human
+  // reply, and an address tier that does not bounce. See lib/segments.js for both tables.
+  // Applied to initials only, so anyone already mid-sequence still gets their follow-ups:
+  // dropping someone after one email is worse than finishing the three.
+  const eligible = (initialsPool || []).filter(isWorthSending);
+  const bySegment = (initialsPool || []).filter(l => !isActiveSegment(l.industry)).length;
+  const byAddress = (initialsPool || []).filter(l => isActiveSegment(l.industry) && !isSendableAddress(l.email_quality)).length;
+  if (bySegment || byAddress) {
+    console.log(`Skipped ${bySegment + byAddress} lead(s): ${bySegment} in paused industries, ${byAddress} on generic addresses.`);
+  }
 
   const named = eligible.filter(l => !isRoleInbox(l.email));
   const role  = eligible.filter(l =>  isRoleInbox(l.email));
