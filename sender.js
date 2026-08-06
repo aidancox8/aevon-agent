@@ -20,6 +20,7 @@ try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
 const { applyAsk } = require('./lib/offer');
 const { isActiveSegment, isSendableAddress, isWorthSending } = require('./lib/segments');
+const { excludedOrgReason } = require('./tempo/dnc');
 
 // Cached MX check: a domain with no mail server (and no A-record fallback) will
 // hard-bounce. Skipping it protects the young domain's sender reputation, which
@@ -578,6 +579,21 @@ async function run() {
     body = applyAsk(body, 'aevon', step, lead.id);
 
     process.stdout.write(`  [${step === 0 ? 'email' : 'followup ' + step}] ${lead.business_name} <${lead.email}>... `);
+
+    // Never email Aidan's employer or the other excluded clinic. This list had no guard on
+    // the Aevon side at all: the exclusion lived only in tempo/lead-finder.js, and Changepain
+    // sat in this table and received two emails in June 2026 before anyone noticed.
+    const excluded = excludedOrgReason(lead.business_name, lead.email);
+    if (excluded) {
+      console.log(`SKIPPED (${excluded})`);
+      await supabase.from('leads').update({
+        status: 'dont_contact',
+        scheduled_send_at: null,
+        notes: `Held by sender: ${excluded}`,
+      }).eq('id', lead.id);
+      failed++;
+      continue;
+    }
 
     // Pre-send validation: never hand a malformed/artifact address to Resend.
     // A bounce hurts the young domain more than skipping does. Park it for review.

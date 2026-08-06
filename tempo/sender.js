@@ -18,7 +18,7 @@ const dns = require('dns').promises;
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('../lib/supabase');
 const { applyAsk } = require('../lib/offer');
-const { dncReason } = require('./dnc');
+const { dncReason, excludedOrgReason } = require('./dnc');
 
 const TABLE = 'tempo_leads';
 const EVENTS = 'tempo_email_events';
@@ -318,8 +318,11 @@ async function run() {
 
     process.stdout.write(`  [${step === 0 ? 'email' : 'followup ' + step}] ${lead.business_name} <${lead.email}>... `);
 
-    // Hard gate: never email a Changepain person, even at another clinic.
-    const dnc = dncReason(lead.contact_name, lead.email);
+    // Hard gate: never email a Changepain person, even at another clinic, and never the
+    // excluded organisations themselves. The org check is separate because dncReason only
+    // matches people: privateservices@changepain.ca cleared it and sat queued in tempo_leads.
+    const dnc = excludedOrgReason(lead.business_name, lead.email)
+             || dncReason(lead.contact_name, lead.email);
     if (dnc) {
       console.log(`SKIPPED (${dnc})`);
       if (LIVE) await supabase.from(TABLE).update({ status: 'dont_contact', scheduled_send_at: null, notes: `Held by sender: ${dnc}` }).eq('id', lead.id);

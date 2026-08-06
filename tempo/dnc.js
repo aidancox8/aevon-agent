@@ -14,6 +14,35 @@
 
 const names = require('./do-not-contact.json').names;
 
+/**
+ * Organisations that must never be contacted by any campaign, whoever the contact is.
+ *
+ * Separate from the people list above, because that list only matches a person's name or the
+ * local part of their address. On 2026-08-06 "Changepain Medical & Allied Health Clinic"
+ * <privateservices@changepain.ca> was found sitting in tempo_leads with status 'queued', one
+ * send away from pitching clinic scheduling software to Aidan's own employer. dncReason()
+ * cleared it, correctly by its own rules: "privateservices" matches no person on the list.
+ *
+ * The only guard was EXCLUDE_NAMES in the lead finder, which runs at discovery. Anything that
+ * reached the table by another route, or before that guard existed, was unprotected. This
+ * closes it at send time, which is the only place that actually matters.
+ */
+const EXCLUDED_ORGS = ['changepain', 'change pain', 'artus'];
+
+/** Returns a reason if this lead's employer or email domain is excluded outright, else null. */
+function excludedOrgReason(businessName, email) {
+  const name = norm(businessName);
+  const domain = String(email || '').toLowerCase().split('@')[1] || '';
+  for (const org of EXCLUDED_ORGS) {
+    if (name && name.includes(org)) return `business is an excluded organisation (${org})`;
+    // Compare against the domain with separators stripped, so "change-pain.ca" is caught too.
+    if (domain && domain.replace(/[^a-z]/g, '').includes(org.replace(/\s/g, ''))) {
+      return `email domain belongs to an excluded organisation (${domain})`;
+    }
+  }
+  return null;
+}
+
 const norm = s => String(s || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')   // strip accents
   .toLowerCase().replace(/^dr\.?\s+/, '').replace(/[^a-z\s-]/g, '').replace(/\s+/g, ' ').trim();
@@ -48,4 +77,4 @@ function dncReason(contactName, email) {
   return null;
 }
 
-module.exports = { dncReason };
+module.exports = { dncReason, excludedOrgReason };
