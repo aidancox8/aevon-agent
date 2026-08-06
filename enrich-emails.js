@@ -18,6 +18,7 @@
 require('dotenv').config();
 const supabase = require('./lib/supabase');
 const { findContact } = require('./lib/contact-finder');
+const { isActiveSegment } = require('./lib/segments');
 
 const CONCURRENCY = 6;
 
@@ -32,16 +33,38 @@ function parseArgs() {
 }
 
 async function enrich(limit) {
-  let q = supabase.from('leads')
-    .select('id, business_name, website')
-    .is('email', null)
-    .not('website', 'is', null)
-    .order('qualification_score', { ascending: false, nullsFirst: false });
-  if (limit) q = q.limit(limit);
+  // Score order alone spends the run on leads the sender will never pick up. Of the 2,582
+  // queued leads with no address, 1,256 sit in industries that have never produced a human
+  // reply and are paused in lib/segments.js, so finding their addresses buys nothing. The
+  // other 1,326 are in live segments and would roughly double the sendable list.
+  //
+  // Ordering rather than filtering: if the paused segments are ever switched back on, an
+  // unlimited run still reaches them, it just does the useful half first.
+  // Paged because an unpaged select truncates. Measured on this project the ceiling is 5,000
+  // rows, not the 1,000 quoted elsewhere in this repo. At 2,543 enrichable leads today this is
+  // not yet truncating, but it silently would once the list grows, and the live-first ordering
+  // below is only correct if it sees every candidate.
+  const all = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from('leads')
+      .select('id, business_name, website, industry, qualification_score')
+      .is('email', null)
+      .not('website', 'is', null)
+      .order('qualification_score', { ascending: false, nullsFirst: false })
+      .range(from, from + 999);
+    if (error) throw new Error(`Fetch failed: ${error.message}`);
+    if (!data || !data.length) break;
+    all.push(...data);
+    if (data.length < 1000) break;
+  }
 
-  const { data: leads, error } = await q;
-  if (error) throw new Error(`Fetch failed: ${error.message}`);
-  if (!leads || leads.length === 0) { console.log('No no-email leads with a website to enrich.'); return 0; }
+  const live = all.filter(l => isActiveSegment(l.industry));
+  const paused = all.filter(l => !isActiveSegment(l.industry));
+  const ordered = [...live, ...paused];
+  const leads = limit ? ordered.slice(0, limit) : ordered;
+
+  if (!leads.length) { console.log('No no-email leads with a website to enrich.'); return 0; }
+  console.log(`${live.length} in live segments, ${paused.length} in paused ones (live first).`);
 
   console.log(`Enriching ${leads.length} lead(s)...\n`);
   let found = 0, still = 0, done = 0;

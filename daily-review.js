@@ -8,8 +8,9 @@
  *   node daily-review.js --days 7   last 7 days
  *
  * Two things this had to get right, because the obvious version gets them wrong:
- *   1. Supabase caps a select at 1000 rows. Every read here pages to the end, otherwise
- *      a 9k-lead table silently reports as 5k and every rate is computed off a fraction.
+ *   1. An unpaged Supabase select truncates. Measured on this project the ceiling is 5,000
+ *      rows (not the 1,000 this comment used to claim), and the leads table is at 9,082, so
+ *      every read here pages to the end or the rates come out of a fraction of the list.
  *   2. There is no 'sent' status. The sender writes last_sent_at and leaves the lead
  *      'queued' so it stays eligible for follow-ups. Counting status='sent' finds nothing
  *      and makes the bounce rate look catastrophic.
@@ -17,7 +18,7 @@
 const supabase = require('./lib/supabase');
 const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
 const { classifyVisits } = require('./lib/visit-quality');
-const { isWorthSending } = require('./lib/segments');
+const { isWorthSending, isActiveSegment } = require('./lib/segments');
 const { autoresponderReason } = require('./reply-processor');
 
 /**
@@ -191,7 +192,13 @@ async function review(c, warnings) {
     warnings.push(`${c.label}: bounce rate ${pct(nBounce, nSent)} is over the 5% line that gets a sender throttled. Prune unverified addresses before adding volume.`);
   }
   if (noEmail.length) {
-    warnings.push(`${c.label}: ${noEmail.length} queued lead(s) have no address and can never send (${pct(noEmail.length, leads.length)} of the list). Run the email hunter or drop them.`);
+    // Split the count, because only part of it is worth acting on. Enriching a lead in a
+    // paused industry buys nothing: the sender would skip it even with an address.
+    const worth = c.segmented ? noEmail.filter(l => isActiveSegment(l.industry)).length : noEmail.length;
+    const detail = c.segmented && worth !== noEmail.length
+      ? ` ${worth} are in live segments and worth enriching (roughly doubling the sendable list); the other ${noEmail.length - worth} are in paused industries, so finding their addresses buys nothing.`
+      : '';
+    warnings.push(`${c.label}: ${noEmail.length} queued lead(s) have no address and can never send (${pct(noEmail.length, leads.length)} of the list).${detail || ' Run the email hunter or drop them.'}`);
   }
   // The Resend webhook delivers 'delivered' and 'bounced' but no open or click events, so
   // email-level engagement is unmeasured. Worth knowing, but not urgent: site visits are
