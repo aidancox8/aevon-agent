@@ -30,7 +30,8 @@ Draft, deliberately short:
 >
 > Jane's own docs say it can't schedule front desk staff and recommend clinics use an external
 > calendar for it, and that it will let you double-book a treatment room. I built the thing that
-> fills that gap. It runs in production at a 60-provider multidisciplinary clinic in BC.
+> fills that gap. It runs in production at a 75 staff multidisciplinary clinic in BC that I
+> can't name.
 >
 > I'm not pitching a sponsorship. I want to know whether this is a problem your owners actually
 > raise, or whether I'm solving something they've quietly lived with.

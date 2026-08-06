@@ -78,10 +78,30 @@ clinic happy on Jane will not switch to get it. That is the wedge.
   staff is the single loudest complaint across 646 Deputy reviews: "not the cheapest option if
   you have a lot of staff doing few hours, as its a per user subscription."
 
+## How to describe the reference
+
+**"A 75 staff multidisciplinary clinic in BC."** That is the wording. Never the clinic's name,
+in any material, ever.
+
+Do not dress it up with specifics that have not been confirmed. An earlier version of this file
+said "60-provider, 11 rooms across 2 floors, 6 disciplines"; the headcount was wrong and the
+rest came from a research example rather than the real deployment. Invented detail in a
+reference is the one thing that cannot be walked back once a prospect checks it.
+
+Do not claim an NDA unless one exists. "A clinic I can't name" makes the same point and is true.
+Healthcare buyers deal with confidentiality constantly and read it as normal rather than evasive,
+which is exactly why an anonymous reference is workable in this market and would not be in most
+others. If asked directly, being straight about it ("it's where I work, so I can't use the name")
+costs less than sounding cagey.
+
+What makes it credible is not the name, it is the operational detail only an insider would know:
+how a weekly schedule actually gets built, where the double-bookings come from, what happens when
+someone calls in sick at 7am. Lead with that.
+
 ## The discovery question this all points at
 
 Nobody has published a figure for hours lost to staff scheduling in a clinic. The one quantified
 owner post found was about billing waste, not rostering. So the number has to come from the
-60-provider deployment: hours to build a weekly schedule before and after, and double-bookings
+75-staff deployment: hours to build a weekly schedule before and after, and double-bookings
 per month eliminated. That number is the case study, and it is the one thing here that cannot be
 copied from a competitor's docs.
