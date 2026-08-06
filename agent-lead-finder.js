@@ -14,6 +14,7 @@ require('dotenv').config();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const supabase = require('./lib/supabase');
+const { excludedOrgReason } = require('./tempo/dnc');
 const { createGenerate } = require('./lib/gemini');
 
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
@@ -307,6 +308,9 @@ async function run() {
             console.log(`skip (score ${score}/10: ${notes})`);
             continue;
           }
+
+          const orgWhy = excludedOrgReason(name, email);
+          if (orgWhy) { console.log(`skip (${orgWhy})`); continue; }
 
           totalQualified++;
           console.log(`score ${score}/10 | ${email || 'no email'}${emailQuality ? ' (' + emailQuality + ')' : ''}${contactName ? ' | ' + contactName : ''}`);

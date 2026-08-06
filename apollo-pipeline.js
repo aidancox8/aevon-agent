@@ -29,6 +29,7 @@
 require('dotenv').config();
 const axios = require('axios');
 const supabase = require('./lib/supabase');
+const { excludedOrgReason } = require('./tempo/dnc');
 
 const KEY = process.env.APOLLO_API_KEY;
 if (!KEY) { console.error('No APOLLO_API_KEY in .env'); process.exit(1); }
@@ -178,7 +179,15 @@ async function run() {
 
   const { data: existing } = await supabase.from('leads').select('email');
   const have = new Set((existing || []).map(r => (r.email || '').toLowerCase()));
-  const fresh = leads.filter(c => !have.has(c.email));
+  // Drop excluded orgs before the bulk insert. The DB check constraint would reject the
+  // whole batch over a single bad row, so filtering here keeps one match from costing
+  // hundreds of good leads.
+  const fresh = leads.filter(c => !have.has(c.email))
+    .filter(c => {
+      const why = excludedOrgReason(c.business_name, c.email);
+      if (why) console.log(`  excluded: ${c.business_name} (${why})`);
+      return !why;
+    });
   console.log(`${fresh.length} are new (not already in the DB).`);
 
   console.log('\n--- sample (first 12) ---');

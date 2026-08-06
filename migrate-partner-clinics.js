@@ -52,6 +52,8 @@ const NOT_A_CLINIC = /construction|design|marketing|agency|digital|software|recr
         || (p.website && bySite.has(p.website.toLowerCase().replace(/\/+$/, '')))) { skipped++; continue; }
     // The do-not-contact gate has to run here too. Migrating around it would be the one way
     // a barred name could reach the send queue.
+    const org = excludedOrgReason(name, p.email);
+    if (org) { rejected.push(name + ' [' + org + ']'); continue; }
     const dnc = dncReason(p.contact_name, p.email);
     if (dnc) { rejected.push(name + ' [DNC: ' + dnc + ']'); continue; }
 
