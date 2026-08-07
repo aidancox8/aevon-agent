@@ -1,7 +1,16 @@
 name: Tempo - Send Outreach
 
-# LIVE on autopilot (armed 2026-07-28): runs weekdays at 10am PT. The sender itself also requires --send, so a stray
+# LIVE on autopilot (armed 2026-07-28): weekdays, one batch per day. The sender itself also requires --send, so a stray
 # dispatch without it can never email anyone.
+#
+# Three slots, not one, because GitHub drops scheduled runs. On 2026-08-06 a hosted-runner
+# shortage failed the single 17:00 slot with "The job was not acquired by Runner of type hosted"
+# and Tempo sent nothing all day, while Aevon lost two of its eight slots and still delivered a
+# full batch. One cron entry is a single point of failure.
+#
+# This cannot double-send: the sender counts today's sends from tempo_email_events against
+# TEMPO_DAILY_CAP and exits immediately once the cap is met, so the later slots are no-ops on a
+# normal day.
 on:
   workflow_dispatch:
     inputs:
@@ -10,7 +19,9 @@ on:
         required: false
         default: 'dry-run'
   schedule:
-    - cron: '0 17 * * 1-5'  # Mon-Fri 10am PT, one batch per day
+    - cron: '0 17 * * 1-5'  # Mon-Fri 10am PT, the intended batch
+    - cron: '0 19 * * 1-5'  # 12pm PT, retry if the 10am slot never ran
+    - cron: '0 21 * * 1-5'  #  2pm PT, last chance before the day is lost
 
 jobs:
   send:
