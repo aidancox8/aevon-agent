@@ -107,7 +107,7 @@ async function auditQueuedCopy(c, warnings) {
 }
 
 async function review(c, warnings) {
-  const leads = await readAll(c.leads, 'status,email,last_sent_at,sequence_step,industry,email_quality');
+  const leads = await readAll(c.leads, 'id,business_name,status,email,last_sent_at,sequence_step,industry,email_quality');
   const events = await readAll(c.events, 'event_type,created_at,metadata,lead_id');
 
   const withEmail = leads.filter(l => l.email);
@@ -234,6 +234,36 @@ async function review(c, warnings) {
   }
   if (untouched.length === 0 && withEmail.length) {
     warnings.push(`${c.label}: every emailable lead has been contacted. The campaign is out of runway — add leads or it goes quiet.`);
+  }
+
+  // ── warm signals: real people who came to the site ────────────────────────
+  //
+  // These were falling on the floor. signals-digest.js only reports repeat visitors, 2+
+  // genuine sessions, so a single real visit is invisible to every report we have. Arctic
+  // Sunshine Movers finished the whole 3-email sequence, was marked dont_contact, and then
+  // loaded the site six hours after the final email. Nothing would ever have surfaced them.
+  //
+  // A human who clicks through is the warmest thing this machine produces, and the ones whose
+  // sequence has ended are the only leads nobody will contact again. They are listed first
+  // because they are the ones that need a decision rather than patience.
+  const byId = Object.fromEntries(leads.filter(l => l.id).map(l => [l.id, l]));
+  const warm = humanVisitors
+    .map(([id, vs]) => ({ lead: byId[id], cls: classifyVisits(vs, firstSentByLead[id]),
+                          last: vs.map(v => v.created_at).sort().slice(-1)[0] }))
+    .filter(w => w.lead)
+    .sort((a, b) => String(b.last).localeCompare(String(a.last)));
+
+  const finished = warm.filter(w => w.lead.status === 'dont_contact' || w.lead.sequence_step >= 3);
+  if (warm.length) {
+    console.log(`   warm        ${warm.length} real visitor(s)${finished.length ? `, ${finished.length} whose sequence has ended` : ''}`);
+    warm.slice(0, 5).forEach(w => {
+      const done = w.lead.status === 'dont_contact' || w.lead.sequence_step >= 3;
+      console.log(`               ${done ? '!' : ' '} ${String(w.lead.business_name || '').slice(0, 34).padEnd(36)}`
+        + `${String(w.last).slice(0, 10)}  ${w.cls.reasons.join('; ')}`);
+    });
+  }
+  if (finished.length) {
+    warnings.push(`${c.label}: ${finished.length} real visitor(s) finished the sequence and will never be contacted again — ${finished.slice(0, 3).map(w => w.lead.business_name).join(', ')}. They came to the site after the last email, so this is the warmest signal available and nothing is set up to act on it.`);
   }
 }
 
