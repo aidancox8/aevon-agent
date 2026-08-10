@@ -7,3 +7,9 @@ enrich-emails.log
 overnight.log
 personalize30.log
 intake-log.*.jsonl
+
+# Scratch HTML dumped by research/fetch tooling (Anubis browser-check pages etc).
+# Swept in once by 'git add -A'; do not let it happen again.
+*.tmp.html
+sr.html
+rl.html
