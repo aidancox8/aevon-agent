@@ -19,7 +19,7 @@ const dns = require('dns').promises;
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
 const { applyAsk } = require('./lib/offer');
-const { isActiveSegment, isSendableAddress, isWorthSending } = require('./lib/segments');
+const { isActiveSegment, isSendableAddress, isWorthSending, isHotSegment } = require('./lib/segments');
 const { excludedOrgReason } = require('./tempo/dnc');
 
 // Cached MX check: a domain with no mail server (and no A-record fallback) will
@@ -411,7 +411,7 @@ async function run() {
     }
   }
 
-  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry, email_quality';
+  const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry, email_quality, city';
   const baseFilter = q => q
     .eq('status', 'queued')
     .not('email_subject', 'is', null)
@@ -465,9 +465,22 @@ async function run() {
     console.log(`Skipped ${bySegment + byAddress} lead(s): ${bySegment} in paused industries, ${byAddress} on generic addresses.`);
   }
 
-  const named = eligible.filter(l => !isRoleInbox(l.email));
-  const role  = eligible.filter(l =>  isRoleInbox(l.email));
-  const initials = [...named, ...role];
+  // Order: hottest segment first, then named contacts ahead of role inboxes within each.
+  //
+  // Hot goes outermost because it is the better-evidenced signal. Metro Vancouver financial
+  // services replies at 1.89% against 0.33% for the rest, p = 0.08%. The role-inbox rule is
+  // sensible but rests on 14 sends and no replies, so it breaks ties rather than setting them.
+  //
+  // This does not change what the queue will eventually return, roughly 7 replies either way.
+  // It front-loads about 4.9 of them into the first two weeks instead of spreading them over
+  // six, which is the only lever left when the whole niche is 926 businesses.
+  const rank = l => (isHotSegment(l) ? 0 : 2) + (isRoleInbox(l.email) ? 1 : 0);
+  const initials = eligible
+    .map((l, i) => ({ l, i }))                                   // keep score order stable
+    .sort((a, b) => rank(a.l) - rank(b.l) || a.i - b.i)
+    .map(x => x.l);
+  const hotCount = eligible.filter(isHotSegment).length;
+  if (hotCount) console.log(`Priority: ${hotCount} of ${eligible.length} eligible are Metro Vancouver financial services (1.89% segment), sending those first.`);
 
   // Region balance: a US test cohort runs alongside the BC backlog. Pure score
   // ordering lets BC's larger, earlier-scheduled queue take every slot, which
