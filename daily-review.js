@@ -140,6 +140,10 @@ async function review(c, warnings) {
   // interest and, worse, would put businesses on a warm list who never looked at anything.
   const visitsByLead = {};
   clickEvents.forEach(e => { (visitsByLead[e.lead_id] = visitsByLead[e.lead_id] || []).push(e); });
+  const sentByLead = {};
+  events.filter(e => e.event_type === 'sent').forEach(e => {
+    (sentByLead[e.lead_id] = sentByLead[e.lead_id] || []).push(e.created_at);
+  });
   const firstSentByLead = {};
   events.filter(e => e.event_type === 'sent').forEach(e => {
     if (!firstSentByLead[e.lead_id] || e.created_at < firstSentByLead[e.lead_id]) {
@@ -253,7 +257,16 @@ async function review(c, warnings) {
     .filter(w => w.lead)
     .sort((a, b) => String(b.last).localeCompare(String(a.last)));
 
-  const finished = warm.filter(w => w.lead.status === 'dont_contact' || w.lead.sequence_step >= 3);
+  // "Nobody will contact them again" stops being true the moment somebody does. Nine of these
+  // were emailed by hand on 2026-08-09, outside the queue, which left their status and
+  // sequence_step untouched, so a status-only test kept naming people already actioned and the
+  // warning would have nagged forever. Anyone with a send AFTER their most recent visit has
+  // been answered, however that send happened.
+  const lastSentAfterVisit = (id, lastVisit) => sentByLead[id]
+    && sentByLead[id].some(t => t > lastVisit);
+  const finished = warm.filter(w =>
+    (w.lead.status === 'dont_contact' || w.lead.sequence_step >= 3)
+    && !lastSentAfterVisit(w.lead.id, w.last));
   if (warm.length) {
     console.log(`   warm        ${warm.length} real visitor(s)${finished.length ? `, ${finished.length} whose sequence has ended` : ''}`);
     warm.slice(0, 5).forEach(w => {
