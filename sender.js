@@ -431,11 +431,18 @@ async function run() {
   const { data: initialsPool, error: iErr } = await baseFilter(
     supabase.from('leads').select(cols).eq('sequence_step', 0)
   ).order('qualification_score', { ascending: false, nullsFirst: false })
-  // Pool has to be much larger than the cap now that the eligibility filter below rejects
-  // roughly three quarters of it (paused industries plus generic addresses). At the old
-  // 20x the top-800 by score yielded only 200 eligible, which still covers a 40/day run but
-  // leaves no margin if either rule tightens.
-   .order('scheduled_send_at', { ascending: true }).limit(Math.max(DAILY_CAP * 40, 800));
+  // Fetch the whole eligible universe, not a score-ranked slice of it.
+  //
+  // The filter below rejects roughly 83% of what comes back (paused industries, generic
+  // addresses), and the fetch is ordered by qualification_score, so a capped pool silently
+  // starves any segment whose leads score lower. Measured 2026-08-10: 245 Metro Vancouver
+  // financial-services leads existed and only 71 were inside a 1600-row window, which would
+  // have exhausted the priority segment in under three days while 174 sat invisible.
+  //
+  // 5000 is the ceiling an unpaged Supabase select returns on this project. The unsent queue
+  // is ~3,800, so this covers all of it today and degrades to a large slice rather than a
+  // biased one if the list grows past the cap.
+   .order('scheduled_send_at', { ascending: true }).limit(5000);
   if (iErr) throw new Error(`Supabase fetch (initials) failed: ${iErr.message}`);
 
   // Prefer a real person's inbox over a generic role/catch-all box. Decision-
@@ -487,18 +494,33 @@ async function run() {
   // silently starved US for days. Guarantee US a share of the new-lead budget so
   // the US-vs-BC reply comparison actually gets data. Named-first + score order
   // is preserved WITHIN each region (initials is already in that order).
+  //
+  // Applied only to the NON-hot remainder. A US lead can never be in a Metro Vancouver
+  // segment, so balancing across the whole budget silently overrode the hot-first sort above:
+  // on 2026-08-10, its first live day, 10 of 24 initials went to US leads while 245 hot leads
+  // sat unsent. The two rules were fighting and region balance was winning.
+  //
+  // Hot wins because it is the better-evidenced signal: 1.89% vs 0.33% at p = 0.08%, against
+  // the US cohort's 1.36% vs 0.57% at p = 0.15, which does not clear significance. The US test
+  // still runs, it just gets the budget hot does not use.
   const US_INITIAL_SHARE = 0.4;
   const isUSLead = l => / (WA|OR|AZ|CO|TX|CA|NV|IL|GA|FL)$/.test(l.city || '');
-  const usInit = initials.filter(isUSLead);
-  const caInit = initials.filter(l => !isUSLead(l));
+  const hotInit = initials.filter(isHotSegment);
+  const restInit = initials.filter(l => !isHotSegment(l));
+  const usInit = restInit.filter(isUSLead);
+  const caInit = restInit.filter(l => !isUSLead(l));
   function regionBalance(budget) {
-    if (!usInit.length || !caInit.length) return initials.slice(0, budget); // one region only
+    // Hot first, always. Region balance only spends what is left.
+    const hot = hotInit.slice(0, budget);
+    budget -= hot.length;
+    if (!budget) return hot;
+    if (!usInit.length || !caInit.length) return [...hot, ...restInit.slice(0, budget)];
     const usWant = Math.min(usInit.length, Math.round(budget * US_INITIAL_SHARE));
     const us = usInit.slice(0, usWant);
     const ca = caInit.slice(0, budget - us.length);
     // Backfill from US if CA ran short so we never under-fill the budget.
     const usFinal = us.length + ca.length < budget ? usInit.slice(0, budget - ca.length) : us;
-    return [...ca, ...usFinal].slice(0, budget);
+    return [...hot, ...[...ca, ...usFinal].slice(0, budget)];
   }
 
   // Budget: follow-ups take their share of THIS run, unused slots roll to new leads, and
