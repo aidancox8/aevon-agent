@@ -18,6 +18,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const axios = require('axios');
+const { isActiveSegment } = require('../lib/segments');
 const cheerio = require('cheerio');
 const supabase = require('../lib/supabase');
 const { classifyEmail } = require('../lib/contact-finder');
@@ -196,13 +197,32 @@ async function huntSite(website) {
 }
 
 async function run() {
-  const { data: rows, error } = await supabase.from(TABLE)
-    .select('id, business_name, website')
+  // Skip anything tried in the last 30 days, and work the segments that reply first.
+  //
+  // Two problems this fixes, both measured 2026-08-11. Without an attempt record the nightly
+  // run re-selected the SAME top-1200 by score every night, re-hunting leads that had already
+  // failed and never reaching the rest of the backlog: the no-address count sat at 2,572 for
+  // three consecutive days. And ordering purely by score spent the run indiscriminately across
+  // live and paused industries, when finding an address for a paused-industry lead buys
+  // nothing because the sender will skip it anyway.
+  const staleBefore = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { data: all, error } = await supabase.from(TABLE)
+    .select('id, business_name, website, industry, email_hunt_attempted_at')
     .is('email', null)
     .not('website', 'is', null)
+    .or(`email_hunt_attempted_at.is.null,email_hunt_attempted_at.lt.${staleBefore}`)
     .order('qualification_score', { ascending: false })
-    .limit(LIMIT || 100000);
+    .limit(100000);
   if (error) throw new Error(error.message);
+
+  // Live segments first. Aevon only: Tempo's whole list is clinics, which the Aevon segment
+  // table marks paused, so applying it there would reject every single lead.
+  const live = TABLE === 'leads' ? (all || []).filter(l => isActiveSegment(l.industry)) : (all || []);
+  const paused = TABLE === 'leads' ? (all || []).filter(l => !isActiveSegment(l.industry)) : [];
+  const rows = [...live, ...paused].slice(0, LIMIT || 100000);
+  if (TABLE === 'leads') {
+    console.log(`${live.length} in live segments, ${paused.length} in paused ones (live first).`);
+  }
   const label = TABLE === 'leads' ? 'Aevon' : 'Tempo';
   console.log(`[${label}] Hunting emails for ${rows.length} lead(s) without one...${DRY ? ' (dry run)' : ''}\n`);
 
@@ -211,7 +231,12 @@ async function run() {
     process.stdout.write(`[${row.business_name}] `);
     const { emails, pagesTried } = await huntSite(row.website);
     const best = pickBest(emails, row.website);
-    if (!best) { console.log(`nothing found (${pagesTried} pages)`); continue; }
+    if (!best) {
+      console.log(`nothing found (${pagesTried} pages)`);
+      // Stamp the miss too, otherwise tomorrow's run picks this same lead again.
+      if (!DRY) await supabase.from(TABLE).update({ email_hunt_attempted_at: new Date().toISOString() }).eq('id', row.id);
+      continue;
+    }
 
     const quality = effectiveQuality(best) === 'last-resort' ? 'generic' : effectiveQuality(best);
     const others = emails.filter(e => e !== best).slice(0, 8);
@@ -223,7 +248,8 @@ async function run() {
       if (offDomain) noteParts.push('email domain differs from website (verify it is the same clinic before sending)');
       if (others.length) noteParts.push('other emails found: ' + others.join(', '));
       const { error: upErr } = await supabase.from(TABLE)
-        .update({ email: best, email_quality: quality, notes: noteParts.join(' | ') || null })
+        .update({ email: best, email_quality: quality, notes: noteParts.join(' | ') || null,
+                  email_hunt_attempted_at: new Date().toISOString() })
         .eq('id', row.id);
       if (upErr) { console.log(`  DB update failed: ${upErr.message}`); continue; }
       updated++;

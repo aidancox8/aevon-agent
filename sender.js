@@ -713,6 +713,36 @@ async function run() {
     } catch (err) {
       const msg = err?.message || String(err);
       const isPermanent = /invalid|not found|unsubscribed|bounced/i.test(msg) || err?.statusCode === 422;
+
+      // A transient provider fault must not cost us the lead. Anything not clearly permanent
+      // used to be parked at status 'error', which drops it out of 'queued' forever: the
+      // sender only ever selects queued rows, so nothing would look at it again. On
+      // 2026-08-11 two Resend 500s ("Internal server error... please try again later")
+      // permanently removed two Metro Vancouver insurance brokerages, both in the priority
+      // segment, from a campaign they should simply have been retried into.
+      //
+      // Transient failures now stay queued and come back in an hour. Only genuinely permanent
+      // failures are parked, and 'error' is reserved for a fault we could not classify.
+      const isTransient = !isPermanent && (
+        /internal server error|try again later|timeout|timed out|rate.?limit|ECONNRESET|ETIMEDOUT|socket hang up|502|503|504/i.test(msg)
+        || err?.statusCode >= 500
+        || err?.statusCode === 429
+      );
+
+      if (isTransient) {
+        const retryAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        console.log(`TRANSIENT, retrying after ${retryAt.slice(11, 16)}: ${msg}`);
+        try {
+          await supabase.from('leads')
+            .update({ scheduled_send_at: retryAt, notes: `Transient send failure, will retry: ${msg}` })
+            .eq('id', lead.id);
+        } catch (dbErr) {
+          console.error(`  Could not reschedule: ${dbErr.message}`);
+        }
+        failed++;
+        continue;
+      }
+
       const newStatus = isPermanent ? 'bounced' : 'error';
       console.log(`FAILED (${newStatus}): ${msg}`);
       try {
