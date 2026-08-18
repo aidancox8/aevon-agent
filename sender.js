@@ -128,6 +128,14 @@ function emailRisk(email) {
   if (/[a-z]+(info|contact|reception|support|enquir|inquir|bookkeeping|customerservice|frontdesk|webmaster|hello)/.test(local)) {
     return 'glued label-word artifact';
   }
+  // Placeholder local parts lifted straight from a website's example text. The domain is
+  // real and has valid MX, so neither the format check nor the MX guard stops them, and they
+  // hard-bounce: your@rmail.com went out on 2026-08-11 and bounced. Anchored to the whole
+  // local part so a real person called e.g. "youri" or "namdi" is untouched.
+  if (/^(your|youremail|yourname|name|firstname|lastname|firstname\.lastname|first\.last|username|user|example|sample|test|noreply|no-reply|donotreply|someone|somebody|anyone|yourcompany|company|business|domain)$/.test(local)) {
+    return 'placeholder local part';
+  }
+
   // A 1-2 char fragment + separator + role word: "to.support", "a-info" — scraped
   // from "...contact us to support@" style page text.
   if (/^[a-z]{1,2}[._-](info|contact|support|sales|hello|reception|admin|office)/.test(local)) {
