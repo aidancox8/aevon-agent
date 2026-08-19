@@ -317,23 +317,10 @@ function toHtml(text, leadId, industry, businessName) {
 <body style="margin:0;padding:0">
   <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.5;color:#222222">
     ${paragraphs}
-    <table cellpadding="0" cellspacing="0" style="margin-top:18px">
-      <tr>
-        <td style="padding-right:12px;vertical-align:middle">
-          <img src="https://aevon.ca/logo-email.png" width="38" height="38" alt="Aevon" style="display:block;border-radius:8px">
-        </td>
-        <td style="vertical-align:middle">
-          <div style="font-size:14px;font-weight:700;color:#1a1a1a">Aidan</div>
-          <div style="font-size:12px;color:#666666;margin-top:2px">
-            <a href="${siteUrl}" style="color:#666666;text-decoration:none">aevon.ca</a>
-            &nbsp;&middot;&nbsp;
-            <a href="mailto:aidan@aevon.ca" style="color:#666666;text-decoration:none">aidan@aevon.ca</a>
-            &nbsp;&middot;&nbsp;
-            <a href="https://calendar.app.google/7R7srDKzWrvmLQg37" style="color:#666666;text-decoration:none">Book a call</a>
-          </div>
-        </td>
-      </tr>
-    </table>
+    <div style="margin-top:18px;font-size:14px;color:#1a1a1a">Aidan</div>
+    <div style="font-size:12px;color:#666666;margin-top:2px">
+      Aevon | <a href="https://aevon.ca" style="color:#666666">aevon.ca</a>
+    </div>
     <div style="font-size:12px;color:#888888;margin-top:14px">${UNSUB_TEXT}</div>
   </div>
 </body>
@@ -679,8 +666,20 @@ async function run() {
         reply_to: 'aidan@aevon.ca',
         to: lead.email,
         subject,
+        // PLAIN TEXT ONLY. Proven by seed test 2026-08-18: the same message, same Resend
+        // path, same recipient, reached the inbox as plain text and was spam-foldered by
+        // Gmail and QUARANTINED AS PHISHING by Microsoft as HTML.
+        //
+        // The signature block was the cause, and "phishing" rather than "junk" says why. It
+        // stacked three deception heuristics: anchor text reading "aevon.ca" over an href to
+        // aevon.ca/<vertical>.html?ref=<uuid>, anchor text "Book a call" hiding an external
+        // calendar.app.google domain, and a remote-loaded logo image. Display text that does
+        // not match its destination is the single strongest phishing signal a filter has.
+        //
+        // Plain text cannot have that mismatch: the URL and its display text are the same
+        // string. toHtml() is kept for test-send-self.js and seed-placement-test.js, but
+        // nothing customer-facing should use it again without re-running the seed test.
         text: withUnsubText(body),
-        html: toHtml(body, lead.id, lead.industry, lead.business_name),
       });
 
       if (sendError) throw new Error(sendError.message);

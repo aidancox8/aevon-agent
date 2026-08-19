@@ -353,7 +353,16 @@ async function run() {
         to: lead.email,
         subject,
         text: body + '\n\n--\nAevon · Lower Mainland, BC. If you would rather not hear from me, just reply with a quick no and I will not email again.',
-        html: toHtml(body, lead.id),
+        // PLAIN TEXT ONLY, same finding as the Aevon sender. Seed-tested 2026-08-18: the
+        // HTML build was quarantined as PHISHING by Microsoft. This sender had the identical
+        // defect, anchor text reading "clinic-scheduler-demo.web.app" over an href with
+        // ?ref=<leadId> appended, so the visible text never matched the destination.
+        //
+        // This matters more here than for Aevon. Clinics are overwhelmingly Microsoft-hosted,
+        // and Tempo has recorded 0 replies and 0 genuine visits across 258 sends. That is
+        // consistent with the mail never being seen rather than with clinics being
+        // uninterested, so treat the earlier "clinics do not answer cold email" conclusion as
+        // unproven until this has run clean for a few weeks.
       });
       if (sendError) throw new Error(sendError.message);
 
