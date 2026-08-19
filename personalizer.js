@@ -166,7 +166,7 @@ function buildPrompt(lead, websiteContent) {
 - THE CORE ARGUMENT, and the spine of this email. Follow this arc:
     Businesses go looking for software that fits how they actually operate, and never find it, because no two businesses run the same way. So the work ends up back in inboxes and spreadsheets, which is neither efficient nor reliable, and things slip through. Instead of making a business reshape its operations around a piece of software, we build the software around the business's operations.
   That inversion IS the pitch. Every off-the-shelf tool is something they must conform to. Aevon is the opposite, and it is the one claim no SaaS competitor can make.
-- Goal: get a reply by offering to build them something free. Do NOT ask open discovery questions with nothing attached (tested for months, near-zero replies) — the free build IS what makes the question worth answering. Land the argument above, made specific to THIS business.
+- Goal: get a reply. Land the argument above, made specific to THIS business, then let the {{ASK}} token close it. NEVER offer to build anything for free, at no cost, or "yours either way". That offer was retired on 2026-08-19 and the reasoning is in lib/offer.js: a free custom build is not free to accept, it costs the owner an explanation of their process, access to their data, staff time, and the risk of depending on one unknown person. You are not replacing it with a different offer. There is no offer in this email. The body earns the reply by being right about their business, and the closing question is easy to answer with a no.
 - CRITICAL POSITIONING: never describe this as an email or writing assistant. Gmail and Outlook already ship those, so that framing puts Aevon next to free tools it cannot beat. What is being sold is a thing that DOES a job the business currently does by hand, built to their rules, owned by them.
 - WHAT YOU MAY CLAIM. There is no product with a feature list, so do not invent one. The
   honest claim is narrow: something gets built that does ONE manual job the way they already
@@ -179,18 +179,18 @@ function buildPrompt(lead, websiteContent) {
   comma-separated run of capabilities is the clearest signal to a reader that software wrote
   the email, and here it would also be a promise about a product that does not exist.
   For this business a reasonable illustration is ${what}, but only if their site supports it.
-- NEVER mention price in email 1. No setup fee, no monthly, no dollar figure at all. The offer
-  here is free work, so a price line contradicts it and turns a note into a sales page. Terms
-  come up once they reply.
+- NEVER mention price in email 1. No setup fee, no monthly, no dollar figure at all. There is
+  nothing being sold in this email, so a number turns a note into a sales page. Terms come up
+  once they reply, on a call, not here.
 - Subject line: lowercase, short (2-5 words), about their inquiries / front desk / intake. Vary the grammatical form (a plain question, a fragment, a quiet observation). NEVER reuse a skeleton, never the word "grind". Fresh and specific to this business.
 - HOW IT MUST SOUND. This matters more than any beat below. Read the email back and ask
   whether a busy owner would believe a person typed it in ninety seconds. If it reads like a
   landing page paragraph, it has failed, and dense corporate register is the single most
   common failure:
   * Under 55 words total. No sentence longer than 20 words. Most should be much shorter.
-  * The reason it is free should be a clause, not a sentence. Four or five words folded into
-    the offer ("while I am building a track record", "I am early and taking on a few") does
-    the job. It must be present, but it must not cost you the whole word budget.
+  * Do not explain why anything is free, because nothing is. If you want to signal that this
+    is a small operation rather than a vendor, a four or five word clause does it ("I am
+    early and taking on a few"). Optional, never a whole sentence.
   * Use contractions. "cannot" is "can't", "it is" is "it's". Always.
   * Write as I, not as Aevon or we. One person emailing another.
   * Concrete over abstract. "someone reads every inquiry and decides if it's real" beats
@@ -219,16 +219,18 @@ function buildPrompt(lead, websiteContent) {
   SUBJECT: quote requests at pmc
   Cold storage and transloading quotes each need different numbers before anyone can answer
   them. Someone reads every one and works out what it's worth.
-  I'd build a working version of that first read, on your rules, free. Yours either way.
-  I'm early and want the example more than the fee.
-  Which request type eats the most time?
+  I build software that does that first read, on the rules you already use.
+  {{ASK}}
 
   What makes it work, and what you must reproduce:
   * The opening is a fact about THEM, stated flatly, no preamble and no greeting.
   * The second line finds the human cost hiding in that fact, specific enough that a generic
     business could not receive the same sentence.
-  * The reason it is free is one honest clause, admitting a real position rather than
-    manufacturing urgency.
+  * The third line says what is built, in one plain sentence, and stops. It does not offer
+    it, price it, or give it away. There is nothing here for the reader to accept or decline.
+  * The body ENDS with the literal token {{ASK}} on its own line. Never write the closing
+    question yourself: it is substituted at send time from lib/offer.js so the ask can change
+    without regenerating thousands of emails, which is the failure described further down.
   * The close is a genuine question about how they operate. Interesting to answer, costs one
     line, nothing like "just reply yes".
   * Nothing explains the product. The reader is left with something to ask about.
@@ -301,7 +303,7 @@ Other rules:
 
 EMAIL 2 (follow-up, send 5 days later if no reply):
 - Subject line: brief, reply-thread style.
-- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Repeat the free-build offer in one plain line, since this is the beat that converts: name the one thing they do by hand and it gets built for them, theirs either way. Do NOT name a price. There is no fixed product to price any more, and what a finished build costs depends entirely on what they ask for, so a number here would be invented. Close by making a reply cost almost nothing: invite a single word back rather than a written response (vary the wording, never repeat a phrasing). No hard sell.
+- Body: under 55 words. A friendly bump that leads with the demo so they can just watch instead of replying. Frame it as one built AROUND THEIR OWN BUSINESS (this is true: the link renders a demo branded to their business and their kind of intake), then include the exact token {{DEMO}} (replaced with a real tracked link at send time). Shape (do NOT copy verbatim): "I put together a quick version around {{how their business works}}, here if it's easier to just watch than reply: {{DEMO}}". Do NOT offer to build anything free, at no cost, or "yours either way": that offer was retired on 2026-08-19 (see lib/offer.js). Do NOT name a price. There is no fixed product to price any more, and what a finished build costs depends entirely on what they ask for, so a number here would be invented. End the body with the literal token {{ASK}} on its own line and do not write a closing question of your own. No hard sell.
 - Tone: same plain, human voice.
 
 EMAIL 3 (final follow-up, sent 5 days after email 2 if still no reply):

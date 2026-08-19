@@ -19,6 +19,7 @@ const dns = require('dns').promises;
 try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
 const supabase = require('./lib/supabase');
 const { applyAsk } = require('./lib/offer');
+const { retiredOfferReason } = require('./lib/copy-guard');
 const { isActiveSegment, isSendableAddress, isWorthSending, isHotSegment } = require('./lib/segments');
 const { excludedOrgReason } = require('./tempo/dnc');
 
@@ -581,6 +582,7 @@ async function run() {
 
   let sent = 0;
   let failed = 0;
+  let held = 0;
 
   for (const lead of due) {
     const step = lead.sequence_step;
@@ -607,6 +609,17 @@ async function run() {
     // whim. Substituting at send time means editing lib/offer.js changes every unsent email
     // instantly, backlog included.
     body = applyAsk(body, 'aevon', step, lead.id);
+
+    // Hold rather than send anything that contradicts the current offer. Stored copy has
+    // outlived three separate offer decisions now, so this is checked on every send instead
+    // of trusted to a one-off cleanup script. The lead stays queued and regen-copy rewrites
+    // it on its normal run, so a hold costs a day, not a lead.
+    const retired = retiredOfferReason(body);
+    if (retired) {
+      console.log(`  [skip] ${lead.business_name} <${lead.email}> - copy ${retired}`);
+      held++;
+      continue;
+    }
 
     process.stdout.write(`  [${step === 0 ? 'email' : 'followup ' + step}] ${lead.business_name} <${lead.email}>... `);
 

@@ -347,12 +347,33 @@ async function run() {
 
     if (suggested_reply && ['interested', 'question', 'referral'].includes(intent)) {
       try {
+        // Run the draft past the same gate that governs unattended sends. Nothing is sent from
+        // here, so this cannot block anything, but a draft that fabricates history is exactly
+        // what a human skims and approves. One draft opened "I have been speaking with Randy"
+        // off the back of an out-of-office where the real history was one unanswered cold
+        // email. The warning goes in the body because that is the part that gets read.
+        const { canSendReply } = require('./lib/send-gate');
+        const gate = canSendReply({
+          toEmail: fromEmail,
+          businessName: lead.business_name,
+          inboundSubject: subject,
+          inboundBody: replyText,
+          replyBody: suggested_reply,
+          inboundMessageId: rfcMessageId,
+          sentToday: 0,
+        });
+        if (!gate.allowed) console.log(`      [gate] ${gate.reason}`);
+
         const rawDraft = await buildRawDraft({
           to: fromEmail,
           subject,
           inReplyTo: rfcMessageId,
           references: header(payload, 'References'),
-          body: suggested_reply,
+          body: gate.allowed
+            ? suggested_reply
+            : `[CHECK BEFORE SENDING: ${gate.reason}]
+
+${suggested_reply}`,
         });
         await gmail.users.drafts.create({
           userId: 'me',

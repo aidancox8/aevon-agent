@@ -50,12 +50,27 @@ function stripPrice(text) {
   return { text: out };
 }
 
+
+/**
+ * Which body fields have not been sent yet, so are still safe to edit.
+ *
+ * The previous filter here was `last_sent_at IS NULL`, which meant a lead that had received
+ * email 1 was skipped entirely, and its queued follow-ups kept the retired copy forever. That
+ * is backwards: those are the emails still due to go out. But the already-sent field must not
+ * be rewritten either, because the stored copy is the only record of what was actually sent.
+ * Sequence step says exactly which is which.
+ */
+function unsentFields(step) {
+  const n = Number(step) || 0;
+  return ['email_body', 'followup_body', 'followup2_body'].slice(n);
+}
+
 (async () => {
   const rows = [];
   for (let f = 0; ; f += 1000) {
     const { data, error } = await supabase.from(TABLE)
-      .select('id, business_name, email_body, followup_body, followup2_body')
-      .eq('status', 'queued').is('last_sent_at', null)
+      .select('id, business_name, sequence_step, email_body, followup_body, followup2_body')
+      .eq('status', 'queued')
       .range(f, f + 999);
     if (error) throw new Error(error.message);
     if (!data || !data.length) break;
@@ -70,7 +85,7 @@ function stripPrice(text) {
     // leads kept quoting a retired price in the email that actually goes out first.
     const patch = {};
     let anyGutted = false;
-    for (const field of ['email_body', 'followup_body', 'followup2_body']) {
+    for (const field of unsentFields(r.sequence_step)) {
       const res = stripPrice(r[field]);
       if (!res) continue;
       if (res.tooShort) { anyGutted = true; continue; }
