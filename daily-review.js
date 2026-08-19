@@ -64,10 +64,10 @@ async function readAll(table, cols) {
 
 const CAMPAIGNS = [
   { label: 'TEMPO', sub: 'clinic scheduling', leads: 'tempo_leads', events: 'tempo_email_events', perDay: 20, sendDays: 'Mon-Fri' },
-  // perDay must track the DAILY_CAP secret (40) or the runway estimate lies. segmented=true
+  // perDay must track the DAILY_CAP secret (85) or the runway estimate lies. segmented=true
   // means new sequences only start in the industries that have replied, so the runway has to
   // count those leads and not the whole queue.
-  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 40, sendDays: 'Mon-Fri', segmented: true },
+  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri', segmented: true },
 ];
 
 /**
