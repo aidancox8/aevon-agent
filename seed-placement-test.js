@@ -19,7 +19,9 @@
  */
 require('dotenv').config();
 const { Resend } = require('resend');
-const { toHtml } = require('./sender');
+// No toHtml import. This used to send `html: toHtml(...)`, which is the exact build that was
+// quarantined as PHISHING and was removed from the sender on 2026-08-18. A seed test that
+// exercises a path the sender no longer uses proves nothing and risks the domain.
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.FROM_EMAIL;
@@ -28,6 +30,7 @@ const TO = process.argv.slice(2).filter(a => a.includes('@'));
 
 // Deliberately shaped like real outreach: same length, same register, same footer. A short
 // "test" note would be classified differently and would prove nothing.
+const FOOTER = [ '', '--', 'Aevon - Lower Mainland, BC. If you would rather not hear from me, just reply with a quick no and I will not email again.' ].join(String.fromCharCode(10));
 const SUBJECT = 'same client details, three portals';
 const BODY = `Every insurer wants the same client details in a slightly different format, so brokers end up typing the same information into three portals to place one policy.
 
@@ -51,8 +54,8 @@ Not interested? Just reply no and I won't email you again.`;
       reply_to: FROM,
       to,
       subject: SUBJECT,
-      text: BODY,
-      html: toHtml(BODY, null, null, null),
+      // Mirrors sender.js exactly: plain text only, same footer, no html part.
+      text: BODY + FOOTER,
     });
     console.log(error ? `FAILED ${to}: ${error.message}` : `sent ${to.padEnd(34)} ${data && data.id}`);
   }
