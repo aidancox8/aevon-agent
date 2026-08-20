@@ -13,6 +13,19 @@ const CASES = [
   ['send', "Either way, all the best."],           // the breakup sign-off must still ship
   ['send', "Roughly how much of a week does that eat?"],
   ['send', ''],
+
+  // False positives the first version of this guard actually produced against the live queue.
+  // Both are the recipient's own words, and both are the reason the email was worth sending.
+  ['send', 'For Miller Plumbing, an agent answers and qualifies every "Request a FREE ESTIMATE" job inquiry.'],
+  ['send', 'Point Grey keeps a busy schedule with Fear Free certified care, so appointment requests pile up.'],
+  ['send', "I build software that frees up your front desk. Worth solving?"],
+  ['send', 'Your booking page offers a free consultation, which means every enquiry needs triage.'],
+  ['send', 'Feel free to ignore this if I have guessed wrong.'],
+
+  // Still must hold: the promise, in the first person, in one sentence.
+  ['hold', "I'm building a track record and would handle that build free for you."],
+  ['hold', "I'm still taking on one more free build to round out my current set."],
+  ['hold', 'I would set up a working version for you at no cost.'],
 ];
 
 let bad = 0;

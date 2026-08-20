@@ -616,8 +616,18 @@ async function run() {
     // it on its normal run, so a hold costs a day, not a lead.
     const retired = retiredOfferReason(body);
     if (retired) {
-      console.log(`  [skip] ${lead.business_name} <${lead.email}> - copy ${retired}`);
+      console.log(`  [hold] ${lead.business_name} <${lead.email}> - copy ${retired}`);
       held++;
+      // Push it a day down the queue rather than leaving it where it is. Holds are ranked by
+      // score like everything else, so a held lead sits at the front of tomorrow's batch too
+      // and blocks the same slot every run until something rewrites it. On the first live run
+      // after this shipped, two of three slots went to the same held leads. Deferring lets the
+      // batch fill with sendable mail while regen-copy clears the copy in the background.
+      if (LIVE) {
+        await supabase.from('leads')
+          .update({ scheduled_send_at: new Date(Date.now() + 86400000).toISOString() })
+          .eq('id', lead.id);
+      }
       continue;
     }
 

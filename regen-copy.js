@@ -11,8 +11,13 @@
  * stop initial outreach for days. Here a lead always holds valid copy: either the old version
  * or the new one.
  *
- * Only touches leads that have never been sent to. A lead mid-sequence keeps the follow-ups
- * that match the email it already received.
+ * Mid-sequence leads are included, but only their UNSENT fields are rewritten. The filter here
+ * used to be `last_sent_at IS NULL`, which skipped every lead past email 1 and left their
+ * queued follow-ups frozen on whatever offer was current when they were generated. That is how
+ * 1,092 second emails kept quoting a setup fee retired seventeen days earlier, and it is why
+ * the send-time guard in lib/copy-guard.js would otherwise hold those leads permanently rather
+ * than for a day: nothing was ever going to rewrite them. The already-sent field is left alone,
+ * because the stored copy is the only record of what the recipient actually received.
  *
  *   node regen-copy.js --limit 50      rewrite the 50 highest-scoring
  *   node regen-copy.js --limit 50 --dry   generate and print, save nothing
@@ -21,6 +26,8 @@ require('dotenv').config();
 const supabase = require('./lib/supabase');
 const { createGenerate } = require('./lib/gemini');
 const { scrapeContext } = require('./lib/contact-finder');
+const { retiredOfferReason } = require('./lib/copy-guard');
+const { applyAsk } = require('./lib/offer');
 // Either campaign. Their buildPrompt signatures differ slightly (Tempo takes a usesJane
 // flag), so the call is normalised below rather than duplicating this whole script.
 const TABLE = (() => {
@@ -113,9 +120,8 @@ const opensWithUs = b => {
 (async () => {
   const { data: pool, error } = await supabase
     .from(TABLE)
-    .select('id, business_name, industry, city, website, email, contact_name, contact_role, qualification_score, lead_insights, email_body')
+    .select('id, business_name, industry, city, website, email, contact_name, contact_role, qualification_score, lead_insights, email_body, followup_body, followup2_body, sequence_step')
     .eq('status', 'queued')
-    .is('last_sent_at', null)
     .not('email', 'is', null)
     .not('email_subject', 'is', null)
     // Must match the sender's initial-pick order exactly (sender.js: score desc, then
@@ -135,11 +141,20 @@ const opensWithUs = b => {
   // makes this safe to re-run: each pass picks up where the last stopped, with no marker
   // column and no risk of paying for the same lead twice. Leads whose opener was already
   // fine are left alone.
-  const leads = pool.filter(l => opensWithUs(l.email_body)).slice(0, LIMIT);
+  // Two defects qualify. The opener one is cosmetic. The second is not: lib/copy-guard.js
+  // refuses at send time to ship copy that contradicts the current offer, and this script is
+  // the only thing that can clear that. If a held lead is not eligible here it is held
+  // forever, silently, which is worse than sending the stale copy would have been.
+  const BODY = ['email_body', 'followup_body', 'followup2_body'];
+  const dueBody = l => l[BODY[Number(l.sequence_step) || 0]];
+  const isStaleOffer = l => TABLE === 'leads'
+    && !!retiredOfferReason(applyAsk(dueBody(l) || '', 'aevon', Number(l.sequence_step) || 0, l.id));
+
+  const leads = pool.filter(l => opensWithUs(l.email_body) || isStaleOffer(l)).slice(0, LIMIT);
   if (!leads.length) { console.log(`Nothing stale in the top ${pool.length} by score. Done.`); return; }
 
   const staleBefore = leads.length;
-  console.log(`${DRY ? 'DRY RUN: ' : ''}regenerating ${leads.length} lead(s) whose copy opens with the sender.\n`);
+  console.log(`${DRY ? 'DRY RUN: ' : ''}regenerating ${leads.length} lead(s): ${leads.length - leads.filter(isStaleOffer).length} opening with the sender, ${leads.filter(isStaleOffer).length} contradicting the current offer.\n`);
 
   let ok = 0, failed = 0, fixed = 0;
   for (const [i, lead] of leads.entries()) {
@@ -161,20 +176,38 @@ const opensWithUs = b => {
       const nowClean = !opensWithUs(content.email_body);
       if (wasStale && nowClean) fixed++;
 
-      if (DRY) { console.log(`ok ${nowClean ? '' : '(still opens with sender)'}`); ok++; continue; }
+      if (DRY) {
+        console.log(`ok ${nowClean ? '' : '(still opens with sender)'}`);
+        if (process.argv.includes('--show')) {
+          const rendered = applyAsk(content.email_body, 'aevon', 0, lead.id);
+          console.log('    SUBJECT: ' + content.email_subject);
+          console.log('    ' + rendered);
+          console.log('    GUARD: ' + (retiredOfferReason(rendered) || 'clean') + ' | has token: ' + content.email_body.includes('{{ASK}}'));
+        }
+        ok++; continue;
+      }
 
       // scheduled_send_at is deliberately left alone: these leads already hold a slot in the
       // queue and rescheduling them would reshuffle send order for no reason.
-      const { error: upErr } = await supabase.from(TABLE).update({
-        email_subject: noDash(content.email_subject),
-        email_body: noDash(content.email_body),
-        followup_subject: noDash(content.followup_subject),
-        followup_body: noDash(content.followup_body),
-        followup2_subject: noDash(content.followup2_subject) || null,
-        followup2_body: noDash(content.followup2_body) || null,
+      // Write only what has not gone out yet. Overwriting a sent email would destroy the one
+      // record of what the recipient read, and would make any later reply unreadable.
+      const step = Number(lead.sequence_step) || 0;
+      const patch = {
         lead_insights: content.lead_insights || null,
         personalization_basis: content.personalization_basis || null,
-      }).eq('id', lead.id);
+      };
+      if (step < 1) {
+        patch.email_subject = noDash(content.email_subject);
+        patch.email_body = noDash(content.email_body);
+      }
+      if (step < 2) {
+        patch.followup_subject = noDash(content.followup_subject);
+        patch.followup_body = noDash(content.followup_body);
+      }
+      patch.followup2_subject = noDash(content.followup2_subject) || null;
+      patch.followup2_body = noDash(content.followup2_body) || null;
+
+      const { error: upErr } = await supabase.from(TABLE).update(patch).eq('id', lead.id);
       if (upErr) throw new Error(upErr.message);
       console.log(`ok ${nowClean ? '' : '(still opens with sender)'}`);
       ok++;

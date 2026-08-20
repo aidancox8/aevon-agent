@@ -20,6 +20,8 @@ const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
 const { classifyVisits } = require('./lib/visit-quality');
 const { isWorthSending, isActiveSegment } = require('./lib/segments');
 const { autoresponderReason } = require('./reply-processor');
+const { retiredOfferReason } = require('./lib/copy-guard');
+const { applyAsk } = require('./lib/offer');
 
 /**
  * Was this 'replied' event written by a person?
@@ -67,7 +69,7 @@ const CAMPAIGNS = [
   // perDay must track the DAILY_CAP secret (85) or the runway estimate lies. segmented=true
   // means new sequences only start in the industries that have replied, so the runway has to
   // count those leads and not the whole queue.
-  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri', segmented: true },
+  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri', segmented: true, campaign: 'aevon' },
 ];
 
 /**
@@ -80,29 +82,45 @@ const CAMPAIGNS = [
  * after someone happens to read a sent email.
  */
 async function auditQueuedCopy(c, warnings) {
-  const rows = await readAll(c.leads, 'status,email,email_body,last_sent_at');
-  const queued = rows.filter(l => l.status === 'queued' && l.email && !l.last_sent_at && l.email_body);
+  const rows = await readAll(c.leads, 'status,email,sequence_step,email_body,followup_body,followup2_body');
+
+  // Audit the field that is ACTUALLY due to send, not email_body on never-sent leads.
+  //
+  // The previous version filtered on `!last_sent_at`, so it only ever inspected the first
+  // email of leads that had never been contacted. Every queued follow-up was invisible to it.
+  // That is how 1,092 second emails quoting the $1,500 fee retired on 3 August sat in the
+  // queue for seventeen days while this line reported "100% carry the live offer token" every
+  // morning. The same filter bug was in strip-price.js. A metric that cannot see two thirds of
+  // the queue is worse than no metric, because it reads as reassurance.
+  const BODY = ['email_body', 'followup_body', 'followup2_body'];
+  const queued = rows
+    .filter(l => l.status === 'queued' && l.email)
+    .map(l => ({ ...l, due: l[BODY[Number(l.sequence_step) || 0]] }))
+    .filter(l => l.due && String(l.due).trim());
   if (queued.length < 20) return;
 
-  // Only OUR retired prices. Matching any dollar figure flagged an email that quoted the
-  // prospect's own pricing back to them, which is personalization working, not a defect.
-  const priced   = queued.filter(l => /\$\s?1,?500\b|\$\s?150\b|150\s*\/\s*mo/i.test(l.email_body));
-  const demo     = queued.filter(l => /90[- ]?second demo|\bwatch a demo\b|reply with ['"]?yes/i.test(l.email_body));
-  const untokened = queued.filter(l => !l.email_body.includes('{{ASK}}'));
+  // One definition of "contradicts the current offer", shared with the send-time guard, so
+  // the report and the sender can never disagree about what is stale. Aevon only: Tempo's
+  // offer IS a free two-week pilot and is current, so the guard would flag all of it.
+  const stale = c.campaign !== 'aevon' ? [] : queued
+    .map(l => ({ l, why: retiredOfferReason(applyAsk(l.due, c.campaign, Number(l.sequence_step) || 0, 'audit')) }))
+    .filter(x => x.why);
+
+  const step0 = queued.filter(l => (Number(l.sequence_step) || 0) === 0);
+  const untokened = step0.filter(l => !String(l.due).includes('{{ASK}}'));
 
   const pctOf = n => `${((n / queued.length) * 100).toFixed(0)}%`;
-  console.log(`   queue copy  ${queued.length} unsent · ${pctOf(queued.length - untokened.length)} carry the live offer token`);
+  console.log(`   queue copy  ${queued.length} due to send · ${stale.length} held as stale · ${step0.length - untokened.length}/${step0.length} first emails carry {{ASK}}`);
 
-  if (priced.length) {
-    warnings.push(`${c.label}: ${priced.length} queued email(s) quote a price (${pctOf(priced.length)}). The offer is free work, so these contradict it. Run strip-price.js.`);
-  }
-  if (demo.length) {
-    warnings.push(`${c.label}: ${demo.length} queued email(s) still ask people to watch a demo (${pctOf(demo.length)}), which is not the current offer. Run swap-ask.js.`);
+  if (stale.length) {
+    const byWhy = stale.reduce((a, x) => { a[x.why] = (a[x.why] || 0) + 1; return a; }, {});
+    const detail = Object.entries(byWhy).map(([w, n]) => `${n} ${w}`).join(', ');
+    warnings.push(`${c.label}: ${stale.length} queued email(s) (${pctOf(stale.length)}) contradict the current offer and will be HELD at send time, not sent: ${detail}. They clear when regen-copy rewrites them.`);
   }
   // A large untokenized share means new copy is being written with the offer baked in again,
   // which is exactly how the queue drifted from the offer in the first place.
-  if (untokened.length > queued.length * 0.2) {
-    warnings.push(`${c.label}: ${untokened.length} queued email(s) (${pctOf(untokened.length)}) have no {{ASK}} token, so they will not pick up an offer change. Run tokenize-asks.js.`);
+  if (untokened.length > step0.length * 0.2) {
+    warnings.push(`${c.label}: ${untokened.length} first email(s) (${((untokened.length / step0.length) * 100).toFixed(0)}%) have no {{ASK}} token, so they will not pick up an offer change. Run tokenize-asks.js.`);
   }
 }
 
