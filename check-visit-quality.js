@@ -87,6 +87,36 @@ CASES.push({
   expect: 'weak',
 });
 
+// Madison Eyes, the highest-scoring lead on the entire warm list: 24 clicks over 9 days from 8
+// device shapes, every other signal saying warm prospect, and an hourly gap sequence.
+const ANDROID7 = 'Mozilla/5.0 (Linux; Android 7.0; SM-G930V) AppleWebKit/537.36 Chrome/59.0.3071.125 Mobile Safari/537.36';
+const hourly = [0, 63, 124, 185, 246].map(m => click(new Date(Date.parse(t(1, 18)) + m * 60000).toISOString()));
+CASES.push({
+  label: 'hourly polling loop dressed as an engaged prospect',
+  visits: hourly,
+  sends: [t(1, 18)],
+  expect: 'scanner',
+});
+CASES.push({
+  label: 'two different browsers clicking in the same second',
+  visits: [click(t(2, 14)), click(t(2, 14), IPHONE), click(t(4, 16))],
+  sends: [t(1, 9)],
+  expect: 'scanner',
+});
+CASES.push({
+  label: 'four different browser builds on one small business',
+  visits: [click(t(2, 14)), click(t(3, 16), IPHONE), click(t(5, 11), ANDROID7),
+           click(t(6, 13), 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0')],
+  sends: [t(1, 9)],
+  expect: 'scanner',
+});
+CASES.push({
+  label: 'three clicks on irregular human timing stay human',
+  visits: [click(t(2, 14)), click(t(4, 10), IPHONE), click(t(9, 16))],
+  sends: [t(1, 9)],
+  expect: 'probable',
+});
+
 let bad = 0;
 for (const c of CASES) {
   const cls = classifyVisits(c.visits, c.sends, c.batchKeys);

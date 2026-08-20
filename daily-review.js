@@ -176,6 +176,10 @@ async function review(c, warnings) {
   const batchKeys = batchClickKeys(clickEvents);
   const humanVisitors = Object.entries(visitsByLead)
     .filter(([id, vs]) => classifyVisits(vs, sendAnchors[id], batchKeys).human);
+  // A single click hours after a send is equally consistent with a delayed sandbox detonation,
+  // so it is counted apart from the ones with corroborating evidence rather than summed in.
+  const confirmed = humanVisitors
+    .filter(([id, vs]) => visitTier(classifyVisits(vs, sendAnchors[id], batchKeys)) !== 'weak');
 
   console.log(`\n── ${c.label}  (${c.sub}) ${'─'.repeat(Math.max(0, 34 - c.sub.length))}`);
   console.log(`   list        ${leads.length} leads · ${withEmail.length} with email · ${leads.length - withEmail.length} without`);
@@ -208,7 +212,7 @@ async function review(c, warnings) {
     const tracked = nDeliv > 0 || nBounce > 0;
     console.log(`   lifetime    sent ${nSent} · delivered ${tracked ? pct(nDeliv, nSent) : 'not tracked'}` +
                 ` · bounced ${tracked ? pct(nBounce, nSent) : 'not tracked'}` +
-                ` · real visitors ${humanVisitors.length} of ${Object.keys(visitsByLead).length} (rest are mail scanners)` +
+                ` · visitors ${confirmed.length} confirmed + ${humanVisitors.length - confirmed.length} single-click of ${Object.keys(visitsByLead).length} (rest are mail scanners)` +
                 ` · replied ${pct(nReply, nSent)} (${nReply} human${nAutoReply ? `, ${nAutoReply} auto` : ''})`);
     if (!tracked && nSent >= 10) {
       warnings.push(`${c.label}: ${nSent} sends with no delivery or bounce events recorded — deliverability is unmonitored, so a blocked domain would look identical to a healthy one.`);
