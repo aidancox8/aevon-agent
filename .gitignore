@@ -13,3 +13,4 @@ intake-log.*.jsonl
 *.tmp.html
 sr.html
 rl.html
+.mx-cache.json
