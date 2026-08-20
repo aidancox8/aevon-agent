@@ -58,6 +58,27 @@ async function notifyBounceHalt(pct, sentN, bounceN) {
 const FOLLOWUP_MAX_SHARE = 0.4;
 const DEMO_URL = 'https://clinic-scheduler-demo.web.app';
 
+/**
+ * Tag the demo link with ?ref=<leadId> in the PLAIN TEXT body.
+ *
+ * Attribution used to live in the HTML builder, which the plain-text fix on 2026-08-18 stopped
+ * calling. Since then every Tempo send has gone out with a bare, untagged demo link, so 566
+ * queued follow-ups point at the demo with no way to tell who opened it. Tempo already has no
+ * open or click data at all, and this removed the last signal it had.
+ *
+ * Writing the ?ref= into the VISIBLE url is what makes this safe in plain text. The phishing
+ * quarantine was caused by anchor text that disagreed with its href; here there is no anchor,
+ * the reader sees exactly the address they will land on, and the two cannot diverge.
+ */
+function tagDemoLink(text, leadId) {
+  if (!text || !leadId) return text;
+  const HOSTS = /(clinic-scheduler-demo|allied-scheduler-demo)\.web\.app(\/?)([?&]ref=\S*)?/gi;
+  return String(text).replace(HOSTS, function (m, host, slash, existing) {
+    return existing ? m : host + '.web.app/?ref=' + leadId;
+  });
+}
+
+
 // ── shared guards (same logic as the Aevon sender) ──────────────────────────
 
 const mxCache = new Map();
@@ -300,6 +321,8 @@ async function run() {
   });
 
 
+
+
   console.log(`${LIVE ? 'Sending' : 'Would send'} ${due.length} email(s) — ${pickedFollowups.length} follow-up, ${due.length - pickedFollowups.length} new | ${sentToday || 0}/${DAILY_CAP} sent today.\n`);
 
   let sent = 0, failed = 0;
@@ -310,7 +333,7 @@ async function run() {
     // The offer is applied at send time, not baked in when the copy was written. See
     // lib/offer.js: stored copy outlives decisions, so an offer change used to require
     // regenerating thousands of emails and in practice simply never reached the queue.
-    if (body) body = applyAsk(body, 'tempo', step, lead.id);
+    if (body) body = tagDemoLink(applyAsk(body, 'tempo', step, lead.id), lead.id);
     if (!subject || !body) {
       if (step >= 1 && LIVE) await supabase.from(TABLE).update({ status: 'dont_contact', scheduled_send_at: null }).eq('id', lead.id);
       continue;
@@ -407,4 +430,4 @@ if (require.main === module) {
   run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
 }
 
-module.exports = { toHtml, isBCHoliday, getVancouverDate };
+module.exports = { toHtml, isBCHoliday, getVancouverDate, tagDemoLink };
