@@ -17,7 +17,7 @@
  */
 const supabase = require('./lib/supabase');
 const { isBCHoliday, getVancouverDate } = require('./tempo/sender');
-const { classifyVisits } = require('./lib/visit-quality');
+const { classifyVisits, visitTier, batchClickKeys } = require('./lib/visit-quality');
 const { isWorthSending, isActiveSegment } = require('./lib/segments');
 const { autoresponderReason } = require('./reply-processor');
 const { retiredOfferReason } = require('./lib/copy-guard');
@@ -158,18 +158,24 @@ async function review(c, warnings) {
   // interest and, worse, would put businesses on a warm list who never looked at anything.
   const visitsByLead = {};
   clickEvents.forEach(e => { (visitsByLead[e.lead_id] = visitsByLead[e.lead_id] || []).push(e); });
+  // Anchor on delivery as well as send. A scanner fires when the message lands, not when we
+  // hand it to the provider, so on a greylisted or queued message the 'sent' timestamp alone
+  // makes a scan look like a click an hour later.
   const sentByLead = {};
   events.filter(e => e.event_type === 'sent').forEach(e => {
     (sentByLead[e.lead_id] = sentByLead[e.lead_id] || []).push(e.created_at);
   });
-  const firstSentByLead = {};
-  events.filter(e => e.event_type === 'sent').forEach(e => {
-    if (!firstSentByLead[e.lead_id] || e.created_at < firstSentByLead[e.lead_id]) {
-      firstSentByLead[e.lead_id] = e.created_at;
-    }
+  const sendAnchors = {};
+  events.filter(e => e.event_type === 'sent' || e.event_type === 'delivered').forEach(e => {
+    (sendAnchors[e.lead_id] = sendAnchors[e.lead_id] || []).push(e.created_at);
   });
+  // Pass EVERY send, not the first one. Measuring against the first email made a scan of the
+  // third look like a return visit two weeks later, which put 14 scanners on the warm list.
+  // Clicks that belong to a cross-lead burst are machine traffic no matter how they look
+  // against their own send. Recorded bursts reach 15 unrelated leads in one 15-minute window.
+  const batchKeys = batchClickKeys(clickEvents);
   const humanVisitors = Object.entries(visitsByLead)
-    .filter(([id, vs]) => classifyVisits(vs, firstSentByLead[id]).human);
+    .filter(([id, vs]) => classifyVisits(vs, sendAnchors[id], batchKeys).human);
 
   console.log(`\n── ${c.label}  (${c.sub}) ${'─'.repeat(Math.max(0, 34 - c.sub.length))}`);
   console.log(`   list        ${leads.length} leads · ${withEmail.length} with email · ${leads.length - withEmail.length} without`);
@@ -270,10 +276,12 @@ async function review(c, warnings) {
   // because they are the ones that need a decision rather than patience.
   const byId = Object.fromEntries(leads.filter(l => l.id).map(l => [l.id, l]));
   const warm = humanVisitors
-    .map(([id, vs]) => ({ lead: byId[id], cls: classifyVisits(vs, firstSentByLead[id]),
+    .map(([id, vs]) => ({ lead: byId[id], cls: classifyVisits(vs, sendAnchors[id], batchKeys),
                           last: vs.map(v => v.created_at).sort().slice(-1)[0] }))
     .filter(w => w.lead)
-    .sort((a, b) => String(b.last).localeCompare(String(a.last)));
+    // Strongest evidence first. Sorting by recency put a lead with one unconfirmable click
+    // above one who came back on nine separate days.
+    .sort((a, b) => (b.cls.offWindow - a.cls.offWindow) || String(b.last).localeCompare(String(a.last)));
 
   // "Nobody will contact them again" stops being true the moment somebody does. Nine of these
   // were emailed by hand on 2026-08-09, outside the queue, which left their status and
@@ -290,7 +298,7 @@ async function review(c, warnings) {
     warm.slice(0, 5).forEach(w => {
       const done = w.lead.status === 'dont_contact' || w.lead.sequence_step >= 3;
       console.log(`               ${done ? '!' : ' '} ${String(w.lead.business_name || '').slice(0, 34).padEnd(36)}`
-        + `${String(w.last).slice(0, 10)}  ${w.cls.reasons.join('; ')}`);
+        + `${String(w.last).slice(0, 10)}  [${visitTier(w.cls)}] ${w.cls.reasons.join('; ')}`);
     });
   }
   if (finished.length) {
