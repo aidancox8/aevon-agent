@@ -30,7 +30,7 @@ const FILE = process.argv[2];
 
 /** Regulated verticals. A workforce whose people cannot legally work on an expired ticket. */
 const VERTICALS = ['health', 'trades', 'transport', 'childcare', 'security', 'food', 'lab',
-  'education', 'manufacturing'];
+  'education', 'manufacturing', 'property'];
 
 const SIGNAL_TYPES = ['hiring_credentialing', 'hiring_compliance', 'manual_tracking', 'tool_gap'];
 
