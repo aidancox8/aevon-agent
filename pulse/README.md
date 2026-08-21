@@ -71,3 +71,65 @@ Avoid searching "credentialing" on its own: it returns regulators and staffing a
 ## Status
 
 8 leads ingested 2026-08-21. No copy written, nothing sent. Addresses still needed.
+
+
+## Sourcing notes, learned the hard way
+
+**Where the signal exists at all.** The method finds nothing in healthcare or property management.
+Two separate agents swept both and returned almost nothing, for the same structural reason:
+individuals hold their own licences there, so employers publish them as a REQUIREMENT ON THE
+APPLICANT, never as internal tracking work. The signal only appears where the EMPLOYER is
+accountable for the workforce's tickets. That means trades, manufacturing, transport, security,
+social services, food processing and aviation maintenance.
+
+**The highest-yield phrase is "training matrix".** By a wide margin, across every province and the
+US. It is an artifact with a name inside these companies, and someone is paid to keep it current.
+Runners-up: "certification tracking", "certification expiry", "recertification tracking",
+"maintain training records", "employee certifications", "driver qualification files".
+
+**Indeed caps results.** It blocks pagination past page one without a login, so every query only
+ever surfaced ~15 results. That is a ceiling on the search, not on the market.
+**SimplyHired.ca honours exact-phrase search AND paginates**, so it reaches deeper.
+
+**Indeed job ids are verifiable.** An agent claimed a fabricated `viewjob?jk=` id returns plausible
+content rather than a 404, which would have made 28 leads uncheckable. Tested: two invented ids
+both returned a clean 404, and re-fetching real ones returned the exact quoted sentences. The
+claim was wrong. Cite `viewjob` links freely, but only ones actually fetched.
+
+## Where published personal emails actually come from
+
+Four found across roughly 35 companies researched. Not one came from an About or Team page.
+
+| Source | Find |
+|---|---|
+| Industry association member directory | `nathan@mjroofing.net` (Canadian Roofing Contractors Association) |
+| Industry association directory **PDF** | `gabe@northmountainconstruction.ca` (Roofing Contractors Association of BC, stable across three annual editions) |
+| Industry association member directory | `tkeith@heartlandcoatings.ca` (Canadian Council for Indigenous Business) |
+| **Parliamentary committee brief** | `yeti@advancepaperbox.ca` (signature block on a House of Commons trade submission) |
+| Company contact page with per-person mailtos | `laura.kleiner@agwest.com` (rare) |
+
+So: **search association directories and government submissions, not company websites.**
+
+**Never construct an address from an observed pattern.** Several companies publish
+firstname.lastname or first-initial-surname openly, which makes guessing tempting. A guessed
+address that bounces costs sending-domain reputation this campaign has none of to spare.
+
+## Verify the human, not just the company
+
+Three findings that would each have produced a bad send:
+
+- An earlier draft was addressed to `aliiqbal@ebco.com`. That address is published nowhere and
+  **Ali Iqbal has left the company.**
+- **Garibaldi Glass's owner and President died in January 2026.** Their Director of People and
+  Culture seat is also vacant or newly filled.
+- AgWest's contact was stale; their published CEO is someone else entirely.
+
+Check that the person still holds the role before writing to them, especially where the source is
+an aggregator rather than the company's own current page.
+
+## Disqualify on parent company
+
+Four leads died on this and every one looked fine on the list. Guardteck sits under a 3,500-staff
+parent already running Dayforce. Hansen Industries and Alliance Maintenance are both Exchange
+Income Corporation. Five Corners centralises HR at Donald's Fine Foods. If HR is decided upstairs,
+the person named in the job ad cannot buy.
