@@ -1,0 +1,90 @@
+[
+  {
+    "business_name": "Kootenay Co-op",
+    "city": "Nelson BC",
+    "industry": "food",
+    "source": "jobbank",
+    "signal_type": "hiring_credentialing",
+    "signal_quote": "Coordinate training programs and track certifications",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+certifications%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "HR Advisor posting. Grocery co-op, food-handling certification across a large hourly workforce."
+  },
+  {
+    "business_name": "Black Tusk Fire & Security Inc.",
+    "city": "Burnaby BC",
+    "industry": "security",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Human Resources Coordinator, hiring simultaneously in Burnaby and Squamish. Fire and security workforce: every guard needs a BC security worker licence and fire techs carry separate tickets.",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+certifications%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "Appeared in BOTH the Job Bank and Indeed searches, hiring in two cities at once. Licensed workforce across multiple sites is the exact shape."
+  },
+  {
+    "business_name": "Guardteck Security",
+    "city": "Burnaby BC",
+    "industry": "security",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Operations Coordinator: incident report tracking and escalation, uniform issuance and return tracking",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+certifications%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "Security guards all hold BC security worker licences. Already tracking issuance and returns by hand."
+  },
+  {
+    "business_name": "Interior Plumbing & Heating Ltd.",
+    "city": "Kamloops BC",
+    "industry": "trades",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "The Safety & Quality Coordinator promotes a safe work environment across all IPH operations by supporting compliance with safety regulations",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+licences%22+OR+%22expiry+dates%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "Plumbing and gas tickets, plus WHMIS and first aid. Hiring a dedicated coordinator means the budget already exists."
+  },
+  {
+    "business_name": "VanMar Constructors Inc.",
+    "city": "Lower Mainland BC",
+    "industry": "trades",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Safety Coordinator, 3+ years of construction health and safety experience. COR and WorkSafeBC compliance across sites.",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+licences%22+OR+%22expiry+dates%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "COR certification requires documented training records per worker."
+  },
+  {
+    "business_name": "Five Corners Meat Company Ltd.",
+    "city": "Chilliwack BC",
+    "industry": "food",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Monitor and enforce compliance with WHMIS, lockout/tagout, and confined space entry programs",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+licences%22+OR+%22expiry+dates%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "Three named training programs, each with its own renewal cycle, on a food-production floor."
+  },
+  {
+    "business_name": "Global Rigging and Transport",
+    "city": "Surrey BC",
+    "industry": "transport",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Safety Officer posting. Rigging and heavy transport: Class 1 licences, air brake endorsements, driver medicals and rigging tickets, each on a different renewal cycle.",
+    "signal_url": "https://www.jobbank.gc.ca/jobsearch/jobsearch?searchstring=%22certification+tracking%22",
+    "signal_date": "2026-08-21",
+    "notes": "Deskless workforce, which is where the email-and-Teams channels fail and SMS matters."
+  },
+  {
+    "business_name": "North Mountain Construction",
+    "city": "Nelson BC",
+    "industry": "trades",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Ensure compliance with WorkSafeBC regulations and COR requirements. Valid Class 5 Driver's License.",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22track+licences%22+OR+%22expiry+dates%22&l=British+Columbia",
+    "signal_date": "2026-08-21",
+    "notes": "COR audit requires per-worker training records be produced on demand."
+  }
+]
