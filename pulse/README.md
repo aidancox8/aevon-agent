@@ -133,3 +133,42 @@ Four leads died on this and every one looked fine on the list. Guardteck sits un
 parent already running Dayforce. Hansen Industries and Alliance Maintenance are both Exchange
 Income Corporation. Five Corners centralises HR at Donald's Fine Foods. If HR is decided upstairs,
 the person named in the job ad cannot buy.
+
+
+## How big is this actually? (measured 2026-08-21)
+
+SimplyHired.ca reports true result totals for exact-phrase queries, so the pool can be measured
+rather than guessed. For the single phrase `"training matrix"`:
+
+| Scope | Live postings |
+|---|---|
+| Ontario | 59 |
+| British Columbia | 13 |
+| **Canada-wide** | **156** |
+
+That is ONE phrase, at ONE moment, and postings expire and refresh continuously. Across the ten
+or so productive phrases the live Canadian pool is plausibly several hundred at any time, and it
+replenishes. This is not a list that gets exhausted; it is a standing stream.
+
+**Channel notes:**
+- **SimplyHired.ca** honours `?q=%22phrase%22&l=ontario` and reports totals. Its `&pn=2` parameter
+  does NOT advance the page, so each query still caps at ~20 visible. Get past that by slicing on
+  location (`l=ontario`, `l=british+columbia`, `l=canada` return different sets) and by using many
+  distinct phrases rather than paginating one.
+- **Eluta.ca** honours phrases and indexes employer career pages directly, so it is a second,
+  non-overlapping corpus.
+- **Dead:** DuckDuckGo, Mojeek and Bing are CAPTCHA-blocked to automated fetching. Job Bank and
+  Talent.com ignore quotes entirely and are not worth further effort.
+
+**Phrases that produced qualifying employers:** "training matrix", "maintain training records",
+"employee training records", "certification expiries", "competency tracking", "certifications are
+up to date", "staff certifications", "driver qualification files".
+
+**Dead-end phrases, do not repeat:** "expiring certifications" (0 results), "certificates and
+tickets" (0), "certifications on file" (2, both personal trainers), "training tracker" (3),
+"licenses and certifications" + track (54 but nearly all IT consultancy roles).
+
+**A trap worth naming.** Several strong-looking hits are about *product or vehicle* certification,
+not employee credentials. DECAST, Storkcraft, The North Transportation and Trans-Northern
+Pipelines all read as qualifying from the search snippet and fail once the posting is opened.
+Every hit needs the individual posting fetched before it counts.
