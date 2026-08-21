@@ -1,0 +1,54 @@
+[
+  {
+    "business_name": "Pacific Coast Community Resources Inc.",
+    "website": "https://pccri.com",
+    "city": "Port Coquitlam BC",
+    "industry": "childcare",
+    "source": "jobbank",
+    "signal_type": "manual_tracking",
+    "signal_quote": "Maintains employee records; including auditing employee files and sends out correspondence to managers, leadership and employees as to any upcoming expiry dates",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22upcoming+expiry+dates%22&l=British+Columbia",
+    "signal_date": "2026-08-20",
+    "staff_estimate": 600,
+    "notes": "Community living and child/youth services. Three concurrent HR postings built around credential recordkeeping; a second one reads 'Track and record timely updates for mandatory trainings and certifications.' This quote describes the manual audit-and-email process in full."
+  },
+  {
+    "business_name": "Spirit of the Children Society",
+    "website": "https://sotcs.ca",
+    "city": "New Westminster BC",
+    "industry": "childcare",
+    "source": "jobbank",
+    "signal_type": "hiring_credentialing",
+    "signal_quote": "Track staff training and certification requirements (e.g., First Aid, FoodSafe, confidentiality training).",
+    "signal_url": "https://bebee.com/ca/jobs/part-time-bookkeeper-hr-assistant-spirit-of-the-children-society-new-westminster-bc--t7xk-773201909",
+    "signal_date": "2026-07-23",
+    "staff_estimate": 30,
+    "notes": "Indigenous child and family services agency. Credential tracking bolted onto a PART-TIME BOOKKEEPER role, which says there is no system at all."
+  },
+  {
+    "business_name": "Spectrum Society for Community Living",
+    "website": "https://www.spectrumsociety.org",
+    "city": "Vancouver BC",
+    "industry": "childcare",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "process hiring-related paperwork; references, requirements of employment (criminal record search, first aid certificate, orientation training and online training)",
+    "signal_url": "https://www.canadajobs.works/job/spectrum-society-for-community-living-26-34-human-resources-assistant",
+    "signal_date": "2026-08-16",
+    "staff_estimate": 250,
+    "notes": "HR Assistant handling record checks and first aid certificates for a large casual support workforce."
+  },
+  {
+    "business_name": "Taproot Community Support Services Ltd.",
+    "website": "https://taproot.ca",
+    "city": "Langley BC",
+    "industry": "childcare",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Supporting HUB registration and caregiver file setup.",
+    "signal_url": "https://ca.indeed.com/jobs?q=%22employee+file+setup%22+OR+%22HUB+registration%22&l=British+Columbia",
+    "signal_date": "2026-08-20",
+    "staff_estimate": 400,
+    "notes": "Formerly WJS Canada. Multi-site BC social services employer hiring admin staff for MCFD HUB clearance registration and caregiver file setup."
+  }
+]

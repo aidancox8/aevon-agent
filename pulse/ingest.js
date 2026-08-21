@@ -29,7 +29,8 @@ const DRY = process.argv.includes('--dry');
 const FILE = process.argv[2];
 
 /** Regulated verticals. A workforce whose people cannot legally work on an expired ticket. */
-const VERTICALS = ['health', 'trades', 'transport', 'childcare', 'security', 'food', 'lab', 'education'];
+const VERTICALS = ['health', 'trades', 'transport', 'childcare', 'security', 'food', 'lab',
+  'education', 'manufacturing'];
 
 const SIGNAL_TYPES = ['hiring_credentialing', 'hiring_compliance', 'manual_tracking', 'tool_gap'];
 
@@ -89,13 +90,23 @@ function validate(lead, i) {
     if (problems.length === leads.length) process.exit(1);
   }
 
+  /**
+   * Normalise before comparing. Different agents return the same company with and without its
+   * legal suffix ("Pacific Coast Community Resources" vs "... Inc."), which an exact-match
+   * check treats as two companies and duplicates into the list.
+   */
+  const norm = n => String(n).toLowerCase()
+    .replace(/[.,]/g, ' ')
+    .replace(/(inc|ltd|limited|corp|corporation|co|company|society|group|holdings)/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+
   const { data: existing } = await supabase.from(TABLE).select('business_name');
-  const have = new Set((existing || []).map(r => String(r.business_name).trim().toLowerCase()));
+  const have = new Set((existing || []).map(r => norm(r.business_name)));
 
   let added = 0, skipped = 0;
   for (const [i, lead] of leads.entries()) {
     if (validate(lead, i)) continue;
-    const key = String(lead.business_name).trim().toLowerCase();
+    const key = norm(lead.business_name);
     if (have.has(key)) { skipped++; continue; }
 
     const row = {

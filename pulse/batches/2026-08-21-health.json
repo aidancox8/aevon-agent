@@ -1,0 +1,39 @@
+[
+  {
+    "business_name": "PhysioCare At Home",
+    "city": "Langley BC",
+    "industry": "health",
+    "source": "jobbank",
+    "signal_type": "hiring_credentialing",
+    "signal_quote": "Track professional registrations, licenses, insurance renewals, and other required documentation",
+    "signal_url": "https://ca.indeed.com/viewjob?jk=bd571b09628574d9",
+    "signal_date": "2026-08-20",
+    "staff_estimate": 60,
+    "notes": "Mobile physiotherapy. Clinical Operations Manager tracking therapist registrations and licence renewals across a DISTRIBUTED clinician network, which is the deskless case where email and Teams both fail."
+  },
+  {
+    "business_name": "Union Gospel Mission",
+    "website": "https://ugm.ca",
+    "city": "Vancouver BC",
+    "industry": "health",
+    "source": "jobbank",
+    "signal_type": "hiring_compliance",
+    "signal_quote": "Maintain accurate records of training attendance, certifications, orientations, inspections, preventive maintenance logs, investigations, and corrective actions",
+    "signal_url": "https://ca.indeed.com/viewjob?jk=4c618365f37f10ed",
+    "signal_date": "2026-08-20",
+    "staff_estimate": 250,
+    "notes": "Addiction recovery and health services. Same posting also asks them to coordinate naloxone training and monitor refresher requirements. Seven record types on one coordinator."
+  },
+  {
+    "business_name": "Footbridge Centre for Integrated Orthopaedic Care",
+    "city": "Vancouver BC",
+    "industry": "health",
+    "source": "jobbank",
+    "signal_type": "hiring_credentialing",
+    "signal_quote": "IME Coordinator will communicate directly with clients, regarding appointment scheduling, physician CV's/credentialing along with appointment changes, and fee schedule approvals.",
+    "signal_url": "https://ca.indeed.com/viewjob?jk=c5485ec4e7a8adcc",
+    "signal_date": "2026-08-20",
+    "staff_estimate": 40,
+    "notes": "Private orthopaedic clinic. Physician credentialing packets handled manually by a coordinator alongside scheduling and billing."
+  }
+]
