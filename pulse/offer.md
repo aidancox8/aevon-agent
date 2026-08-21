@@ -1,3 +1,16 @@
+# SUPERSEDED 2026-08-21 by drafts-v2.md
+
+**Do not send anything from this file.** Two reasons:
+
+1. Every draft here failed the cold email research: no greeting, subject lines too long,
+   bodies 78-91 words against a 25-50 ideal, and no signature. See `drafts-v2.md`.
+2. **Draft 2 was addressed to `aliiqbal@ebco.com`. That address is not published on any Ebco
+   page and Ali Iqbal has left the company.** It would have bounced or reached a stranger.
+
+Kept only as a record of the reasoning, which is still in the header below.
+
+---
+
 # Pulse: what the email says
 
 Written 2026-08-21. Six hand-written first emails for the leads that have a verified address,
