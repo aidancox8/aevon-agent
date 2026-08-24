@@ -70,12 +70,45 @@ const PHRASES = [
   'training compliance',
 ];
 
-const LOCATIONS = ['ontario', 'british columbia', 'alberta', 'quebec', 'manitoba',
-  'saskatchewan', 'nova scotia', 'new brunswick', 'canada'];
+/**
+ * Where to search, and on which site.
+ *
+ * simplyhired.ca and simplyhired.com are separate corpora with separate inventory, so the US is
+ * not reachable by adding a US state to the .ca site. Each entry names its own host.
+ *
+ * The US is roughly ten times the Canadian pool and is searched BY DEFAULT. Use --region ca to
+ * restrict to Canada, or --region us for the States alone.
+ */
+const REGIONS = {
+  ca: {
+    host: 'https://www.simplyhired.ca',
+    places: ['ontario', 'british columbia', 'alberta', 'quebec', 'manitoba', 'saskatchewan',
+      'nova scotia', 'new brunswick', 'newfoundland and labrador', 'prince edward island',
+      'canada'],
+  },
+  us: {
+    host: 'https://www.simplyhired.com',
+    // Weighted toward states with dense industrial, trades and transport employment, and toward
+    // the Pacific Northwest and Mountain West where a BC reference is least implausible.
+    places: ['washington', 'oregon', 'idaho', 'montana', 'utah', 'colorado', 'arizona', 'nevada',
+      'texas', 'ohio', 'pennsylvania', 'illinois', 'indiana', 'michigan', 'wisconsin',
+      'minnesota', 'missouri', 'tennessee', 'georgia', 'north carolina', 'alabama', 'louisiana',
+      'oklahoma', 'kansas', 'iowa', 'california', 'florida', 'new york'],
+  },
+};
+const REGION = (() => {
+  const i = process.argv.indexOf('--region');
+  const r = i > -1 ? process.argv[i + 1] : 'all';  // US included by default
+  if (!['ca', 'us', 'all'].includes(r)) throw new Error('--region must be ca, us or all');
+  return r;
+})();
+const TARGETS = (REGION === 'all' ? ['ca', 'us'] : [REGION])
+  .flatMap(k => REGIONS[k].places.map(p => ({ host: REGIONS[k].host, place: p, region: k })));
 
 /** Companies whose OWN BUSINESS is selling this, or who cannot buy. */
 const EXCLUDE_NAME = [
   /\b(staffing|recruit|personnel|talent|placement|manpower|adecco|randstad|robert half|hays)\b/i,
+  /\b(job shoppe|labour ?ready|employment (services|solutions)|workforce solutions|temp agency)\b/i,
   /\b(safety (training|consult)|training (solutions|institute|academy|centre|center)|college|university|polytechnic|school district|school board)\b/i,
   /\b(certification|certifying|registrar|accreditation)\b.*\b(body|services|inc|ltd)\b/i,
   /\b(bureau veritas|sgs|intertek|acuren|levitt-safety|labtest|skilledtrades|worksafe)\b/i,
@@ -91,31 +124,81 @@ const EXCLUDE_LARGE = [
   /\b(schaeffler|thales|dometic|winpak|menasha|rexel|orica|chep|cencora|clean harbors)\b/i,
   /\b(iamgold|alamos|hydro one|securiguard|paladin|securitas|gardaworld|commissionaires)\b/i,
   /\b(eclipse automation|accenture|deloitte|kpmg|cgi |bayshore|lifemark|cbi health|extendicare|revera|chartwell)\b/i,
+  /\b(de havilland|andrew peller|richelieu|quincaillerie|viterra|parrish|federated co-?op)\b/i,
 ];
 
 /**
- * Verticals where this signal is structurally absent. Two sweeps confirmed healthcare and
- * property employers publish credentials as a requirement ON THE APPLICANT, not as internal
- * work, so a hit there is almost always a misread of a training-coordinator role.
+ * Excluded verticals, deliberately SHORT.
+ *
+ * An earlier version excluded healthcare and property management outright, on the grounds that
+ * two sweeps found almost nothing there. That was the wrong fix. What those sweeps actually
+ * found is that those employers publish credentials as a requirement ON THE APPLICANT rather
+ * than as internal work, and APPLICANT_FACING below tests for that directly. Excluding the
+ * industry instead of the pattern threw away real leads: PhysioCare At Home is a genuine
+ * multi-province lead whose posting reads "Track professional registrations, licenses,
+ * insurance renewals", and a name filter on "physiotherapy" would have dropped it.
+ *
+ * Healthcare is also where the only honest reference is, so it is the last vertical to exclude.
+ *
+ * What is left here is only what has no expiring workforce credential behind it at all.
  */
 const EXCLUDE_VERTICAL = [
-  /\b(clinic|dental|physiotherapy|chiropract|pharmacy|veterinar|hospice|long.?term care)\b/i,
-  /\b(property management|strata|realty|real estate|brokerage|condominium)\b/i,
-  /\b(retail|boutique|restaurant|hotel|resort)\b/i,
+  /\b(boutique|gift shop|thrift|e-?commerce|dropship)\b/i,
 ];
 
-/** Map the posting to one of the verticals where this signal is real. */
+/**
+ * Classify the posting. Deliberately broad.
+ *
+ * An earlier version had eight buckets and defaulted everything it did not recognise to
+ * manufacturing, which is how an airline maintenance shop and a recreation centre both ended up
+ * filed as factories. Any organisation whose staff hold something that expires belongs here, and
+ * that is far more industries than the original list allowed.
+ *
+ * HEALTHCARE IS FIRST, not excluded. It is the only vertical with a live reference behind it,
+ * because that is where the software actually runs today.
+ */
 function inferIndustry(text) {
   const t = text.toLowerCase();
-  if (/\b(driver|fleet|trucking|transport|logistics|carrier|dispatch|dq file)\b/.test(t)) return 'transport';
-  if (/\b(childcare|daycare|early learning|ece|youth|foster|residential|social services|community living|caregiver)\b/.test(t)) return 'childcare';
-  if (/\b(guard|security|patrol|alarm)\b/.test(t)) return 'security';
-  if (/\b(food|bakery|dairy|meat|produce|processing|haccp|foodsafe|brewery|seafood)\b/.test(t)) return 'food';
-  if (/\b(laborator|lab tech|assay|geotech|testing services|quality control lab)\b/.test(t)) return 'lab';
-  if (/\b(construct|contractor|electrical|plumbing|mechanical|roofing|excavat|welding|scaffold|crane|hvac|pipeline|drilling|oilfield|mining)\b/.test(t)) return 'trades';
-  if (/\b(manufactur|plant|fabricat|machining|assembly|production|mill|foundry|extrusion)\b/.test(t)) return 'manufacturing';
-  return 'manufacturing';
+  if (/\b(clinic|physiotherap|chiropract|massage therap|dental|denture|optometr|audiolog|pharmac|nurs|rn |lpn |care home|long.?term care|home care|assisted living|hospice|paramedic|medical|health centre|health center|veterinar|lab technolog|diagnostic|imaging|midwif|podiatr|naturopath|acupunctur|occupational therap|speech.?language)\b/.test(t)) return 'health';
+  if (/\b(childcare|daycare|early learning|ece\b|preschool|youth|foster|group home|residential care|social services|community living|caregiver|family services|shelter|outreach)\b/.test(t)) return 'childcare';
+  if (/\b(driver|fleet|trucking|transport|logistics|carrier|dispatch|dq file|courier|bus |transit|marine|shipping|rail|aviation|aircraft|airline|amo\b|ground handling)\b/.test(t)) return 'transport';
+  if (/\b(guard|security|patrol|alarm|loss prevention|corrections)\b/.test(t)) return 'security';
+  if (/\b(food|bakery|dairy|meat|produce|processing|haccp|foodsafe|brewery|winery|seafood|grocer|catering|kitchen|restaurant)\b/.test(t)) return 'food';
+  if (/\b(laborator|lab tech|assay|geotech|materials testing|quality control lab|tissue culture|cannabis)\b/.test(t)) return 'lab';
+  if (/\b(school|teacher|educator|training centre|college|campus|tutor|instructor)\b/.test(t)) return 'education';
+  if (/\b(utilit|hydro|power|electric distribution|water treatment|wastewater|telecom|fibre|fiber|isp\b|tower)\b/.test(t)) return 'utilities';
+  if (/\b(farm|agricultur|agronom|grain|crop|livestock|greenhouse|orchard|forestry|logging|silvicultur|fish)\b/.test(t)) return 'agriculture';
+  if (/\b(recreation|arena|pool|lifeguard|fitness|community centre|sport|camp|park)\b/.test(t)) return 'recreation';
+  if (/\b(hotel|resort|hospitality|casino|venue|event)\b/.test(t)) return 'hospitality';
+  if (/\b(waste|recycl|environmental|remediation|abatement|hazmat|spill)\b/.test(t)) return 'environmental';
+  if (/\b(facilit|janitorial|custodial|cleaning|building operat|property maintenance|caretaker)\b/.test(t)) return 'facilities';
+  if (/\b(construct|contractor|electrical|plumb|mechanical|roofing|excavat|weld|scaffold|crane|hvac|pipeline|drilling|oilfield|mining|paving|concrete|framing|glazing|insulation|sheet metal|millwright|rigging)\b/.test(t)) return 'trades';
+  if (/\b(manufactur|plant|fabricat|machining|assembly|production|mill|foundry|extrusion|packaging|printing|textile|furniture|cabinet)\b/.test(t)) return 'manufacturing';
+  if (/\b(warehous|distribution|supply chain|inventory|forklift)\b/.test(t)) return 'warehousing';
+  return 'other';
 }
+
+/**
+ * THE MOST IMPORTANT FILTER. Reject quotes that are a requirement ON THE APPLICANT.
+ *
+ * This is the same distinction that makes healthcare and property management dead verticals:
+ * "Valid forklift licence is an asset" is the candidate being asked to hold a ticket, not the
+ * employer describing work that someone does. The first sweep let through United Roofing
+ * ("Safety tickets ... Recertification can/will be") and The Job Shoppe ("recertification
+ * support may be available for qualified candidates"). Both are job perks, not a tracking
+ * burden, and an email quoting one back would read as though we had not understood the posting.
+ */
+const APPLICANT_FACING = [
+  /\b(is an asset|are an asset|would be an asset|is preferred|are preferred|is required|are required)\b/i,
+  /\b(must (have|hold|possess)|should (have|hold|possess))\b/i,
+  /\bvalid .{0,30}(licen[cs]e|ticket|certificat)/i,
+  /\b(candidates?|applicants?|the ideal candidate|you will (have|bring))\b/i,
+  /\b(ability to (provide|obtain)|willing to obtain)\b/i,
+  /\b(recertification (support|assistance|can|will|may)|reimburse)\b/i,
+];
+
+/** Employer-side verbs. The quote must describe work being done, not a qualification held. */
+const INTERNAL_WORK = /\b(maintain(s|ing)?|track(s|ing)?|monitor(s|ing)?|updat(e|es|ing)|coordinat(e|es|ing)|manag(e|es|ing)|administer|schedul(e|es|ing)|audit|filing|record ?keeping)\b/i;
 
 /** The sentence containing the phrase, which becomes the verbatim quote. */
 function extractQuote(snippet, phrase) {
@@ -138,8 +221,8 @@ const norm = n => String(n).toLowerCase().replace(/[.,]/g, ' ')
   .replace(/\b(inc|ltd|limited|corp|corporation|co|company|society|group|holdings|llc|lp)\b/g, ' ')
   .replace(/\s+/g, ' ').trim();
 
-async function search(phrase, location) {
-  const url = `https://www.simplyhired.ca/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(location)}`;
+async function search(phrase, target) {
+  const url = `${target.host}/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(target.place)}`;
   const res = await axios.get(url, { headers: HEADERS, timeout: 25000 });
   const m = String(res.data).match(/id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
   if (!m) return { jobs: [], total: 0 };
@@ -147,20 +230,23 @@ async function search(phrase, location) {
   return { jobs: pp.jobs || [], total: pp.resultCount || 0 };
 }
 
-(async () => {
+module.exports = { APPLICANT_FACING, INTERNAL_WORK, EXCLUDE_NAME, EXCLUDE_LARGE, extractQuote, inferIndustry };
+
+// Only run when invoked directly, so the filters can be unit tested without hitting the network.
+if (require.main === module) (async () => {
   const { data: existing } = await supabase.from(TABLE).select('business_name');
   const seen = new Set((existing || []).map(r => norm(r.business_name)));
   console.log(`${DRY ? 'DRY RUN. ' : ''}${seen.size} companies already in the list.\n`);
 
   const found = [];
   const phrases = PHRASES.slice(0, MAX_PHRASES);
-  const locations = LOCATIONS.slice(0, MAX_LOCATIONS);
+  const targets = TARGETS.slice(0, MAX_LOCATIONS);
 
   for (const phrase of phrases) {
-    for (const location of locations) {
+    for (const target of targets) {
       let r;
-      try { r = await search(phrase, location); }
-      catch (e) { console.log(`  ! ${phrase} / ${location}: ${e.response ? e.response.status : e.code}`); continue; }
+      try { r = await search(phrase, target); }
+      catch (e) { console.log(`  ! ${phrase} / ${target.place}: ${e.response ? e.response.status : e.code}`); continue; }
       await new Promise(res => setTimeout(res, GAP_MS));
 
       let added = 0;
@@ -172,10 +258,16 @@ async function search(phrase, location) {
         if (!key || seen.has(key)) continue;
         if (EXCLUDE_NAME.some(re => re.test(company)) || EXCLUDE_LARGE.some(re => re.test(company))) continue;
         if (EXCLUDE_VERTICAL.some(re => re.test(company + " " + job.title))) continue;
-        if (excludedOrgReason(company, null)) continue;
+        // NEVER the employer or the other excluded organisation, at company level. This matters
+        // more now that healthcare is searched rather than filtered out, because the employer is
+        // a healthcare organisation and would otherwise be a textbook match for these phrases.
+        const dnc = excludedOrgReason(company, null);
+        if (dnc) { console.log(`  ! skipped excluded org: ${company}`); continue; }
 
         const quote = extractQuote(snippet, phrase);
         if (quote.length < 25) continue;
+        if (APPLICANT_FACING.some(re => re.test(quote))) continue;
+        if (!INTERNAL_WORK.test(quote)) continue;
 
         seen.add(key);
         found.push({
@@ -185,15 +277,15 @@ async function search(phrase, location) {
           source: 'simplyhired',
           signal_type: /matrix|spreadsheet|binder|by hand|manual/i.test(quote) ? 'manual_tracking' : 'hiring_credentialing',
           signal_quote: quote,
-          signal_url: job.encodedUrl ? `https://www.simplyhired.ca${job.encodedUrl}` : `https://www.simplyhired.ca/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(location)}`,
+          signal_url: job.encodedUrl ? `${target.host}${job.encodedUrl}` : `${target.host}/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(target.place)}`,
           signal_date: new Date().toISOString().slice(0, 10),
           qualification_score: scoreOf(quote, phrase),
           personalization_basis: `published signal: ${phrase}`,
-          notes: `Found via SimplyHired phrase "${phrase}" in ${location}. Job title: ${job.title}.`,
+          notes: `Found via SimplyHired phrase "${phrase}" in ${target.place}. Job title: ${job.title}.`,
         });
         added++;
       }
-      console.log(`  ${String(r.total).padStart(4)} hits  ${added ? '+' + added : '  '}  "${phrase}" / ${location}`);
+      console.log(`  ${String(r.total).padStart(4)} hits  ${added ? '+' + added : '  '}  "${phrase}" / ${target.place}`);
     }
   }
 

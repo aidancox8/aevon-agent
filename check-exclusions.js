@@ -19,6 +19,13 @@ const CASES = [
   ['Pain Free Clinic', 'info@painfree.ca', false],
   ['Artistic Wellness Studio', 'hi@artisticwellness.ca', false],
   ['Changing Habits Health', 'info@changinghabits.ca', false],
+
+  // Added 2026-08-24. Matched with separators stripped so every spelling catches.
+  ['Brenda Lau MD', null, true],
+  ['brendalaumd', null, true],
+  ['Dr. Brenda Lau Medical Corporation', null, true],
+  ['Some Clinic', 'info@brendalaumd.com', true],
+  ['Some Clinic', 'info@brenda-lau-md.ca', true],
 ];
 
 let bad = 0;

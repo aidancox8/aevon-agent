@@ -27,14 +27,23 @@ const names = require('./do-not-contact.json').names;
  * reached the table by another route, or before that guard existed, was unprotected. This
  * closes it at send time, which is the only place that actually matters.
  */
-const EXCLUDED_ORGS = ['changepain', 'change pain', 'artus'];
+// Never contacted, at organisation level, on any campaign. The first two are Aidan's employer,
+// which sat queued in tempo_leads and received two emails in June 2026 before anyone noticed.
+// 'brendalaumd' is matched with separators stripped, so brendalaumd.com, brenda-lau-md.ca and
+// "Brenda Lau MD" all catch.
+const EXCLUDED_ORGS = ['changepain', 'change pain', 'artus', 'brendalaumd', 'brenda lau'];
 
 /** Returns a reason if this lead's employer or email domain is excluded outright, else null. */
 function excludedOrgReason(businessName, email) {
   const name = norm(businessName);
   const domain = String(email || '').toLowerCase().split('@')[1] || '';
+  const nameSquashed = name.replace(/[^a-z]/g, '');
   for (const org of EXCLUDED_ORGS) {
     if (name && name.includes(org)) return `business is an excluded organisation (${org})`;
+    // Also compare with separators stripped so "Brenda Lau MD" matches "brendalaumd".
+    if (nameSquashed && nameSquashed.includes(org.replace(/\s/g, ''))) {
+      return `business is an excluded organisation (${org})`;
+    }
     // Compare against the domain with separators stripped, so "change-pain.ca" is caught too.
     if (domain && domain.replace(/[^a-z]/g, '').includes(org.replace(/\s/g, ''))) {
       return `email domain belongs to an excluded organisation (${domain})`;
