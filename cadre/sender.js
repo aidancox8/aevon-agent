@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pulse/sender.js — the Pulse (HR / credentials) sender.
+ * cadre/sender.js — the Cadre (HR / credentials) sender.
  *
  * Third campaign, same shape as sender.js (Aevon) and tempo/sender.js (Tempo), so the three
  * can be compared honestly in the daily review. Everything learned on the other two is carried
@@ -28,9 +28,9 @@
  * published words back to them. A lead whose quote is missing, or whose copy does not actually
  * contain the quote, is not sendable. That is checked here, not assumed.
  *
- *   node pulse/sender.js              dry run
- *   node pulse/sender.js --send       send for real
- *   node pulse/sender.js --limit 3    cap this run
+ *   node cadre/sender.js              dry run
+ *   node cadre/sender.js --send       send for real
+ *   node cadre/sender.js --limit 3    cap this run
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -38,8 +38,8 @@ const { Resend } = require('resend');
 const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
 
-const TABLE = 'pulse_leads';
-const EVENTS = 'pulse_email_events';
+const TABLE = 'cadre_leads';
+const EVENTS = 'cadre_email_events';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = process.env.FROM_EMAIL || 'aidan@aevon.ca';
@@ -54,7 +54,7 @@ const LIMIT = (() => {
 })();
 
 /** Deliberately small. See the header: the constraint is the argument, not the volume. */
-const DAILY_CAP = parseInt(process.env.PULSE_DAILY_CAP || '5', 10);
+const DAILY_CAP = parseInt(process.env.CADRE_DAILY_CAP || '5', 10);
 const BOUNCE_LIMIT = 0.05;
 const BOUNCE_WINDOW = 100;
 
@@ -197,4 +197,4 @@ async function bounceRate() {
   }
 
   console.log(`\nDone. Sent: ${sent} | Blocked: ${blocked} | Failed: ${failed}`);
-})().catch(e => { console.error('pulse sender failed:', e.message); process.exit(1); });
+})().catch(e => { console.error('cadre sender failed:', e.message); process.exit(1); });

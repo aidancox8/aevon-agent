@@ -1,4 +1,4 @@
--- pulse_leads: a THIRD, separate lead store, for the HR/credentials offer.
+-- cadre_leads: a THIRD, separate lead store, for the HR/credentials offer.
 --
 -- Kept apart from `leads` (Aevon) and `tempo_leads` (clinic scheduling) for the same reason
 -- those two are separate: the campaigns never mix, and stopping one is just not running its
@@ -13,7 +13,7 @@
 -- posting that asks someone to "maintain the certification spreadsheet", a review complaining
 -- their HR tool cannot track licence expiry. `signal_quote` holds their own words and
 -- `signal_url` says where it came from. No signal, no row.
-create table if not exists pulse_leads (
+create table if not exists cadre_leads (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz default now(),
   business_name text not null,
@@ -59,10 +59,10 @@ create table if not exists pulse_leads (
 -- A signal is mandatory. This is a CHECK rather than a convention because the convention is
 -- exactly what eroded on the other two campaigns: rows arrived with no evidence of pain and
 -- nobody noticed until thousands of emails had gone out.
-alter table pulse_leads drop constraint if exists pulse_leads_requires_signal;
-alter table pulse_leads add constraint pulse_leads_requires_signal
+alter table cadre_leads drop constraint if exists cadre_leads_requires_signal;
+alter table cadre_leads add constraint cadre_leads_requires_signal
   check (signal_quote is not null and length(btrim(signal_quote)) > 20 and signal_url is not null);
 
-create unique index if not exists pulse_leads_business_uniq
-  on pulse_leads (lower(btrim(business_name)));
-create index if not exists pulse_leads_status_idx on pulse_leads (status, sequence_step);
+create unique index if not exists cadre_leads_business_uniq
+  on cadre_leads (lower(btrim(business_name)));
+create index if not exists cadre_leads_status_idx on cadre_leads (status, sequence_step);

@@ -33,8 +33,8 @@ const { classifyEmail } = require('../lib/contact-finder');
 const TABLE = (() => {
   const i = process.argv.indexOf('--table');
   const t = i > -1 ? process.argv[i + 1] : 'tempo_leads';
-  if (!['leads', 'tempo_leads', 'pulse_leads'].includes(t)) {
-    throw new Error(`--table must be leads, tempo_leads or pulse_leads, got "${t}"`);
+  if (!['leads', 'tempo_leads', 'cadre_leads'].includes(t)) {
+    throw new Error(`--table must be leads, tempo_leads or cadre_leads, got "${t}"`);
   }
   return t;
 })();
@@ -159,14 +159,14 @@ function effectiveQuality(e) {
 }
 
 /**
- * Local-parts that reach the person who owns this problem, for the pulse campaign only.
+ * Local-parts that reach the person who owns this problem, for the Cadre campaign only.
  *
  * The generic ranking is about address QUALITY, not about who reads it, and on an HR pitch that
  * is the wrong axis. Black Tusk Fire & Security publishes fire@, security@ and hr@; the quality
  * ranking scores fire@ as "personal" because it looks like a first name, and picks it. An email
  * about tracking staff credentials landing in the fire alarm inbox is a wasted send.
  */
-const PULSE_PREFERRED = ['hr', 'humanresources', 'human.resources', 'people', 'peopleandculture',
+const CADRE_PREFERRED = ['hr', 'humanresources', 'human.resources', 'people', 'peopleandculture',
   'safety', 'compliance', 'training', 'operations', 'ops', 'admin', 'office'];
 
 function pickBest(emails, website) {
@@ -177,7 +177,7 @@ function pickBest(emails, website) {
     const onDomain = e.split('@')[1] === host || e.split('@')[1] === 'www.' + host ? 2 : 0;
     const q = { personal: 3, role: 2, generic: 1 }[effectiveQuality(e)] || 0;
     // Role relevance outranks address quality, but only on the campaign it applies to.
-    const relevant = TABLE === 'pulse_leads' && PULSE_PREFERRED.includes(local) ? 1 : 0;
+    const relevant = TABLE === 'cadre_leads' && CADRE_PREFERRED.includes(local) ? 1 : 0;
     return onDomain * 100 + relevant * 20 + q; // own-domain, then the right desk, then quality
   };
   return emails.sort((a, b) => rank(b) - rank(a))[0];

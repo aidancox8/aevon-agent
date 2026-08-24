@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pulse/ingest.js — add signal-qualified leads to `pulse_leads`.
+ * cadre/ingest.js — add signal-qualified leads to `cadre_leads`.
  *
  * There is deliberately no scraper here. The other two campaigns were both filled by querying
  * Google Places for a business type and assuming the pain: 3,808 sends, zero meetings. This
@@ -11,8 +11,8 @@
  * That is a feature, not a workaround. The first-customers research is blunt that nobody got
  * customer #1 from a list larger than about 100, and a hand-built list of 40 beats 3,400.
  *
- *   node pulse/ingest.js leads.json --dry
- *   node pulse/ingest.js leads.json
+ *   node cadre/ingest.js leads.json --dry
+ *   node cadre/ingest.js leads.json
  *
  * Each entry: { business_name, website?, city, industry, source, signal_type, signal_quote,
  *               signal_url, signal_date?, staff_estimate?, contact_name?, contact_role?,
@@ -24,7 +24,7 @@ const fs = require('fs');
 const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
 
-const TABLE = 'pulse_leads';
+const TABLE = 'cadre_leads';
 const DRY = process.argv.includes('--dry');
 const FILE = process.argv[2];
 
@@ -77,7 +77,7 @@ function validate(lead, i) {
 
 (async () => {
   if (!FILE || !fs.existsSync(FILE)) {
-    console.error('Usage: node pulse/ingest.js <leads.json> [--dry]');
+    console.error('Usage: node cadre/ingest.js <leads.json> [--dry]');
     process.exit(1);
   }
   const raw = JSON.parse(fs.readFileSync(FILE, 'utf8'));

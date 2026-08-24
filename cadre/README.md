@@ -1,11 +1,11 @@
-# Pulse — the HR / credentials campaign
+# Cadre — the HR / credentials campaign
 
 Third campaign, third lead table. `leads` is Aevon, `tempo_leads` is clinic scheduling,
-`pulse_leads` is this one. They never mix, and stopping one is just not running its scripts.
+`cadre_leads` is this one. They never mix, and stopping one is just not running its scripts.
 
 ## What is being sold
 
-HR Pulse plus the Company Wiki, sold whole and priced flat, to organisations whose staff hold
+HR Cadre plus the Company Wiki, sold whole and priced flat, to organisations whose staff hold
 credentials that expire. Not "HR software for SMBs" — that is a demographic, and a demographic is
 what killed Aevon.
 
@@ -27,7 +27,7 @@ offer. The offer is credentials joined to HR, training, onboarding and Teams in 
 `leads` and `tempo_leads` were both filled by querying Google Places for a business type and
 assuming the pain. Between them: **3,808 sends, 12 human replies, zero meetings.**
 
-A row in `pulse_leads` requires a signal: something the company published showing it has this
+A row in `cadre_leads` requires a signal: something the company published showing it has this
 problem. A job ad for someone to "track certifications". A safety coordinator role listing three
 training programs with three renewal cycles. A review saying their HR tool cannot do expiry.
 
@@ -43,8 +43,8 @@ about 100, and a hand-built 40 beats a scraped 3,400.
 ## Usage
 
 ```bash
-node pulse/ingest.js pulse/batches/<date>-<source>.json --dry
-node pulse/ingest.js pulse/batches/<date>-<source>.json
+node cadre/ingest.js cadre/batches/<date>-<source>.json --dry
+node cadre/ingest.js cadre/batches/<date>-<source>.json
 ```
 
 Scoring rewards how directly the company admitted the problem, not how big it is. Hiring someone

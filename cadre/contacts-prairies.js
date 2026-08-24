@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pulse/contacts-prairies.js — apply the AB/SK/MB contact research to pulse_leads.
+ * cadre/contacts-prairies.js — apply the AB/SK/MB contact research to cadre_leads.
  *
  * Three published personal emails were found, none of them constructed from a pattern. The best
  * came from a House of Commons committee brief: Advance Paper Box's CFO signed a submission on
@@ -110,7 +110,7 @@ const UPDATES = [
   let ok = 0, miss = 0;
   for (const [name, patch] of UPDATES) {
     if (DRY) { console.log(`[dry] ${name}`); ok++; continue; }
-    const { data, error } = await supabase.from('pulse_leads').update(patch)
+    const { data, error } = await supabase.from('cadre_leads').update(patch)
       .eq('business_name', name).select('id');
     if (error) { console.error(`FAIL ${name}: ${error.message}`); continue; }
     if (!data || !data.length) { console.log(`MISS ${name}`); miss++; continue; }

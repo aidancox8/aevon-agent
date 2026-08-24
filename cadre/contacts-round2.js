@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pulse/contacts-round2.js — second contact pass, and several corrections that matter.
+ * cadre/contacts-round2.js — second contact pass, and several corrections that matter.
  *
  * Two genuine personal addresses found across sixteen companies. Both came from places a
  * company website never publishes: an industry association directory PDF, and a contact page
@@ -97,7 +97,7 @@ const UPDATES = [
   let ok = 0, miss = 0;
   for (const [name, patch] of UPDATES) {
     if (DRY) { console.log(`[dry] ${name}`); ok++; continue; }
-    const { data, error } = await supabase.from('pulse_leads').update(patch)
+    const { data, error } = await supabase.from('cadre_leads').update(patch)
       .eq('business_name', name).select('id');
     if (error) { console.error(`FAIL ${name}: ${error.message}`); continue; }
     if (!data || !data.length) { console.log(`MISS ${name}`); miss++; continue; }

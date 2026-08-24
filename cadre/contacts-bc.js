@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pulse/contacts-bc.js — apply the BC contact research to pulse_leads.
+ * cadre/contacts-bc.js — apply the BC contact research to cadre_leads.
  *
  * Two kinds of finding here and the second matters more than the first.
  *
@@ -115,7 +115,7 @@ const UPDATES = [
   let ok = 0, miss = 0;
   for (const [name, patch] of UPDATES) {
     if (DRY) { console.log(`[dry] ${name} -> ${Object.keys(patch).join(', ')}`); ok++; continue; }
-    const { data, error } = await supabase.from('pulse_leads').update(patch)
+    const { data, error } = await supabase.from('cadre_leads').update(patch)
       .eq('business_name', name).select('id');
     if (error) { console.error(`FAIL ${name}: ${error.message}`); continue; }
     if (!data || !data.length) { console.log(`MISS ${name} (no row matched)`); miss++; continue; }

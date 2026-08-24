@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * pulse/load-drafts.js — load the hand-written drafts onto their leads and schedule them.
+ * cadre/load-drafts.js — load the hand-written drafts onto their leads and schedule them.
  *
  * These are written by hand rather than generated, because the campaign's premise is quoting
  * the prospect's own published sentence and there are only a handful of leads with both a
@@ -11,8 +11,8 @@
  * a cold domain sending five at once to five different providers looks worse than five spread
  * out, and a spread means an early bounce or reply can change what the later ones say.
  *
- *   node pulse/load-drafts.js --dry
- *   node pulse/load-drafts.js
+ *   node cadre/load-drafts.js --dry
+ *   node cadre/load-drafts.js
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -95,7 +95,7 @@ How much of your week does that actually take?`],
 (async () => {
   let n = 0;
   for (const [name, subject, body] of DRAFTS) {
-    const { data: lead, error: readErr } = await supabase.from('pulse_leads')
+    const { data: lead, error: readErr } = await supabase.from('cadre_leads')
       .select('id, email, contact_name, signal_quote, status').eq('business_name', name).single();
     if (readErr || !lead) { console.log(`MISS  ${name}`); continue; }
     if (!lead.email) { console.log(`SKIP  ${name} - no address`); continue; }
@@ -105,7 +105,7 @@ How much of your week does that actually take?`],
     console.log(`${DRY ? '[dry] ' : ''}${String(n + 1).padStart(2)}. ${name.slice(0, 32).padEnd(34)}${lead.email.padEnd(34)}${when.slice(0, 16).replace('T', ' ')} UTC`);
 
     if (!DRY) {
-      const { error } = await supabase.from('pulse_leads').update({
+      const { error } = await supabase.from('cadre_leads').update({
         email_subject: subject, email_body: body, scheduled_send_at: when, send_batch: 1,
       }).eq('id', lead.id);
       if (error) { console.error(`      FAILED: ${error.message}`); continue; }

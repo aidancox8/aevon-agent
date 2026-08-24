@@ -11,7 +11,7 @@ Kept only as a record of the reasoning, which is still in the header below.
 
 ---
 
-# Pulse: what the email says
+# Cadre: what the email says
 
 Written 2026-08-21. Six hand-written first emails for the leads that have a verified address,
 plus the rules that produced them.

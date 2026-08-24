@@ -73,7 +73,7 @@ const CAMPAIGNS = [
   // Third campaign, HR and credentials. perDay is deliberately tiny: the thing being tested is
   // whether the argument works, not whether volume works. Aevon already answered that with
   // 3,506 sends and zero meetings.
-  { label: 'PULSE', sub: 'HR + credentials',  leads: 'pulse_leads', events: 'pulse_email_events', perDay: 5,  sendDays: 'Mon-Fri', campaign: 'pulse' },
+  { label: 'CADRE', sub: 'HR + credentials',  leads: 'cadre_leads', events: 'cadre_email_events', perDay: 5,  sendDays: 'Mon-Fri', campaign: 'cadre' },
 ];
 
 /**
@@ -261,10 +261,10 @@ async function review(c, warnings) {
   const dow = new Date().toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
   const hourPT = parseInt(new Date().toLocaleString('en-US', { timeZone: TZ, hour: '2-digit', hour12: false }), 10);
   const isWeekday = !['Sat', 'Sun'].includes(dow) && !isBCHoliday(getVancouverDate());
-  // "Ready" must mean what the SENDER means by ready, not just "has an address". Pulse has 42
+  // "Ready" must mean what the SENDER means by ready, not just "has an address". Cadre has 42
   // leads with an address and 5 with copy written, so counting addresses produced a warning that
   // the workflow had failed when in fact there was nothing for it to send.
-  // And "due" must mean due NOW. Pulse schedules one send per working day, so five leads with
+  // And "due" must mean due NOW. Cadre schedules one send per working day, so five leads with
   // copy written are correctly not sent today if four of them are dated later this week.
   const nowIso = new Date().toISOString();
   const sendable = untouched.filter(l => l.email_subject
