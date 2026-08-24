@@ -123,6 +123,39 @@ with a dry-run mode and a feature flag.
 - Accreditation **cycles**, standards, and checklist items
 - **Evidence tracking** against each standard
 
+## 15. Volunteers, not just employees
+
+A person who needs a credential is not always on payroll. Nonprofits, societies, recreation
+centres, sports organisations and social services agencies run on volunteers who carry exactly
+the same expiring documents as staff: criminal record and vulnerable sector checks, first aid and
+CPR, non-violent crisis intervention, food safe, driver abstracts.
+
+Volunteers are in some ways the harder half of the problem:
+
+- **Higher churn.** A volunteer roster turns over faster than a staff roster, so the records go
+  stale faster.
+- **Nobody owns them.** Staff credentials sit with HR. Volunteer credentials usually sit with a
+  program coordinator, in a separate spreadsheet, because the HR system has no place to put a
+  person who is not an employee.
+- **The consequence is identical.** An expired record check on a volunteer working with children
+  is the same regulatory failure as one on an employee, and the organisation carries it either
+  way.
+
+So a person record must support a **type** (employee, volunteer, contractor, student placement,
+locum) that changes what is required of them and how they are reported, without forcing them into
+a payroll record they do not belong in. Credentials, training assignment, onboarding, policy
+acknowledgement and the reminder engine should all work identically for a volunteer. Payroll,
+performance reviews, probation and offboarding should not apply.
+
+**Why this matters commercially.** Social services and nonprofits were identified as the vertical
+with no dedicated incumbent: safety platforms are construction-shaped and HR platforms assume
+everyone is on payroll. Several leads already in the list are exactly this shape, including
+Choices For Youth, Spirit of the Children Society, Vivo, Trellis and Union Gospel Mission. A
+volunteer-capable person record is what makes the product fit a sector nobody else is serving,
+and it is a small change compared to multi-tenancy.
+
+**Status: not built.** This is a requirement, not a feature.
+
 ---
 
 ## What is not built

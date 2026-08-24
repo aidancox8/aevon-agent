@@ -130,6 +130,10 @@ two products.
   employer's name.
 - **Not yet genericised.** Tempo went through that before it could be sold; this has not, and the
   wiki holds clinical documents.
+- **Volunteers are not supported.** A person record assumes an employee. Nonprofits and
+  recreation organisations run on volunteers carrying the same expiring record checks and first
+  aid, and that is the one vertical with no incumbent competitor, so this is the cheapest change
+  with the clearest commercial return. See features.md.
 - **Multi-tenancy does not exist.** Entra tenant assumptions, SharePoint libraries, domain gating
   and a hardcoded department vocabulary all assume one organisation. That is the work between a
   demo and a second customer, and it should be done when someone says yes, not before.
