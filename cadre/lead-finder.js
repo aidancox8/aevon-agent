@@ -46,6 +46,8 @@ const arg = (name, fallback) => {
 const MAX_PHRASES = arg('phrases', 99);
 const MAX_LOCATIONS = arg('locations', 99);
 const GAP_MS = 2500;
+/** Individual postings to open per query when the snippet omits the phrase. */
+const DEEP_PER_QUERY = 6;
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36',
@@ -54,7 +56,15 @@ const HEADERS = {
   'Accept-Language': 'en-CA,en;q=0.9',
 };
 
-/** Ordered by yield. The first is worth more than the rest combined. */
+/**
+ * Ordered by yield. The first is worth more than the rest combined.
+ *
+ * SPELLING MATTERS AND IS NOT SYMMETRIC. British and Canadian job ads write "licence" for the
+ * noun; American ads write "license" for both noun and verb. A search for one spelling silently
+ * misses the other country's postings entirely, which is a whole market lost to a single letter.
+ * "Programme" and "organisation" split the same way. Neutral phrases like "training matrix" and
+ * "certification records" need no variant, which is part of why they travel so well.
+ */
 const PHRASES = [
   'training matrix',
   'certification tracking',
@@ -68,16 +78,41 @@ const PHRASES = [
   'track certifications',
   'certifications are up to date',
   'training compliance',
+  // Spelling variants. Each finds postings the other cannot see.
+  'licence renewals',      // UK, IE, CA
+  'license renewals',      // US
+  'licence expiry',        // UK, IE, CA
+  'license expiry',        // US
+  'training programme',    // UK, IE
 ];
 
 /**
  * Where to search, and on which site.
  *
- * simplyhired.ca and simplyhired.com are separate corpora with separate inventory, so the US is
- * not reachable by adding a US state to the .ca site. Each entry names its own host.
+ * SimplyHired runs a separate site per country, each with identical __NEXT_DATA__ structure, so
+ * a new country is a config entry rather than a new parser. The country sites are separate
+ * corpora: a UK employer is not reachable by adding "London" to the .ca site.
  *
- * The US is roughly ten times the Canadian pool and is searched BY DEFAULT. Use --region ca to
- * restrict to Canada, or --region us for the States alone.
+ * MEASURED SIGNAL VOLUME, 2026-08-24, across four phrases ("training matrix", "certification
+ * expiry", "maintain training records", "competency matrix"):
+ *
+ *   US   1,305      6x Canada
+ *   UK     272      bigger than Canada from a smaller economy, because "training matrix" is
+ *                   standard British H&S vocabulary
+ *   CA     209
+ *   AU      45      understated: SEEK dominates there and blocks us
+ *   IE      44
+ *   NZ       0      site returned nothing usable
+ *
+ * WHY EACH COUNTRY FITS
+ * UK: CSCS cards expire every 5 years, SIA security licences expire, Gas Safe renews annually,
+ *     DBS checks for anyone working near children. reed.co.uk is a second fetchable corpus.
+ * AU: the cleanest regulatory fit anywhere. High Risk Work Licences for forklift, crane and EWP
+ *     expire on a fixed cycle, plus White Card and state Working with Children Checks.
+ * IE: Safe Pass cards expire every 4 years. Small, but free to include once UK is configured.
+ *
+ * THE HONEST CAVEAT: the only reference available is a BC one, and it travels worse the further
+ * from BC the reader is. Volume is not the same as fit.
  */
 const REGIONS = {
   ca: {
@@ -88,21 +123,34 @@ const REGIONS = {
   },
   us: {
     host: 'https://www.simplyhired.com',
-    // Weighted toward states with dense industrial, trades and transport employment, and toward
-    // the Pacific Northwest and Mountain West where a BC reference is least implausible.
     places: ['washington', 'oregon', 'idaho', 'montana', 'utah', 'colorado', 'arizona', 'nevada',
       'texas', 'ohio', 'pennsylvania', 'illinois', 'indiana', 'michigan', 'wisconsin',
       'minnesota', 'missouri', 'tennessee', 'georgia', 'north carolina', 'alabama', 'louisiana',
       'oklahoma', 'kansas', 'iowa', 'california', 'florida', 'new york'],
   },
+  uk: {
+    host: 'https://www.simplyhired.co.uk',
+    places: ['england', 'scotland', 'wales', 'northern ireland', 'london', 'manchester',
+      'birmingham', 'leeds', 'glasgow', 'bristol', 'united kingdom'],
+  },
+  ie: { host: 'https://www.simplyhired.ie', places: ['dublin', 'cork', 'galway', 'ireland'] },
+  au: {
+    host: 'https://www.simplyhired.com.au',
+    places: ['new south wales', 'victoria', 'queensland', 'western australia', 'south australia',
+      'australia'],
+  },
 };
 const REGION = (() => {
   const i = process.argv.indexOf('--region');
-  const r = i > -1 ? process.argv[i + 1] : 'all';  // US included by default
-  if (!['ca', 'us', 'all'].includes(r)) throw new Error('--region must be ca, us or all');
+  const r = i > -1 ? process.argv[i + 1] : 'core';  // CA + US + UK by default
+  const valid = [...Object.keys(REGIONS), 'core', 'all'];
+  if (!valid.includes(r)) throw new Error(`--region must be one of ${valid.join(', ')}`);
   return r;
 })();
-const TARGETS = (REGION === 'all' ? ['ca', 'us'] : [REGION])
+const REGION_SET = REGION === 'all' ? Object.keys(REGIONS)
+  : REGION === 'core' ? ['ca', 'us', 'uk']
+  : [REGION];
+const TARGETS = REGION_SET
   .flatMap(k => REGIONS[k].places.map(p => ({ host: REGIONS[k].host, place: p, region: k })));
 
 /** Companies whose OWN BUSINESS is selling this, or who cannot buy. */
@@ -198,7 +246,45 @@ const APPLICANT_FACING = [
 ];
 
 /** Employer-side verbs. The quote must describe work being done, not a qualification held. */
-const INTERNAL_WORK = /\b(maintain(s|ing)?|track(s|ing)?|monitor(s|ing)?|updat(e|es|ing)|coordinat(e|es|ing)|manag(e|es|ing)|administer|schedul(e|es|ing)|audit|filing|record ?keeping)\b/i;
+const INTERNAL_WORK = /\b(maintain(s|ing)?|track(s|ing)?|monitor(s|ing)?|updat(e|es|ing)|coordinat(e|es|ing)|manag(e|es|ing)|administer|schedul(e|es|ing)|audit(s|ing)?|filing|record ?keeping|keep(s|ing)?|ensur(e|es|ing)|oversee|overseeing|own(s|ing)?|review(s|ing)?|complet(e|es|ing)|verif(y|ies|ying)|log(s|ging)?)\b/i;
+
+/**
+ * Build a usable link to the posting.
+ *
+ * job.encodedUrl is PERCENT-ENCODED, so concatenating it onto the host produced
+ * "https://www.simplyhired.ca%2Fjob%2F..." which is not a URL. Every lead inserted before
+ * 2026-08-24 carries one of those and needs repairing. job.botUrl is the clean path.
+ */
+function jobUrl(target, job, phrase) {
+  const pathPart = job.botUrl || (job.encodedUrl ? decodeURIComponent(job.encodedUrl).split('?')[0] : null);
+  if (pathPart) return `${target.host}${pathPart}`;
+  return `${target.host}/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(target.place)}`;
+}
+
+/**
+ * Fetch the full posting and pull the sentence containing the phrase.
+ *
+ * Needed because the UK site's search snippets do not contain the matched phrase at all: a query
+ * for "training matrix" in England returns 142 results and not one snippet carries the words.
+ * Without this the entire UK, the second largest pool measured, yields zero.
+ *
+ * Rate-limited and capped per query, because this is one request per candidate rather than one
+ * per twenty.
+ */
+async function deepQuote(target, job, phrase) {
+  const url = jobUrl(target, job, phrase);
+  if (!/\/job\//.test(url)) return null;
+  try {
+    const res = await axios.get(url, { headers: HEADERS, timeout: 25000 });
+    const m = String(res.data).match(/id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (!m) return null;
+    const jp = JSON.parse(m[1]).props.pageProps;
+    const html = (jp.viewJobData && jp.viewJobData.job && jp.viewJobData.job.jobDescriptionHtml) || '';
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ');
+    if (!text.toLowerCase().includes(phrase.toLowerCase())) return null;
+    return extractQuote(text, phrase);
+  } catch { return null; }
+}
 
 /** The sentence containing the phrase, which becomes the verbatim quote. */
 function extractQuote(snippet, phrase) {
@@ -250,10 +336,22 @@ if (require.main === module) (async () => {
       await new Promise(res => setTimeout(res, GAP_MS));
 
       let added = 0;
+      let deepUsed = 0;
       for (const job of r.jobs) {
         const company = String(job.company || '').trim();
         const snippet = String(job.snippet || '');
-        if (!company || !snippet.toLowerCase().includes(phrase.toLowerCase())) continue;
+        if (!company) continue;
+        let quoteSource = snippet;
+        if (!snippet.toLowerCase().includes(phrase.toLowerCase())) {
+          // Some country sites never put the matched phrase in the snippet. Fetch the posting,
+          // but only for a few per query so this does not turn into 20 requests a search.
+          if (deepUsed >= DEEP_PER_QUERY) continue;
+          deepUsed++;
+          await new Promise(r => setTimeout(r, 1200));
+          const deep = await deepQuote(target, job, phrase);
+          if (!deep) continue;
+          quoteSource = deep;
+        }
         const key = norm(company);
         if (!key || seen.has(key)) continue;
         if (EXCLUDE_NAME.some(re => re.test(company)) || EXCLUDE_LARGE.some(re => re.test(company))) continue;
@@ -264,7 +362,7 @@ if (require.main === module) (async () => {
         const dnc = excludedOrgReason(company, null);
         if (dnc) { console.log(`  ! skipped excluded org: ${company}`); continue; }
 
-        const quote = extractQuote(snippet, phrase);
+        const quote = extractQuote(quoteSource, phrase);
         if (quote.length < 25) continue;
         if (APPLICANT_FACING.some(re => re.test(quote))) continue;
         if (!INTERNAL_WORK.test(quote)) continue;
@@ -277,11 +375,11 @@ if (require.main === module) (async () => {
           source: 'simplyhired',
           signal_type: /matrix|spreadsheet|binder|by hand|manual/i.test(quote) ? 'manual_tracking' : 'hiring_credentialing',
           signal_quote: quote,
-          signal_url: job.encodedUrl ? `${target.host}${job.encodedUrl}` : `${target.host}/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(target.place)}`,
+          signal_url: jobUrl(target, job, phrase),
           signal_date: new Date().toISOString().slice(0, 10),
           qualification_score: scoreOf(quote, phrase),
           personalization_basis: `published signal: ${phrase}`,
-          notes: `Found via SimplyHired phrase "${phrase}" in ${target.place}. Job title: ${job.title}.`,
+          notes: `[${target.region.toUpperCase()}] Found via SimplyHired phrase "${phrase}" in ${target.place}. Job title: ${job.title}.`,
         });
         added++;
       }

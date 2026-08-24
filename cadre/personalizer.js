@@ -120,6 +120,32 @@ function reject(subject, body, lead) {
   return null;
 }
 
+/**
+ * Which English to write in.
+ *
+ * Canadian, British and American English are three different registers, and mixing them is a
+ * tell. A British reader notices "license" as a noun and "center"; an American reader notices
+ * "organisation" and "programme". The sender is Canadian, so Canadian spelling is the default
+ * and is close enough to British to pass, but American copy must be deliberately American.
+ *
+ * The signal quote is left EXACTLY as published regardless, including their spelling. It is
+ * their sentence, not ours, and correcting it would break the one thing this campaign relies on.
+ */
+function localeFor(lead) {
+  const where = `${lead.city || ''} ${lead.notes || ''}`.toUpperCase();
+  if (/\[US\]|\b(WA|OR|ID|MT|UT|CO|AZ|NV|TX|OH|PA|IL|IN|MI|WI|MN|MO|TN|GA|NC|AL|LA|OK|KS|IA|CA|FL|NY)\b/.test(where)
+      && !/\b(BC|AB|SK|MB|ON|QC|NS|NB|NL|PE)\b/.test(where)) return 'us';
+  if (/\[UK\]|\[IE\]|ENGLAND|SCOTLAND|WALES|LONDON|MANCHESTER|BIRMINGHAM|LEEDS|GLASGOW|BRISTOL|DUBLIN|CORK|GALWAY/.test(where)) return 'uk';
+  if (/\[AU\]|NEW SOUTH WALES|VICTORIA|QUEENSLAND|AUSTRALIA/.test(where)) return 'uk';
+  return 'ca';
+}
+
+const SPELLING = {
+  ca: 'Canadian English. "licence" for the noun and "license" for the verb, "centre", "labour", "organization" with a z.',
+  uk: 'British English. "licence" for the noun and "license" for the verb, "centre", "labour", "organisation" and "programme" with an s.',
+  us: 'American English. "license" for both noun and verb, "center", "labor", "organization" and "program". Never "licence", never "centre", never "programme".',
+};
+
 function buildPrompt(lead) {
   const first = (lead.contact_name || '').trim().split(/\s+/)[0];
   return `Write one short cold email. Return ONLY valid JSON: {"subject": "...", "body": "..."}
