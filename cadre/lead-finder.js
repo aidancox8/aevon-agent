@@ -46,7 +46,7 @@ const arg = (name, fallback) => {
 };
 const MAX_PHRASES = arg('phrases', 99);
 const MAX_LOCATIONS = arg('locations', 99);
-const GAP_MS = 2500;
+const GAP_MS = 4000;
 /** Individual postings to open per query when the snippet omits the phrase. */
 const DEEP_PER_QUERY = 6;
 
@@ -313,13 +313,42 @@ const norm = n => String(n).toLowerCase().replace(/[.,]/g, ' ')
   .replace(/\b(inc|ltd|limited|corp|corporation|co|company|society|group|holdings|llc|lp)\b/g, ' ')
   .replace(/\s+/g, ' ').trim();
 
+/**
+ * Fetch one search page.
+ *
+ * DNS IS THE BOTTLENECK, NOT THE SITE. A 850-query sweep returned ENOTFOUND on 841 of them
+ * after the first nine succeeded. The host resolver gives out under sustained lookups, and the
+ * same failure hit Supabase mid-run as "fetch failed", which is how a 72-lead crawl was lost.
+ *
+ * So: retry ENOTFOUND and friends rather than treating them as "no results", and back off hard
+ * when they cluster, because the resolver needs time rather than another immediate attempt.
+ */
+const DNS_ERRORS = /ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNRESET|socket hang up|fetch failed/i;
+let consecutiveDnsFailures = 0;
+
 async function search(phrase, target) {
   const url = `${target.host}/search?q=${encodeURIComponent(`"${phrase}"`)}&l=${encodeURIComponent(target.place)}`;
-  const res = await axios.get(url, { headers: HEADERS, timeout: 25000 });
-  const m = String(res.data).match(/id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-  if (!m) return { jobs: [], total: 0 };
-  const pp = JSON.parse(m[1]).props.pageProps;
-  return { jobs: pp.jobs || [], total: pp.resultCount || 0 };
+  let lastErr;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await axios.get(url, { headers: HEADERS, timeout: 25000 });
+      consecutiveDnsFailures = 0;
+      const m = String(res.data).match(/id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+      if (!m) return { jobs: [], total: 0 };
+      const pp = JSON.parse(m[1]).props.pageProps;
+      return { jobs: pp.jobs || [], total: pp.resultCount || 0 };
+    } catch (e) {
+      lastErr = e;
+      const code = e.code || e.message || '';
+      if (!DNS_ERRORS.test(code)) throw e;
+      consecutiveDnsFailures++;
+      // Escalating backoff. Once several in a row fail the resolver is saturated and only time
+      // fixes it, so wait seconds rather than milliseconds.
+      const wait = Math.min(30000, 2000 * Math.pow(2, attempt) + consecutiveDnsFailures * 1000);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+  throw lastErr;
 }
 
 module.exports = { APPLICANT_FACING, INTERNAL_WORK, EXCLUDE_NAME, EXCLUDE_LARGE, extractQuote, inferIndustry };
@@ -340,6 +369,11 @@ if (require.main === module) (async () => {
       try { r = await search(phrase, target); }
       catch (e) { console.log(`  ! ${phrase} / ${target.place}: ${e.response ? e.response.status : e.code}`); continue; }
       await new Promise(res => setTimeout(res, GAP_MS));
+      if (consecutiveDnsFailures >= 3) {
+        console.log('  … resolver struggling, pausing 60s');
+        await new Promise(res => setTimeout(res, 60000));
+        consecutiveDnsFailures = 0;
+      }
 
       let added = 0;
       let deepUsed = 0;

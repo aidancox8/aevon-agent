@@ -172,3 +172,35 @@ tickets" (0), "certifications on file" (2, both personal trainers), "training tr
 not employee credentials. DECAST, Storkcraft, The North Transportation and Trans-Northern
 Pipelines all read as qualifying from the search snippet and fail once the posting is opened.
 Every hit needs the individual posting fetched before it counts.
+
+## Tested: can the existing Aevon and Tempo lists be reused? No.
+
+The idea was reasonable. There are 688 clinics in `tempo_leads` with verified addresses, all
+healthcare, all with credentialed staff, so all with the problem. Importing them would have
+produced 688 sendable leads instantly.
+
+`cadre/signal-check.js` tested it properly rather than assuming either way: take a company we
+already know, search for its own postings, and see whether it has published the signal.
+
+**Result: 0 of 27.** Twelve Tempo clinics, fifteen Aevon businesses, no signal anywhere.
+
+The reason is visible in the names. Both lists are small businesses: realtors, mortgage brokers,
+marketing agencies, single-site physio clinics. Two things follow.
+
+- **Most have no credentialed workforce at all.** A realtor or a marketing agency has nothing
+  that expires.
+- **The ones that do are too small to delegate it.** A five-person clinic does not hire someone
+  to track certifications, the owner does it between patients. Nobody publishes a job ad for
+  work they do themselves, which is exactly why the signal is invisible below a certain size.
+
+This is the same structural finding as healthcare and property management, arriving from a
+different direction: **the signal appears when a company is large enough that credential tracking
+becomes somebody's named job.** Below that it is real but silent.
+
+It also explains why Cadre's lead profile looks nothing like the other two campaigns:
+manufacturing 56, trades 51, transport 27. Those industries barely appear in the Aevon or Tempo
+lists, and the overlap between Cadre and both existing tables is 5 companies out of 171.
+
+**The tool is kept**, because checking a specific known company for a signal is still the right
+move when one turns up from a referral or a conversation. It just does not work as a bulk
+conversion of an old list.

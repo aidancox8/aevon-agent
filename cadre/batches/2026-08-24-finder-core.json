@@ -1,0 +1,28 @@
+[
+ {
+  "business_name": "Inglenook Creche Childcare Centre",
+  "city": "Owen Sound, ON",
+  "industry": "childcare",
+  "source": "simplyhired",
+  "signal_type": "manual_tracking",
+  "signal_quote": "Keep Training Matrix up to date.",
+  "signal_url": "https://www.simplyhired.ca/job/xsWYxbhjZnp_QdknQLyfjG3TMPq-MfPZgiFWEQpkix9_feQhBtJzxQ",
+  "signal_date": "2026-08-24",
+  "qualification_score": 9,
+  "personalization_basis": "published signal: training matrix",
+  "notes": "[CA] Found via SimplyHired phrase \"training matrix\" in ontario. Job title: Administrative Assistant/Receptionist."
+ },
+ {
+  "business_name": "CAM Industrial Solutions LLC",
+  "city": "Saint John, NB",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "manual_tracking",
+  "signal_quote": "Ensure that the training matrix is up to date with reliable and valid information.",
+  "signal_url": "https://www.simplyhired.ca/job/VtPD05kSfm5aeMkHrXSDfWqOPiNUe4I__FktLa68yPTT1oexCUSX5g",
+  "signal_date": "2026-08-24",
+  "qualification_score": 9,
+  "personalization_basis": "published signal: training matrix",
+  "notes": "[CA] Found via SimplyHired phrase \"training matrix\" in new brunswick. Job title: HSE Training Co-ordinator/ HSE Specialist."
+ }
+]
