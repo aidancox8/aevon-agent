@@ -34,6 +34,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const axios = require('axios');
+const fs = require('fs');
 const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
 
@@ -172,6 +173,11 @@ const EXCLUDE_LARGE = [
   /\b(schaeffler|thales|dometic|winpak|menasha|rexel|orica|chep|cencora|clean harbors)\b/i,
   /\b(iamgold|alamos|hydro one|securiguard|paladin|securitas|gardaworld|commissionaires)\b/i,
   /\b(eclipse automation|accenture|deloitte|kpmg|cgi |bayshore|lifemark|cbi health|extendicare|revera|chartwell)\b/i,
+  // Added after a US sweep tried to insert Tesla, Owens Corning and Ravago Americas.
+  /\b(tesla|owens corning|ravago|id logistics|amazon|google|microsoft|apple|meta|boeing|lockheed|raytheon|northrop)\b/i,
+  /\b(pepsi|coca.?cola|nestle|unilever|kraft|tyson|jbs |smithfield|conagra|general mills|kellogg)\b/i,
+  /\b(3m\b|dupont|dow |basf|bayer|pfizer|merck|johnson &? johnson|ge |caterpillar|deere|cummins)\b/i,
+  /\b(fedex|ups\b|xpo|schneider national|werner|swift transportation|knight-swift|jb hunt|ryder)\b/i,
   /\b(de havilland|andrew peller|richelieu|quincaillerie|viterra|parrish|federated co-?op)\b/i,
 ];
 
@@ -394,13 +400,38 @@ if (require.main === module) (async () => {
   }
   if (found.length > 15) console.log(`  ... and ${found.length - 15} more`);
 
-  if (DRY || !found.length) { console.log(`\n${DRY ? 'Dry run, nothing written.' : 'Nothing new.'}`); return; }
+  // ALWAYS write the batch to disk first.
+  //
+  // A 40-minute CA+US sweep found 72 companies and then lost every one of them to a single
+  // "fetch failed" on the first insert. Forty minutes of requests thrown away because the
+  // results only existed in memory. The file is written before any further network call, so a
+  // failed run can be re-ingested with cadre/ingest.js instead of re-crawled.
+  const stamp = new Date().toISOString().slice(0, 10);
+  const batchPath = `cadre/batches/${stamp}-finder-${REGION}.json`;
+  try {
+    fs.mkdirSync('cadre/batches', { recursive: true });
+    fs.writeFileSync(batchPath, JSON.stringify(found, null, 1));
+    console.log(`Saved to ${batchPath}`);
+  } catch (e) { console.error(`could not save batch: ${e.message}`); }
 
-  let ok = 0;
+  if (DRY || !found.length) { console.log(`${DRY ? 'Dry run, nothing written to the database.' : 'Nothing new.'}`); return; }
+
+  let ok = 0, failed = 0;
   for (const f of found) {
-    const { error } = await supabase.from(TABLE).insert(f);
-    if (error) { console.error(`  insert failed ${f.business_name}: ${error.message}`); continue; }
-    ok++;
+    let inserted = false;
+    for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+      const { error } = await supabase.from(TABLE).insert(f);
+      if (!error) { inserted = true; break; }
+      // A transient network error should not cost a lead that took a crawl to find.
+      if (/fetch failed|ETIMEDOUT|ECONNRESET|socket hang up/i.test(error.message) && attempt < 2) {
+        await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+        continue;
+      }
+      console.error(`  insert failed ${f.business_name}: ${error.message}`);
+      break;
+    }
+    inserted ? ok++ : failed++;
   }
-  console.log(`\nInserted ${ok}. Next: node tempo/hunt-emails.js --table ${TABLE}`);
+  console.log(`\nInserted ${ok}${failed ? `, ${failed} failed (re-run: node cadre/ingest.js ${batchPath})` : ''}.`);
+  console.log(`Next: node tempo/hunt-emails.js --table ${TABLE}`);
 })().catch(e => { console.error('lead finder failed:', e.message); process.exit(1); });
