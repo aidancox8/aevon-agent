@@ -70,6 +70,10 @@ const CAMPAIGNS = [
   // means new sequences only start in the industries that have replied, so the runway has to
   // count those leads and not the whole queue.
   { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri', segmented: true, campaign: 'aevon' },
+  // Third campaign, HR and credentials. perDay is deliberately tiny: the thing being tested is
+  // whether the argument works, not whether volume works. Aevon already answered that with
+  // 3,506 sends and zero meetings.
+  { label: 'PULSE', sub: 'HR + credentials',  leads: 'pulse_leads', events: 'pulse_email_events', perDay: 5,  sendDays: 'Mon-Fri', campaign: 'pulse' },
 ];
 
 /**
@@ -125,7 +129,7 @@ async function auditQueuedCopy(c, warnings) {
 }
 
 async function review(c, warnings) {
-  const leads = await readAll(c.leads, 'id,business_name,status,email,last_sent_at,sequence_step,industry,email_quality');
+  const leads = await readAll(c.leads, 'id,business_name,status,email,last_sent_at,sequence_step,industry,email_quality,email_subject,scheduled_send_at');
   const events = await readAll(c.events, 'event_type,created_at,metadata,lead_id');
 
   const withEmail = leads.filter(l => l.email);
@@ -257,9 +261,17 @@ async function review(c, warnings) {
   const dow = new Date().toLocaleDateString('en-US', { timeZone: TZ, weekday: 'short' });
   const hourPT = parseInt(new Date().toLocaleString('en-US', { timeZone: TZ, hour: '2-digit', hour12: false }), 10);
   const isWeekday = !['Sat', 'Sun'].includes(dow) && !isBCHoliday(getVancouverDate());
-  if (isWeekday && sentToday.length === 0 && untouched.length > 0) {
+  // "Ready" must mean what the SENDER means by ready, not just "has an address". Pulse has 42
+  // leads with an address and 5 with copy written, so counting addresses produced a warning that
+  // the workflow had failed when in fact there was nothing for it to send.
+  // And "due" must mean due NOW. Pulse schedules one send per working day, so five leads with
+  // copy written are correctly not sent today if four of them are dated later this week.
+  const nowIso = new Date().toISOString();
+  const sendable = untouched.filter(l => l.email_subject
+    && (!l.scheduled_send_at || l.scheduled_send_at <= nowIso));
+  if (isWeekday && sentToday.length === 0 && sendable.length > 0) {
     if (hourPT >= FIRST_SEND_EXPECTED_BY_PT) {
-      warnings.push(`${c.label}: nothing sent today (${dow}) despite ${untouched.length} leads ready — check the send workflow ran.`);
+      warnings.push(`${c.label}: nothing sent today (${dow}) despite ${sendable.length} lead(s) with copy written and due — check the send workflow ran.`);
     } else {
       console.log(`   note        nothing sent yet, but it is only ${hourPT}:00 PT and the first run usually lands ~10:30. Not flagged.`);
     }

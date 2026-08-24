@@ -1,0 +1,87 @@
+name: Pulse - Send Outreach
+
+# The HR / credentials campaign. Third sender, same shape as Aevon and Tempo.
+#
+# NOT ARMED BY DEFAULT. A scheduled run only sends if the repository variable PULSE_ARMED is
+# exactly "true". Until then a scheduled run performs a dry run and prints what it would have
+# sent. The other two campaigns were armed by editing a workflow; this one is armed by flipping
+# a variable, which is easier to reverse and leaves an audit trail.
+#
+# Three slots, not one, because GitHub drops scheduled runs. On 2026-08-06 a hosted-runner
+# shortage failed Tempo's single 17:00 slot and it sent nothing all day. One cron entry is a
+# single point of failure.
+#
+# This cannot double-send: the sender counts today's sends from pulse_email_events against
+# PULSE_DAILY_CAP and exits once the cap is met, so later slots are no-ops on a normal day.
+#
+# The cap is deliberately tiny (default 5). Aevon ran 85/day into a scraped list for 3,506 sends
+# and zero meetings. This list is signal-qualified and hand-checked, so the thing being tested is
+# whether the argument works, not whether volume works.
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Type SEND to actually send (anything else = dry run)'
+        required: false
+        default: 'dry-run'
+  schedule:
+    - cron: '40 16 * * 1-5'  # Mon-Fri 9:40am PT, the intended batch
+    - cron: '40 19 * * 1-5'  # 12:40pm PT, retry if the morning slot never ran
+    - cron: '40 21 * * 1-5'  #  2:40pm PT, last chance before the day is lost
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard the email shape
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node check-email-shape.js
+
+      - name: Run Pulse sender
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          PULSE_DAILY_CAP: ${{ vars.PULSE_DAILY_CAP || '5' }}
+        run: |
+          MANUAL_SEND="${{ github.event.inputs.live }}"
+          ARMED="${{ vars.PULSE_ARMED }}"
+          if [ "$MANUAL_SEND" = "SEND" ]; then
+            echo "Manual send requested."
+            node pulse/sender.js --send
+          elif [ "${{ github.event_name }}" = "schedule" ] && [ "$ARMED" = "true" ]; then
+            echo "PULSE_ARMED is true, sending."
+            node pulse/sender.js --send
+          else
+            echo "Not armed (set repository variable PULSE_ARMED=true to go live). Dry run:"
+            node pulse/sender.js
+          fi
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: |
+          node -e "
+          const { Resend } = require('resend');
+          new Resend(process.env.RESEND_API_KEY).emails.send({
+            from: 'Aevon <' + process.env.FROM_EMAIL + '>',
+            to: 'aidan@aevon.ca',
+            subject: '[Aevon ALERT] Pulse sender failed',
+            text: 'The Pulse sender workflow failed. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          });"
