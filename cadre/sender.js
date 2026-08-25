@@ -28,23 +28,98 @@
  * published words back to them. A lead whose quote is missing, or whose copy does not actually
  * contain the quote, is not sendable. That is checked here, not assumed.
  *
- *   node cadre/sender.js              dry run
- *   node cadre/sender.js --send       send for real
- *   node cadre/sender.js --limit 3    cap this run
+ *   node cadre/sender.js                        dry run
+ *   node cadre/sender.js --send                 send for real, through Resend
+ *   node cadre/sender.js --send --via gmail     test send out of the real mailbox
+ *   node cadre/sender.js --limit 3              cap this run
+ *
+ * Timing, sequence and opt-out live in three sibling files, not here:
+ *   cadre/timezone.js    what time it is where the recipient is
+ *   cadre/schedule.js    books each touch at 09:00-11:00 their time, Tue-Thu
+ *   cadre/reply-scan.js  reads the mailbox and stops the sequence when somebody answers
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Resend } = require('resend');
 const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
+const { google } = require('googleapis');
 
 const TABLE = 'cadre_leads';
 const EVENTS = 'cadre_email_events';
 const resend = new Resend(process.env.RESEND_API_KEY);
+const { zoneFor, nextSendSlot } = require('./timezone');
+
+/**
+ * THE SEQUENCE. One touch throws away most of the campaign: across published cold-email data
+ * follow-ups roughly double total replies, and the last one, the short note that says you will
+ * stop, reliably outperforms the middle of the sequence.
+ *
+ * Gaps are in SEND SLOTS, not calendar days, because a slot is already Tue-Thu 09:00-11:00 in
+ * their zone. Two slots is about a week, four is about a fortnight.
+ *
+ * Nothing here can reach someone who answered: cadre/reply-scan.js moves a reply to `replied`
+ * or `unsubscribed`, and the due query below only ever looks at `queued` and `sent`.
+ */
+const SEQUENCE = [
+  { step: 0, subject: 'email_subject',     body: 'email_body',     gapSlots: 2 },
+  { step: 1, subject: 'followup_subject',  body: 'followup_body',  gapSlots: 3 },
+  { step: 2, subject: 'followup2_subject', body: 'followup2_body', gapSlots: 0 },
+];
 
 const FROM = process.env.FROM_EMAIL || 'aidan@aevon.ca';
 const FROM_NAME = 'Aidan Cox';
 const REPLY_TO = 'aidan@aevon.ca';
+
+/**
+ * WHICH PIPE THE MAIL GOES DOWN.
+ *
+ * Resend is the default and the only thing the scheduled runs use. It is the right choice for
+ * volume for one reason that has nothing to do with deliverability: it reports bounces by
+ * webhook, and the 5% breaker above depends on knowing the bounce rate. Gmail does not report
+ * bounces at all, they only arrive later as a message in the inbox, so a bad list would burn the
+ * domain for a day before anything noticed.
+ *
+ * --via gmail exists for test sends, where the point is to see exactly what a real recipient
+ * sees, threading and signature and all, out of the actual mailbox. Aidan's call, 2026-08-25.
+ * It is deliberately not available in CI.
+ */
+const VIA = (() => {
+  const i = process.argv.indexOf('--via');
+  const v = i > -1 ? String(process.argv[i + 1] || '').toLowerCase() : 'resend';
+  if (!['resend', 'gmail'].includes(v)) throw new Error(`--via must be resend or gmail, got "${v}"`);
+  if (v === 'gmail' && process.env.GITHUB_ACTIONS) {
+    throw new Error('--via gmail is for hand-run test sends only, not for scheduled runs');
+  }
+  return v;
+})();
+
+/** Hand the raw RFC822 message to Gmail. Plain text only, same as the Resend path. */
+async function sendViaGmail({ from, fromName, replyTo, to, subject, text }) {
+  const oauth2 = new google.auth.OAuth2(
+    process.env.GMAIL_OAUTH_CLIENT_ID, process.env.GMAIL_OAUTH_CLIENT_SECRET);
+  oauth2.setCredentials({ refresh_token: process.env.GMAIL_OAUTH_REFRESH_TOKEN });
+  const gmail = google.gmail({ version: 'v1', auth: oauth2 });
+
+  // RFC 2047 encode the display name so a non-ASCII character cannot corrupt the header.
+  const raw = [
+    `From: =?UTF-8?B?${Buffer.from(fromName).toString('base64')}?= <${from}>`,
+    `To: ${to}`,
+    `Reply-To: ${replyTo}`,
+    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(text).toString('base64'),
+  ].join('\r\n');
+
+  const res = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw: Buffer.from(raw).toString('base64url') },
+  });
+  return { id: res.data.id };
+}
 
 const IS_CI = !!process.env.GITHUB_ACTIONS;
 const LIVE = IS_CI || process.argv.includes('--send');
@@ -59,18 +134,59 @@ const BOUNCE_LIMIT = 0.05;
 const BOUNCE_WINDOW = 100;
 
 const FREEMAIL = /@(gmail|hotmail|outlook|yahoo|icloud|live|aol|proton|gmx)\./i;
+
+/**
+ * Inboxes that will not route a pitch about staff records, whatever the domain says.
+ *
+ * Nine scheduled leads pointed at one of these, including the two highest-scoring in the whole
+ * campaign. They passed the domain guard because sales@atstraffic.ca genuinely is their domain.
+ * That is the point: the domain check answers "is this the right company", not "is this the
+ * right person", and an HR pitch landing in a sales queue is a wasted send and a slightly worse
+ * sender reputation.
+ */
+const WRONG_DESK = /^(sales|sales-[a-z]+|service|servicedesk|support|techsupport|billing|accounts|accountspayable|accountsreceivable|invoices|orders|parts|shipping|dispatch|marketing|media|press|webmaster|noreply|no-reply|donations|volunteer|urethane|craneservice|fire|security|reception|bookings|quotes|estimating)@/i;
 const PLACEHOLDER = /^(your|email|name|test|example|info@example)/i;
 
-const FOOTER = [
-  '',
+/**
+ * THE LEGAL FOOTER. This is not decoration.
+ *
+ * CASL s.6(2) requires every commercial electronic message to identify the sender and give a
+ * MAILING ADDRESS valid for at least 60 days, plus an unsubscribe mechanism that actually works.
+ * CAN-SPAM requires the same physical postal address for the US half of the list. The footer used
+ * to read "Aevon, Vancouver BC", which is a city, not an address, and satisfies neither.
+ *
+ * Raised with Aidan on 2026-08-25 and declined: he does not want an address in the footer and
+ * accepts the risk. So CADRE_MAILING_ADDRESS is read from the environment, the sender WARNS on
+ * every run while it is empty, and setting that one variable closes the gap whenever he wants.
+ * The line is dropped from the footer entirely when unset rather than left blank.
+ *
+ * The opt-out line is honoured by cadre/reply-scan.js, which reads the mailbox and moves anyone
+ * who says no to `unsubscribed`. Without that scanner this sentence would be a lie.
+ */
+const MAILING_ADDRESS = (process.env.CADRE_MAILING_ADDRESS || '').trim();
+
+const FOOTER = '\n\n' + [
   '--',
   'Aidan Cox',
-  'Aevon, Vancouver BC',
+  'Aevon',
+  MAILING_ADDRESS,                 // filtered out below when empty, so no blank line is left
   'Staff records, training and credentials in one system. Runs daily at a 75 staff clinic in BC.',
   'aevon.ca',
-  '',
-  'Not relevant? Reply with a no and I will not email again.',
-].join('\n');
+].filter(Boolean).join('\n') + '\n\nNot relevant? Reply with a no and I will not email again.';
+
+/** Longest run of consecutive words from the quote that appears in the body. */
+function longestVerbatimRun(quote, body) {
+  const q = String(quote).toLowerCase().replace(/\s+/g, ' ').split(' ');
+  const b = ' ' + String(body).toLowerCase().replace(/\s+/g, ' ') + ' ';
+  let best = 0;
+  for (let i = 0; i < q.length; i++) {
+    for (let j = q.length; j > i + best; j--) {
+      const run = q.slice(i, j).join(' ');
+      if (run.length > 3 && b.includes(run)) { best = Math.max(best, j - i); break; }
+    }
+  }
+  return best;
+}
 
 const rootDomain = h => String(h || '').replace(/^https?:\/\//, '').replace(/^www\./, '')
   .split('/')[0].toLowerCase().split('.').slice(-2).join('.');
@@ -79,10 +195,11 @@ const rootDomain = h => String(h || '').replace(/^https?:\/\//, '').replace(/^ww
  * Every reason a lead must not be sent to, checked at send time rather than trusted from
  * intake. Each of these corresponds to something that actually went wrong on another campaign.
  */
-function blockReason(lead) {
+function blockReason(lead, stepNo) {
   if (!lead.email) return 'no address';
   if (PLACEHOLDER.test(lead.email)) return 'placeholder address';
   if (FREEMAIL.test(lead.email)) return 'freemail address, likely a scraping artifact';
+  if (WRONG_DESK.test(lead.email)) return `${lead.email.split('@')[0]}@ will not route an HR pitch`;
   if (lead.website && rootDomain(lead.email.split('@')[1]) !== rootDomain(lead.website)) {
     return `address domain does not match ${rootDomain(lead.website)}`;
   }
@@ -94,10 +211,21 @@ function blockReason(lead) {
 
   // The campaign's whole premise. If the body does not carry their own words, this is just
   // another cold email and should not go out under this campaign's name.
-  const key = lead.signal_quote.trim().toLowerCase().split(/\s+/).slice(0, 6).join(' ');
-  if (key && !lead.email_body.toLowerCase().includes(key.split(' ').slice(0, 3).join(' '))) {
-    return 'copy does not reference the signal quote';
-  }
+  //
+  // This originally compared only the FIRST few words of the quote, which blocked the strongest
+  // lead in the campaign: MJ Roofing's quote runs "Deliver safety orientations, ongoing
+  // training, toolbox talks, and maintain employee training records and certifications", and the
+  // email quotes the END of it. Measure the longest run of their words that survives ANYWHERE in
+  // the body, the same way the personalizer does.
+  // Follow-ups are exempt. They are a reply to a thread that already quoted them, and restating
+  // the quote a second time would read as a mail merge, which is the thing this check exists to
+  // prevent. Blocking a follow-up on it is the check firing at the wrong target.
+  if (stepNo > 0) return null;
+
+  const run = longestVerbatimRun(lead.signal_quote, lead.email_body);
+  const quoteWords = lead.signal_quote.trim().split(/\s+/).length;
+  const need = Math.min(5, Math.max(3, quoteWords - 2));
+  if (run < need) return `only ${run} consecutive words of their quote survived, need ${need}`;
   return null;
 }
 
@@ -125,6 +253,14 @@ async function bounceRate() {
     console.error('A bad list damages the sending domain for all three campaigns. Clean it first.');
     process.exit(1);
   }
+  // Raised with Aidan on 2026-08-25 and declined: he does not want a mailing address in the
+  // footer. It stays a warning rather than a block, so the risk is visible on every run and one
+  // env var closes it if he changes his mind. Not my call to make for him.
+  if (!MAILING_ADDRESS) {
+    console.warn('  ! No CADRE_MAILING_ADDRESS. CASL s.6(2) and CAN-SPAM both require a physical');
+    console.warn('    mailing address in commercial email. Sending anyway, as agreed.\n');
+  }
+
   if (sentN) console.log(`Bounce rate ${(rate * 100).toFixed(1)}% over last ${sentN} sends (limit ${BOUNCE_LIMIT * 100}%).`);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -136,8 +272,13 @@ async function bounceRate() {
 
   const now = new Date().toISOString();
   const { data: due, error } = await supabase.from(TABLE)
-    .select('id, business_name, email, website, contact_name, contact_role, city, signal_quote, signal_url, email_subject, email_body, qualification_score, scheduled_send_at')
-    .eq('status', 'queued')
+    .select('id, business_name, email, website, contact_name, contact_role, city, address, signal_quote, signal_url, ' +
+            'email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, ' +
+            'sequence_step, last_sent_at, qualification_score, scheduled_send_at')
+    // 'sent' is included because a lead stays `sent` between sequence steps. 'replied',
+    // 'unsubscribed', 'bounced' and 'dont_contact' are absent on purpose: those are the four
+    // ways a lead earns the right never to hear from us again.
+    .in('status', ['queued', 'sent'])
     .not('email_subject', 'is', null)
     .not('email', 'is', null)
     .lte('scheduled_send_at', now)
@@ -149,11 +290,21 @@ async function bounceRate() {
   const batch = (due || []).slice(0, LIMIT ? Math.min(LIMIT, room) : room);
   if (!batch.length) { console.log('Nothing scheduled and due.'); return; }
 
-  console.log(`${LIVE ? 'Sending' : 'Would send'} ${batch.length} (${already}/${DAILY_CAP} sent today)\n`);
+  console.log(`${LIVE ? 'Sending' : 'Would send'} ${batch.length} via ${VIA} ` +
+    `(${already}/${DAILY_CAP} sent today)\n`);
 
   let sent = 0, blocked = 0, failed = 0;
   for (const lead of batch) {
-    const block = blockReason(lead);
+    // Which touch is this? A lead sits at sequence_step 0 until the first email goes out.
+    const stepNo = lead.sequence_step || 0;
+    const stage = SEQUENCE[stepNo];
+    if (!stage) {
+      console.log(`  [done]  ${lead.business_name} - sequence complete`);
+      if (LIVE) await supabase.from(TABLE).update({ scheduled_send_at: null }).eq('id', lead.id);
+      continue;
+    }
+
+    const block = blockReason(lead, stepNo);
     if (block) {
       console.log(`  [block] ${lead.business_name} - ${block}`);
       blocked++;
@@ -164,34 +315,80 @@ async function bounceRate() {
       continue;
     }
 
-    const body = lead.email_body.trim() + FOOTER;
-    process.stdout.write(`  ${lead.business_name.slice(0, 34).padEnd(36)}${lead.email.padEnd(34)}`);
+    const rawSubject = lead[stage.subject];
+    const rawBody = lead[stage.body];
+    if (!rawSubject || !rawBody) {
+      console.log(`  [block] ${lead.business_name} - step ${stepNo + 1} copy not written`);
+      blocked++;
+      continue;
+    }
 
-    if (!LIVE) { console.log(`[dry] "${lead.email_subject}"`); sent++; continue; }
+    // A follow-up must never land the same week as the message before it. The scheduler already
+    // spaces them, but a manual reschedule or a re-run could collapse the gap, and a follow-up
+    // arriving a day after the first email reads as a machine, not a person.
+    if (stepNo > 0 && lead.last_sent_at) {
+      const daysSince = (Date.now() - new Date(lead.last_sent_at)) / 86400000;
+      if (daysSince < 4) {
+        console.log(`  [block] ${lead.business_name} - only ${daysSince.toFixed(1)}d since the last email`);
+        blocked++;
+        continue;
+      }
+    }
 
-    const { data, error: sendErr } = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM}>`,
-      reply_to: REPLY_TO,
-      to: lead.email,
-      subject: lead.email_subject,
-      // PLAIN TEXT ONLY. No html key, ever. See the header.
-      text: body,
-    });
+    // Follow-ups carry the original subject so they thread in the recipient's client rather than
+    // arriving as a second unrelated cold email.
+    const subject = stepNo === 0 ? rawSubject
+      : (/^re:/i.test(rawSubject) ? rawSubject : `Re: ${lead.email_subject}`);
+    const body = rawBody.trim() + FOOTER;
+    process.stdout.write(`  ${String(stepNo + 1)}/3 ${lead.business_name.slice(0, 30).padEnd(32)}${lead.email.padEnd(34)}`);
+
+    if (!LIVE) { console.log(`[dry] "${subject}"`); sent++; continue; }
+
+    let data, sendErr;
+    if (VIA === 'gmail') {
+      try {
+        data = await sendViaGmail({
+          from: FROM, fromName: FROM_NAME, replyTo: REPLY_TO,
+          to: lead.email, subject, text: body,
+        });
+      } catch (e) { sendErr = e; }
+    } else {
+      ({ data, error: sendErr } = await resend.emails.send({
+        from: `${FROM_NAME} <${FROM}>`,
+        reply_to: REPLY_TO,
+        to: lead.email,
+        subject,
+        // PLAIN TEXT ONLY. No html key, ever. See the header.
+        text: body,
+      }));
+    }
 
     if (sendErr) {
       console.log(`FAILED: ${sendErr.message}`);
-      await log(lead.id, 'error', { error: sendErr.message, email: lead.email });
+      await log(lead.id, 'error', { error: sendErr.message, email: lead.email, via: VIA });
       failed++;
       continue;
     }
     console.log('sent');
     await log(lead.id, 'sent', {
-      email: lead.email, subject: lead.email_subject, resend_id: data && data.id,
+      email: lead.email, subject, step: stepNo + 1, via: VIA, resend_id: data && data.id,
       contact: lead.contact_name || null, signal_url: lead.signal_url || null,
     });
+
+    // Book the next touch now, in their zone, or close the sequence out. Doing it here rather
+    // than in a nightly job means a lead can never sit half-advanced: the row that records the
+    // send is the same row that records what happens next.
+    const nextStep = stepNo + 1;
+    const hasNext = SEQUENCE[nextStep] &&
+      lead[SEQUENCE[nextStep].subject] && lead[SEQUENCE[nextStep].body];
+    const nextAt = (stage.gapSlots && hasNext)
+      ? nextSendSlot(zoneFor(lead.city || lead.address, lead.address), stage.gapSlots, 20).toISOString()
+      : null;
+
     await supabase.from(TABLE).update({
       status: 'sent', last_sent_at: new Date().toISOString(),
-      sequence_step: 1, resend_email_id: data && data.id,
+      sequence_step: nextStep, resend_email_id: data && data.id,
+      scheduled_send_at: nextAt,
     }).eq('id', lead.id);
     sent++;
   }

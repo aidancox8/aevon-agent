@@ -7,16 +7,24 @@ name: Cadre - Send Outreach
 # sent. The other two campaigns were armed by editing a workflow; this one is armed by flipping
 # a variable, which is easier to reverse and leaves an audit trail.
 #
-# Three slots, not one, because GitHub drops scheduled runs. On 2026-08-06 a hosted-runner
-# shortage failed Tempo's single 17:00 slot and it sent nothing all day. One cron entry is a
-# single point of failure.
+# WHY IT RUNS EVERY HOUR AND NOT THREE TIMES A DAY.
 #
-# This cannot double-send: the sender counts today's sends from cadre_email_events against
-# CADRE_DAILY_CAP and exits once the cap is met, so later slots are no-ops on a normal day.
+# This used to fire at 9:40, 12:40 and 14:40 Pacific, which was fine while every send was booked
+# at 9:40 Pacific too. It is not fine now. cadre/schedule.js books each email for 09:00-11:00 in
+# the RECIPIENT'S timezone, and the sender only picks up what is already due, so a runner that
+# wakes on Pacific time delivers everything east of Vancouver late:
 #
-# The cap is deliberately tiny (default 5). Aevon ran 85/day into a scraped list for 3,506 sends
-# and zero meetings. This list is signal-qualified and hand-checked, so the thing being tested is
-# whether the argument works, not whether volume works.
+#   a lead due 09:00 in St. John's is 11:30 UTC, and the old first slot was 16:40 UTC,
+#   so it would have landed at 14:10 their time, four hours past the window it was chosen for.
+#
+# Hourly across 08:00-19:00 UTC covers 09:00 UK through 11:00 Pacific, which is every zone on the
+# list. Extra runs are free: the sender sends only what is due, and the daily cap is counted from
+# cadre_email_events rather than from how many times the workflow ran, so it cannot double-send.
+# Hourly also removes the reason the three slots existed, which was that GitHub silently drops
+# scheduled runs (it dropped Tempo's single 17:00 slot on 2026-08-06 and it sent nothing all day).
+#
+# Tue-Thu only, because that is the only thing the scheduler books. Mon and Fri runs would be
+# no-ops, and a workflow that does nothing 40% of the time is a workflow nobody trusts.
 on:
   workflow_dispatch:
     inputs:
@@ -25,9 +33,15 @@ on:
         required: false
         default: 'dry-run'
   schedule:
-    - cron: '40 16 * * 1-5'  # Mon-Fri 9:40am PT, the intended batch
-    - cron: '40 19 * * 1-5'  # 12:40pm PT, retry if the morning slot never ran
-    - cron: '40 21 * * 1-5'  #  2:40pm PT, last chance before the day is lost
+    # Every hour, 08:00-19:00 UTC, Tuesday to Thursday. Covers 09:00 in London through
+    # 11:00 in Vancouver, which spans every zone any lead on the list sits in.
+    - cron: '5 8-19 * * 2-4'
+
+# Two runs sending at once would each read the same "sent today" count and both think there is
+# room, which is the one way the daily cap can be beaten. Queue them instead.
+concurrency:
+  group: cadre-send
+  cancel-in-progress: false
 
 jobs:
   send:
@@ -49,6 +63,20 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node check-email-shape.js
 
+      # Runs BEFORE the sender, deliberately. Anyone who replied or asked to be left alone in the
+      # last hour is moved out of 'queued' here, so this run cannot email them. Doing it after
+      # the send would still record the opt-out but would honour it one email too late.
+      - name: Read replies and honour opt-outs
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+        run: node cadre/reply-scan.js
+
       - name: Run Cadre sender
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -56,7 +84,8 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-          CADRE_DAILY_CAP: ${{ vars.CADRE_DAILY_CAP || '5' }}
+          CADRE_DAILY_CAP: ${{ vars.CADRE_DAILY_CAP || '12' }}
+          CADRE_MAILING_ADDRESS: ${{ vars.CADRE_MAILING_ADDRESS }}
         run: |
           MANUAL_SEND="${{ github.event.inputs.live }}"
           ARMED="${{ vars.CADRE_ARMED }}"

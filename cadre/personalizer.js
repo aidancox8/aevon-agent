@@ -81,13 +81,35 @@ function reject(subject, body, lead) {
   if (words > 90) return `body is ${words} words, over the limit`;
   if (first && !new RegExp(`^Hi ${first}\\b`, 'i').test(body.trim())) return `does not open with "Hi ${first},"`;
   if (!first && !/^Hi\b/i.test(body.trim())) return 'no greeting';
-  if (!/\?\s*$/.test(body.trim())) return 'does not end with a question';
+  // The closing ask is a token now, substituted at send time from cadre/offer.js, so the body
+  // ends with {{ASK}} rather than a question mark. Requiring one here rejected every email the
+  // moment the offer moved into a token.
+  if (!body.includes('{{ASK}}') && !/\?\s*$/.test(body.trim())) {
+    return 'no closing ask: needs the {{ASK}} token or a question';
+  }
 
   // THE CHECK THAT MATTERS. Their words must survive intact.
   const quoteWords = lead.signal_quote.trim().split(/\s+/).length;
   const need = Math.min(6, Math.max(3, quoteWords - 2));
   const run = longestVerbatimRun(lead.signal_quote, body);
   if (run < need) return `only ${run} consecutive words of their quote survived, need ${need}`;
+
+
+  // Aevon IS a company, so "we" is legitimate and is not blocked. What is blocked is any claim
+  // of a CUSTOMER BASE, because there are zero clients. "We often hear this" is true, since
+  // Aidan works inside a 75-staff clinic and talks to practitioners all week. "Our clients say"
+  // is not, and never will be until someone signs.
+  if (/\b(our (clients?|customers?)|clients like|customers like|many of our|we work with|companies we (work|serve)|our users)\b/i.test(body)) {
+    return 'claims a customer base that does not exist';
+  }
+
+  // A statement ending in a question mark reads as machine-written. Two generated bodies had
+  // "I build software that ... flags gaps before they become problems?"
+  for (const line of body.split('\n')) {
+    if (/^\s*I build software that\b/i.test(line) && /\?\s*$/.test(line)) {
+      return 'a statement ends with a question mark';
+    }
+  }
 
   for (const b of BANNED) if (b.re.test(body) || b.re.test(subject)) return b.why;
 
@@ -146,8 +168,88 @@ const SPELLING = {
   us: 'American English. "license" for both noun and verb, "center", "labor", "organization" and "program". Never "licence", never "centre", never "programme".',
 };
 
+/**
+ * Four ways to write the same email.
+ *
+ * The research is blunt that this is the SECOND most important thing, not the first: emails
+ * triggered by a real buying signal reply at 3-5x any well-written template, and every email
+ * here is signal-triggered already. Framework choice is worth a few points on top of that, not
+ * a multiple.
+ *
+ * Variety earns its place for a different reason. Fifteen emails a day in one identical shape
+ * reads as a campaign to a human and as a pattern to a filter. Four shapes, rotated by lead id
+ * so the same company always gets the same one, breaks that up without losing the premise.
+ *
+ * What each is and why it is here:
+ *  - TRIGGER: leads with the event, that they are hiring for this. The most honest of the four,
+ *    because the posting IS the reason we are writing.
+ *  - PAS: problem, agitate, solve. Reported as the strongest first-touch structure in B2B SaaS.
+ *    Agitation is capped at one line; more than that reads as manipulation.
+ *  - QUESTION: opens on their sentence and spends the email asking rather than telling. Question
+ *    framing lifts replies roughly 20%.
+ *  - SHORT: under 55 words, no argument at all, just their line and one question.
+ *
+ * BAB (before-after-bridge) is deliberately absent. It needs a customer story, there are no
+ * customers, and inventing one is the single thing that must never happen.
+ */
+const APPROACHES = [
+  {
+    name: 'trigger',
+    shape: [
+      'Line 1: "Hi {FIRST},"',
+      'Line 2: Say you saw the posting, then QUOTE THEIR SENTENCE exactly.',
+      'Line 3: BRIDGE from their quote to onboarding. In one plain sentence, say the records problem',
+      '        they advertised is what manual onboarding looks like from the outside. Base it only on',
+      '        facts given above and invent nothing about their workforce.',
+      'Line 4: One sentence, starting "I build software that", on the ONBOARDING and lifecycle, not on certificate tracking.',
+      'Line 5: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
+    ].join('\n'),
+  },
+  {
+    name: 'pas',
+    shape: [
+      'Line 1: "Hi {FIRST},"',
+      'Line 2: State the problem in their own words: say where you saw it, then QUOTE THEIR SENTENCE exactly.',
+      'Line 3: ONE line on what it costs when onboarding is manual: how long a new person takes to',
+      '        be useful, or what gets missed. Concrete and understated. No fear-mongering.',
+      'Line 4: One sentence, starting "I build software that", on running onboarding end to end so the records look after themselves.',
+      'Line 5: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
+    ].join('\n'),
+  },
+  {
+    name: 'question',
+    shape: [
+      'Line 1: "Hi {FIRST},"',
+      'Line 2: Say you saw the posting and QUOTE THEIR SENTENCE exactly.',
+      'Line 3: Ask how they onboard a new starter today. Genuinely curious, not rhetorical, not leading.',
+      'Line 4: One short sentence, starting "I build software that", under twenty words. This',
+      '        version is mostly question, not pitch.',
+      'Line 5: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
+    ].join('\n'),
+  },
+  {
+    name: 'short',
+    shape: [
+      'Line 1: "Hi {FIRST},"',
+      'Line 2: Say you saw the posting and QUOTE THEIR SENTENCE exactly.',
+      'Line 3: One sentence, starting "I build software that", on the ONBOARDING and lifecycle, not on certificate tracking.',
+      'Line 4: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
+      'TOTAL BODY UNDER 55 WORDS. No observation line at all. Nothing to argue with.',
+    ].join('\n'),
+  },
+];
+
+/** Same lead always gets the same approach, so re-running does not change their email. */
+function approachFor(lead) {
+  let h = 0;
+  for (const ch of String(lead.id || lead.business_name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return APPROACHES[h % APPROACHES.length];
+}
+
 function buildPrompt(lead) {
   const first = (lead.contact_name || '').trim().split(/\s+/)[0];
+  const approach = approachFor(lead);
+  const shape = approach.shape.replace(/\{FIRST\}/g, first || 'there');
   return `Write one short cold email. Return ONLY valid JSON: {"subject": "...", "body": "..."}
 
 WHO IT IS TO
@@ -160,23 +262,33 @@ ${lead.staff_estimate ? `Roughly ${lead.staff_estimate} staff.` : ''}
 WHAT THEY PUBLISHED, in a recent job ad. This is the whole reason we are writing:
 "${lead.signal_quote}"
 
-WHAT WE SELL
-Software that keeps staff records, onboarding, training and credential renewals on ONE employee
-record. A certification nearing expiry triggers the course that renews it, and completing the
-course clears the credential with nobody re-keying anything. It reminds the person and copies
-their manager a month before expiry, through email and Microsoft Teams.
+WHAT WE SELL, and what to LEAD with
+
+Lead with ONBOARDING, not certificate tracking.
+
+The quote you are given is almost always about training records or certifications. That is the
+SIGNAL, meaning it is why we found them and why the email is relevant. It is not the pitch.
+Certificate tracking on its own is a filing cabinet, and there are dedicated tools that do only
+that. Onboarding is what an HR or safety manager is actually measured on: 20% of all staff
+turnover happens in the first 45 days, and 52% of new hires say admin dominated their first week.
+
+The product runs the whole employee lifecycle on ONE record per person:
+  - Role-based onboarding. A new welder and a new receptionist get different paths.
+  - The training for that role is assigned as part of it, not chased separately afterwards.
+  - Completing the course auto-completes the onboarding step. Nobody re-keys anything.
+  - The credential is enrolled with its renewal date already set, so the reminders start
+    themselves at 60, 30 and 7 days and copy the manager a month before it lapses.
+  - Policies, documents and equipment are collected in the same flow.
+
+So the argument in the email is: the records problem they advertised is a SYMPTOM. It shows up in
+the spreadsheet because onboarding is manual end to end, and fixing the spreadsheet fixes the
+symptom.
+
+Reminders and expiry tracking may be mentioned as the tail of that sentence. They must never be
+the whole of it.
 
 THE SHAPE, follow it exactly:
-Line 1: "Hi ${first || 'there'},"
-Line 2: Say you SAW or NOTICED the posting, then QUOTE THEIR SENTENCE. Never drop the quote in
-        without saying where it came from. Reproduce at least six consecutive
-        words of it EXACTLY as written above. Do not reword, tidy, shorten or fix their grammar.
-Line 3: One plain observation about why that gets harder. Base it ONLY on facts given above.
-        Do NOT invent anything about their workforce: not volunteers, not part-timers, not
-        contractors, not shifts, not union status, not anything else you were not told.
-Line 4: One sentence on what the software does, written as "I build software that ...".
-        Never "our software", never "we provide". One person, not a company. No feature list.
-Line 5: A short question they can answer with a no.
+${shape}
 
 HARD RULES
 - Body between 55 and 80 words total.
