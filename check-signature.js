@@ -50,8 +50,20 @@ const cadre = require('fs').readFileSync('./cadre/sender.js', 'utf8');
 check('Aevon sender imports the shared signature', /require\(.*lib\/signature.*\)/.test(aevon));
 check('Cadre sender imports the shared signature', /require\(.*lib\/signature.*\)/.test(cadre));
 check('Aevon sends body + signature, not body + opt-out alone',
-  /signature\(\{/.test(aevon) && /text: withUnsubText\(body\)/.test(aevon));
+  /signature\(\{/.test(aevon) && /text: withUnsubText\(body,/.test(aevon));
 check('Cadre builds its footer from the shared signature', /const FOOTER = signature\(/.test(cadre));
+
+// The booking link is the one thing in the signature that can still look like a call to action,
+// so email 1 must not carry it while the Aevon copy rule says "no link in email 1".
+check('Aevon withholds the booking link on the first touch', /booking: step > 0/.test(aevon));
+// Assert on the OUTPUT, not the source: lib/signature.js quotes the original bad HTML in a
+// comment to explain why it was replaced, and a source-level regex reads that as a violation.
+const withBooking = signature({ optOut: OPT_OUT, booking: true });
+check('booking link appears when asked for', withBooking.includes('calendar.app.google'));
+check('booking link is a naked URL, never anchor text',
+  /Book a call: https:\/\/calendar\.app\.google\/\S+$/m.test(withBooking));
+check('booking link absent from the no-link variant',
+  !signature({ optOut: OPT_OUT, booking: false }).includes('calendar.app.google'));
 
 console.log(`\n${bad ? `${bad} FAILED` : 'All signature checks passed.'}`);
 process.exit(bad ? 1 : 0);
