@@ -61,7 +61,9 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node check-email-shape.js
+        run: |
+          node check-email-shape.js
+          node check-signature.js
 
       # Runs BEFORE the sender, deliberately. Anyone who replied or asked to be left alone in the
       # last hour is moved out of 'queued' here, so this run cannot email them. Doing it after

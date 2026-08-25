@@ -33,11 +33,45 @@ const names = require('./do-not-contact.json').names;
 // "Brenda Lau MD" all catch.
 const EXCLUDED_ORGS = ['changepain', 'change pain', 'artus', 'brendalaumd', 'brenda lau'];
 
+/**
+ * Domains where somebody asked us to stop.
+ *
+ * Kept separate from EXCLUDED_ORGS because the reason is different: those are places we choose
+ * never to pitch, these are places that told us no. Mixing them would lose that distinction the
+ * first time anyone asked why a name was on the list.
+ *
+ * Setting the lead's status to `unsubscribed` already stops the send, since every sender queries
+ * `status = 'queued'`. This is the second layer, and it exists for one specific failure: a lead
+ * finder re-discovering the same company later and inserting a FRESH row at `queued`, which the
+ * status guard cannot see. The status protects the row; this protects the company.
+ *
+ * Each entry records who and when, because a do-not-contact list nobody can audit becomes a list
+ * nobody trusts and eventually a list somebody quietly edits.
+ */
+const OPTED_OUT_DOMAINS = [
+  // Robert replied "NO" 2026-08-25 to the Aevon "injury case intake" follow-up. He had a third
+  // touch booked for 2026-08-30, which was cancelled. Note the address mismatch that let this
+  // slip past automated matching: he writes from robert@, the row held rob@.
+  'kornfeldlaw.com',
+];
+
 /** Returns a reason if this lead's employer or email domain is excluded outright, else null. */
 function excludedOrgReason(businessName, email) {
   const name = norm(businessName);
   const domain = String(email || '').toLowerCase().split('@')[1] || '';
   const nameSquashed = name.replace(/[^a-z]/g, '');
+
+  // Somebody at this company said stop. That outranks every other reason to send.
+  for (const d of OPTED_OUT_DOMAINS) {
+    if (domain === d || domain.endsWith('.' + d)) {
+      return `${d} asked not to be contacted again`;
+    }
+    // Catch a re-scrape that found the company but not the same address.
+    const bare = d.replace(/\.[a-z.]+$/, '').replace(/[^a-z]/g, '');
+    if (bare.length >= 6 && nameSquashed.includes(bare)) {
+      return `${d} asked not to be contacted again`;
+    }
+  }
   for (const org of EXCLUDED_ORGS) {
     if (name && name.includes(org)) return `business is an excluded organisation (${org})`;
     // Also compare with separators stripped so "Brenda Lau MD" matches "brendalaumd".

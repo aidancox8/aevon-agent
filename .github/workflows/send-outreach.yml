@@ -19,6 +19,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The Aevon signature vanished on 2026-08-18 and every email went out unsigned for a week
+      # before a prospect's "NO" made it visible. This workflow had no shape guard at all, which
+      # is why nothing caught it. See check-signature.js.
+      - name: Guard the email shape and signature
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          node check-email-shape.js
+          node check-signature.js
+
       - name: Send due emails
         env:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}

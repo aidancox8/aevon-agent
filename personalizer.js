@@ -259,7 +259,7 @@ function buildPrompt(lead, websiteContent) {
      price, a demo, a free build, or what to reply will be stale the moment the offer moves.
      So write ONLY the part that is genuinely about this business, then {{ASK}}.
      Never mention price, a demo, a trial, or what it costs anywhere in the body.
-  - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off (the signature handles that).`;
+  - No link in email 1 (it goes out when they say yes, or in the follow-up). No feature dump. Do NOT assert their pain as fact. No sign-off: sender.js appends the signature from lib/signature.js, so writing one here would double it up.`;
   return `You are writing a cold outreach email on behalf of Aevon, ${companyLine}.
 
 About Aevon:

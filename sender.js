@@ -22,6 +22,11 @@ const { applyAsk } = require('./lib/offer');
 const { retiredOfferReason } = require('./lib/copy-guard');
 const { isActiveSegment, isSendableAddress, isWorthSending, isHotSegment } = require('./lib/segments');
 const { excludedOrgReason } = require('./tempo/dnc');
+const { signature } = require('./lib/signature');
+
+// Optional. CASL s.6(2) and CAN-SPAM both want a physical mailing address; Aidan declined one on
+// 2026-08-25. Setting this env var puts it in the signature across all three campaigns.
+const MAILING_ADDRESS = (process.env.CADRE_MAILING_ADDRESS || '').trim();
 
 // Cached MX check: a domain with no mail server (and no A-record fallback) will
 // hard-bounce. Skipping it protects the young domain's sender reputation, which
@@ -282,10 +287,24 @@ function isSendableDay() {
 // anyone who replies "no" straight to dont_contact without waiting on a model call.
 const UNSUB_TEXT = "Not interested? Just reply no and I won't email you again.";
 
-/** Append the opt-out line to the body, if the copy does not already carry one. */
+/**
+ * Append the signature and the opt-out line.
+ *
+ * THIS USED TO ONLY APPEND THE OPT-OUT. The name was missing entirely, because the sign-off lived
+ * in toHtml() and toHtml() stopped being sent on 2026-08-18, while the personalizer prompt still
+ * told the model "No sign-off (the signature handles that)". Between those two facts, every
+ * Aevon email for a week went out with no name on it: body, blank line, opt-out sentence, end.
+ * See lib/signature.js for the whole story.
+ */
 function withUnsubText(body) {
-  if (/reply no\b|unsubscribe/i.test(body)) return body;
-  return `${body.trimEnd()}\n\n${UNSUB_TEXT}`;
+  const trimmed = body.trimEnd();
+  // Copy that already carries its own opt-out gets the signature but not a second one.
+  if (/reply no\b|unsubscribe/i.test(trimmed)) {
+    return trimmed.replace(
+      /\n*\s*(Not interested\?[^\n]*|[^\n]*\breply no\b[^\n]*|[^\n]*unsubscribe[^\n]*)\s*$/i,
+      '') .trimEnd() + signature({ optOut: UNSUB_TEXT, address: MAILING_ADDRESS });
+  }
+  return trimmed + signature({ optOut: UNSUB_TEXT, address: MAILING_ADDRESS });
 }
 
 // Plain, left-aligned personal email. No card/wrapper/hero image — a marketing

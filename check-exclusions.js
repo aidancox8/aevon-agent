@@ -14,6 +14,12 @@ const CASES = [
   ['Some Other Clinic', 'info@changepain.ca', true],
   ['Some Other Clinic', 'info@change-pain.ca', true],
   ['Artus Health Centre', 'info@artushealth.ca', true],
+  // Robert replied NO on 2026-08-25. All four spellings must be blocked, including the address
+  // he actually writes from (robert@), which is not the address the lead row held (rob@).
+  ['Lindquist & Kornfeld Attorneys At Law', 'rob@kornfeldlaw.com', true],
+  ['Lindquist & Kornfeld Attorneys At Law', 'robert@kornfeldlaw.com', true],
+  ['Anything', 'intake@mail.kornfeldlaw.com', true],
+  ['Kornfeld Law Group', 'hello@some-other-domain.com', true],
   // Must NOT be blocked: real prospects with superficially similar names.
   ['Vancouver Physiotherapy', 'info@vanphysio.ca', false],
   ['Pain Free Clinic', 'info@painfree.ca', false],

@@ -44,6 +44,7 @@ const { Resend } = require('resend');
 const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
 const { google } = require('googleapis');
+const { signature } = require('../lib/signature');
 
 const TABLE = 'cadre_leads';
 const EVENTS = 'cadre_email_events';
@@ -165,14 +166,14 @@ const PLACEHOLDER = /^(your|email|name|test|example|info@example)/i;
  */
 const MAILING_ADDRESS = (process.env.CADRE_MAILING_ADDRESS || '').trim();
 
-const FOOTER = '\n\n' + [
-  '--',
-  'Aidan Cox',
-  'Aevon',
-  MAILING_ADDRESS,                 // filtered out below when empty, so no blank line is left
-  'Staff records, training and credentials in one system. Runs daily at a 75 staff clinic in BC.',
-  'aevon.ca',
-].filter(Boolean).join('\n') + '\n\nNot relevant? Reply with a no and I will not email again.';
+// Built by lib/signature.js so all three campaigns share one sign-off and cannot drift apart
+// again. They already had: Aevon's went missing entirely on 2026-08-18 and nobody noticed for a
+// week, because the only copy of it lived in a function that had stopped being called.
+const FOOTER = signature({
+  optOut: 'Not relevant? Reply with a no and I will not email again.',
+  address: MAILING_ADDRESS,
+  tagline: 'Staff records, training and credentials in one system.',
+});
 
 /** Longest run of consecutive words from the quote that appears in the body. */
 function longestVerbatimRun(quote, body) {
