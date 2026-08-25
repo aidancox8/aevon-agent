@@ -360,6 +360,28 @@ if (require.main === module) (async () => {
   console.log(`${DRY ? 'DRY RUN. ' : ''}${seen.size} companies already in the list.\n`);
 
   const found = [];
+
+  // Checkpoint to disk as we go. A sweep can run 40 minutes across 600 queries, and anything
+  // that ends it early (a kill, a lost terminal, a laptop sleeping) would otherwise throw away
+  // every result, because the batch used to be written only after the loop finished.
+  const stamp = new Date().toISOString().slice(0, 10);
+  const batchPath = `cadre/batches/${stamp}-finder-${REGION}.json`;
+  const checkpoint = () => {
+    try {
+      fs.mkdirSync('cadre/batches', { recursive: true });
+      fs.writeFileSync(batchPath, JSON.stringify(found, null, 1));
+    } catch (e) { console.error(`  checkpoint failed: ${e.message}`); }
+  };
+  // Save on the way out too, however the process ends.
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.on(sig, () => {
+      checkpoint();
+      console.log(`\nStopped. ${found.length} companies saved to ${batchPath}`);
+      console.log(`Ingest them with: node cadre/ingest.js ${batchPath}`);
+      process.exit(0);
+    });
+  }
+
   const phrases = PHRASES.slice(0, MAX_PHRASES);
   const targets = TARGETS.slice(0, MAX_LOCATIONS);
 
@@ -423,6 +445,7 @@ if (require.main === module) (async () => {
         });
         added++;
       }
+      if (added) checkpoint();
       console.log(`  ${String(r.total).padStart(4)} hits  ${added ? '+' + added : '  '}  "${phrase}" / ${target.place}`);
     }
   }
@@ -440,13 +463,8 @@ if (require.main === module) (async () => {
   // "fetch failed" on the first insert. Forty minutes of requests thrown away because the
   // results only existed in memory. The file is written before any further network call, so a
   // failed run can be re-ingested with cadre/ingest.js instead of re-crawled.
-  const stamp = new Date().toISOString().slice(0, 10);
-  const batchPath = `cadre/batches/${stamp}-finder-${REGION}.json`;
-  try {
-    fs.mkdirSync('cadre/batches', { recursive: true });
-    fs.writeFileSync(batchPath, JSON.stringify(found, null, 1));
-    console.log(`Saved to ${batchPath}`);
-  } catch (e) { console.error(`could not save batch: ${e.message}`); }
+  checkpoint();
+  console.log(`Saved to ${batchPath}`);
 
   if (DRY || !found.length) { console.log(`${DRY ? 'Dry run, nothing written to the database.' : 'Nothing new.'}`); return; }
 
