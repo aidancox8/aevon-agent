@@ -1,7 +1,14 @@
 name: Tempo - Send Outreach
 
-# LIVE on autopilot (armed 2026-07-28): weekdays, one batch per day. The sender itself also requires --send, so a stray
-# dispatch without it can never email anyone.
+# PAUSED 2026-08-26. Was live on autopilot from 2026-07-28. Tempo was shelved as a business on
+# 2026-08-20, but this workflow carried on regardless and sent 100 emails in the following week
+# before anyone looked. Scheduled runs now require the repository variable TEMPO_ARMED="true";
+# without it they dry-run and print what they would have sent.
+#
+# Nothing here is deleted. The crons, the copy and the 514 queued leads are all intact, so
+# resuming is one variable rather than a code change. A manual dispatch typing SEND still sends,
+# for a deliberate one-off. The sender itself also requires --send, so a stray dispatch without
+# it can never email anyone.
 #
 # Three slots, not one, because GitHub drops scheduled runs. On 2026-08-06 a hosted-runner
 # shortage failed the single 17:00 slot with "The job was not acquired by Runner of type hosted"
@@ -47,9 +54,24 @@ jobs:
           TEMPO_RESEND_API_KEY: ${{ secrets.TEMPO_RESEND_API_KEY }}
           TEMPO_FROM_EMAIL: ${{ secrets.TEMPO_FROM_EMAIL }}
           TEMPO_DAILY_CAP: ${{ vars.TEMPO_DAILY_CAP || '20' }}
+          TEMPO_ARMED: ${{ vars.TEMPO_ARMED }}
         run: |
-          if [ "${{ github.event.inputs.live }}" = "SEND" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+          # PAUSED 2026-08-26. Tempo was shelved as a business on 2026-08-20 with every
+          # acquisition channel ruled out, but this workflow kept sending: 100 emails in the
+          # seven days before it was noticed, against 514 leads still due. That is domain
+          # reputation and prospect goodwill spent on a product nobody is selling.
+          #
+          # Scheduled runs now need the repository variable TEMPO_ARMED set to exactly "true".
+          # Nothing is deleted: the crons, the copy and the queue are all intact, so restarting
+          # is one variable rather than a code change. A manual run typing SEND still works, so
+          # a deliberate one-off is still possible.
+          if [ "${{ github.event.inputs.live }}" = "SEND" ]; then
+            echo "Manual send requested."
+            node tempo/sender.js --send
+          elif [ "${{ github.event_name }}" = "schedule" ] && [ "$TEMPO_ARMED" = "true" ]; then
+            echo "TEMPO_ARMED is true, sending."
             node tempo/sender.js --send
           else
+            echo "Tempo sending is PAUSED (shelved 2026-08-20). Set TEMPO_ARMED=true to resume."
             node tempo/sender.js
           fi
