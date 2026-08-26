@@ -77,6 +77,22 @@ function reject(subject, body, lead) {
 
   if (subjWords > 4) return `subject is ${subjWords} words, research says 4 or fewer`;
   if (/[.!?]$/.test(subject.trim())) return 'subject ends with punctuation';
+
+  // FORMATTING IS NOT COSMETIC. A background run on 2026-08-25 wrote 27 bodies with no blank
+  // line anywhere: greeting, quote, claim and ask stacked as one block. On a phone that is a
+  // grey wall, and a wall is the fastest way to be deleted unread. Every one of them passed
+  // every other check here, which is how they nearly went out.
+  if (!/\n\s*\n/.test(body.trim())) return 'no blank line between paragraphs, the body is one wall';
+  const paras = body.trim().split(/\n\s*\n/).filter(Boolean);
+  if (paras.length < 3) return `only ${paras.length} paragraph(s), needs at least 3`;
+  const longest = paras.reduce((m, p) => Math.max(m, p.trim().split(/\s+/).length), 0);
+  if (longest > 45) return `a paragraph runs ${longest} words, too long to read on a phone`;
+
+  // The quote belongs woven into a sentence, not dropped in quotation marks. Quoting it as a
+  // quotation is the single clearest mail-merge tell: a person paraphrases what they read.
+  if (/[:]\s*["“]/.test(body) || /\bit says:?\s*["“]/i.test(body)) {
+    return 'the signal quote is presented as a quotation, which reads as a mail merge';
+  }
   if (words < 45) return `body is ${words} words, too thin`;
   if (words > 90) return `body is ${words} words, over the limit`;
   if (first && !new RegExp(`^Hi ${first}\\b`, 'i').test(body.trim())) return `does not open with "Hi ${first},"`;

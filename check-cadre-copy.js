@@ -14,15 +14,37 @@ const LEAD = {
   signal_quote: 'Maintain employee training records and certifications',
   industry: 'trades', business_name: 'MJ Roofing', notes: '', staff_estimate: 120,
 };
+// Blank lines between paragraphs, because that is what a real email looks like. This fixture
+// used to be single-spaced, which meant the "wall of text" rule had nothing to test against and
+// 27 stored bodies with no paragraph break at all passed every check in the file.
 const GOOD = `Hi Nathan,
+
 Saw your Safety Officer posting, which asks whoever takes it to maintain employee training records and certifications.
+
 With 120 roofers on tickets, that half of the job grows quietly until it is most of it.
+
 I build software that clears the record when the course that renews it is completed.
+
 Is that a real annoyance at MJ, or handled?`;
 
 const swap = (from, to) => GOOD.replace(from, to);
 
 const CASES = [
+  // The 2026-08-25 background run produced all three of these and every one passed the old file.
+  ['reject', 'employee training', `Hi there,
+I came across your recent job posting and noticed that it says: "Maintain accurate records of employee training and certifications."
+I build software that assigns role-based onboarding, auto-enrols training, and sends renewal reminders.
+{{ASK}}`],
+  // The same good copy, collapsed to single spacing. Nothing else about it changed, which is
+  // the point: formatting alone decides whether this is readable on a phone.
+  ['reject', 'training matrix', GOOD.replace(/\n\n/g, '\n')],
+  ['reject', 'training matrix', `Hi Tim,
+
+Saw your posting.
+
+I build software that ties role-based onboarding paths to the required training so each new hire gets a personalised plan, completes courses that auto-sign off onboarding steps, and has credentials enrolled with automatic renewal reminders set for 60, 30 and 7 days before expiry.
+
+{{ASK}}`],
   ['accept', 'training records', GOOD],
   // Model actually did this: invented volunteers at a grocery co-op.
   ['reject', 'training records', swap('120 roofers', '120 volunteers')],
