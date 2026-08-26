@@ -105,9 +105,12 @@ How much of your week does that actually take?`],
     console.log(`${DRY ? '[dry] ' : ''}${String(n + 1).padStart(2)}. ${name.slice(0, 32).padEnd(34)}${lead.email.padEnd(34)}${when.slice(0, 16).replace('T', ' ')} UTC`);
 
     if (!DRY) {
+      // eq('copy_locked', false) so this cannot overwrite hand-written copy either. The
+      // personalizer is not the only thing that writes a body, and locking one writer while
+      // leaving the others open is not a lock.
       const { error } = await supabase.from('cadre_leads').update({
         email_subject: subject, email_body: body, scheduled_send_at: when, send_batch: 1,
-      }).eq('id', lead.id);
+      }).eq('id', lead.id).eq('copy_locked', false);
       if (error) { console.error(`      FAILED: ${error.message}`); continue; }
     }
     n++;

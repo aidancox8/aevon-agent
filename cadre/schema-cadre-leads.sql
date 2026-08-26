@@ -66,3 +66,16 @@ alter table cadre_leads add constraint cadre_leads_requires_signal
 create unique index if not exists cadre_leads_business_uniq
   on cadre_leads (lower(btrim(business_name)));
 create index if not exists cadre_leads_status_idx on cadre_leads (status, sequence_step);
+
+-- Hand-written copy must not be silently replaced by generated copy.
+--
+-- On 2026-08-25 a background regeneration run overwrote every hand-written Cadre body. The
+-- personalizer already filtered on `email_subject is null`, which should have prevented it and
+-- did not, and the loss was recoverable only because a scratch file happened to survive. An
+-- empty field is a weak way to express "leave this alone"; a column says it outright.
+--
+-- Set by cadre/copy-handwritten.js. Honoured by cadre/personalizer.js and cadre/load-drafts.js.
+-- Asserted against the live database by check-copy-lock.js, which attempts a real write.
+alter table cadre_leads add column if not exists copy_locked boolean not null default false;
+comment on column cadre_leads.copy_locked is
+  'Hand-written copy. The personalizer must skip this row. Set by cadre/copy-handwritten.js.';

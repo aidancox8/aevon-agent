@@ -326,6 +326,12 @@ if (require.main === module) (async () => {
   const { data: leads, error } = await supabase.from(TABLE)
     .select('id, business_name, city, industry, contact_name, contact_role, staff_estimate, signal_quote, notes, email, qualification_score')
     .eq('status', 'queued')
+    // Never touch hand-written copy. On 2026-08-25 a background regeneration run replaced every
+    // hand-written body with a generated one, and the only reason it was recoverable is that a
+    // scratch file happened to survive. `.is('email_subject', null)` below was supposed to
+    // prevent that on its own and did not, so the intent is now stated explicitly in a column
+    // rather than inferred from whether a field is empty.
+    .eq('copy_locked', false)
     .is('email_subject', null)
     .not('email', 'is', null)
     .not('signal_quote', 'is', null)

@@ -181,7 +181,14 @@ I build software that runs onboarding by role, assigns the training as part of i
   let ok = 0;
   for (const [id, subject, body] of COPY) {
     const { error } = await supabase.from('cadre_leads')
-      .update({ email_subject: subject, email_body: body.trim(), personalization_basis: 'hand-written from published signal quote' })
+      .update({
+        email_subject: subject,
+        email_body: body.trim(),
+        personalization_basis: 'hand-written from published signal quote',
+        // Stops the personalizer replacing this. Without it a background run regenerates over
+        // hand-written copy and nothing says so; that is how 27 wall-of-text bodies appeared.
+        copy_locked: true,
+      })
       .eq('id', id);
     if (error) { console.error(`FAIL ${id}: ${error.message}`); continue; }
     ok++;
