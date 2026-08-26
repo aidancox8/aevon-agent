@@ -204,3 +204,29 @@ lists, and the overlap between Cadre and both existing tables is 5 companies out
 **The tool is kept**, because checking a specific known company for a signal is still the right
 move when one turns up from a referral or a conversation. It just does not work as a bulk
 conversion of an old list.
+
+## Deferred: DMARC reporting, then enforcement
+
+`aevon.ca` publishes `v=DMARC1; p=none;` with no `rua=`, so no DMARC report has ever been
+received and there is no way to see what sends as the domain. Probing for other senders on
+2026-08-25 found only Google Workspace and Resend (on the `send.aevon.ca` subdomain), but absence
+of evidence is not evidence of absence.
+
+Raising straight to `p=quarantine` was considered and declined on 2026-08-25, for two reasons:
+any unaligned mail stream nobody knows about starts getting junked silently, and it was the night
+before the campaign's first real batch, where a DNS change would make a Defender problem
+indistinguishable from a DMARC problem.
+
+The order to do it in:
+
+1. Reporting only, no enforcement change, nothing can break:
+   `v=DMARC1; p=none; rua=mailto:aidan@aevon.ca; fo=1`
+2. Read a week or two of reports. Confirm only known senders appear.
+3. Then `p=quarantine`, as a decision rather than a gamble.
+
+DNS is at Namecheap: Domain List -> aevon.ca -> Manage -> Advanced DNS -> the `_dmarc` TXT record.
+
+Worth knowing before step 1: the reports are daily XML from every major provider, roughly 5-15
+messages a day into the mailbox cadre/reply-scan.js reads. They come from addresses like
+noreply-dmarc-support@google.com, match no lead and are skipped harmlessly, but they are noise. A
+Gmail filter or a dedicated `dmarc@aevon.ca` alias fixes that.
