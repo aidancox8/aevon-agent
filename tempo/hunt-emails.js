@@ -166,7 +166,8 @@ function effectiveQuality(e) {
  * ranking scores fire@ as "personal" because it looks like a first name, and picks it. An email
  * about tracking staff credentials landing in the fire alarm inbox is a wasted send.
  */
-const CADRE_PREFERRED = ['hr', 'humanresources', 'human.resources', 'people', 'peopleandculture',
+const CADRE_PREFERRED = ['hr', 'humanresources', 'human.resources', 'hrdept', 'rh', 'people',
+  'peopleandculture', 'careers', 'career', 'jobs', 'recruiting', 'recruitment', 'hiring',
   'safety', 'compliance', 'training', 'operations', 'ops', 'admin', 'office'];
 
 /**
@@ -185,9 +186,39 @@ const CADRE_PREFERRED = ['hr', 'humanresources', 'human.resources', 'people', 'p
 const UNUSABLE = [
   [/^(your|email|name|test|example)/i, 'placeholder'],
   [/@(gmail|hotmail|outlook|yahoo|icloud|live|aol|proton|gmx)\./i, 'freemail, usually a scraping artifact'],
-  [/^(sales|sales-[a-z]+|service|servicedesk|support|techsupport|billing|accounts|accountspayable|accountsreceivable|invoices|orders|parts|shipping|dispatch|marketing|media|press|webmaster|noreply|no-reply|donations|volunteer|urethane|craneservice|fire|security|reception|bookings|quotes|estimating|customerservice|custexp)@/i,
-   'wrong desk, will not route an HR pitch'],
 ];
+
+/**
+ * Desks that will not route a pitch about staff records.
+ *
+ * MATCHED AS SEGMENTS, NOT AS A PREFIX. The first version anchored on `^sales@` and was walked
+ * past three separate ways in one run: sales.main@daybar.com (a dot), insidesales@ecyclesolutions
+ * (a prefix), and %20sales@progressiverubber (an encoding artifact). Anchoring assumes the
+ * mailbox is named exactly what you expected, and real ones are not.
+ *
+ * So the local part is split on anything that is not a letter and each piece is checked, which
+ * catches sales.main and corp.comm; and a short list of words that essentially never occur inside
+ * a person's name is additionally matched as a substring, which catches insidesales.
+ */
+const DESK_WORDS = [
+  'sales', 'service', 'servicedesk', 'support', 'techsupport', 'billing', 'accounts',
+  'accountspayable', 'accountsreceivable', 'ap', 'ar', 'invoices', 'invoice', 'orders', 'parts',
+  'shipping', 'dispatch', 'marketing', 'media', 'press', 'webmaster', 'postmaster', 'noreply',
+  'donations', 'volunteer', 'urethane', 'craneservice', 'fire', 'reception', 'bookings',
+  'quotes', 'estimating', 'estimations', 'estimation', 'customerservice', 'custexp', 'rfq',
+  'communications', 'corpcomm', 'comms', 'ethics', 'privacy', 'thirdparty', 'architects',
+  'inquiries', 'enquiries', 'legal', 'purchasing', 'procurement', 'warranty', 'returns',
+  'customersuccess', 'customercare', 'clientservices', 'clientcare', 'helpdesk', 'aog',
+];
+/** Never part of a real person's name, so safe to match anywhere in the local part. */
+const DESK_SUBSTRINGS = /(sales|invoice|billing|noreply|no-reply|webmaster|postmaster|estimat|customerservice|techsupport)/i;
+
+function wrongDesk(localPart) {
+  const local = String(localPart).toLowerCase();
+  const segments = local.split(/[^a-z]+/).filter(Boolean);
+  if (segments.some(seg => DESK_WORDS.includes(seg))) return true;
+  return DESK_SUBSTRINGS.test(local);
+}
 
 /**
  * Template addresses that ship with a website theme and belong to nobody. Distinct from the
@@ -210,6 +241,7 @@ function unusableReason(email, website) {
   if (/[\s<>"'(),;]/.test(email)) return 'contains characters no address has';
   if (PLACEHOLDER_DOMAIN.test(email)) return 'placeholder domain from a site template';
   for (const [re, why] of UNUSABLE) if (re.test(email)) return why;
+  if (wrongDesk(email.split('@')[0])) return `${email.split('@')[0]}@ is the wrong desk for an HR pitch`;
   // Off-domain. The sender blocks these outright, because an address on someone else's domain is
   // usually a supplier, a web designer, or a font author rather than the company.
   const host = siteHost(website);
