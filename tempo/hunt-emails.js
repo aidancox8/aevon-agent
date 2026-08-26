@@ -209,6 +209,7 @@ const DESK_WORDS = [
   'communications', 'corpcomm', 'comms', 'ethics', 'privacy', 'thirdparty', 'architects',
   'inquiries', 'enquiries', 'legal', 'purchasing', 'procurement', 'warranty', 'returns',
   'customersuccess', 'customercare', 'clientservices', 'clientcare', 'helpdesk', 'aog',
+  'dpo', 'compliance.legal', 'gdpr', 'abuse', 'security',
 ];
 /** Never part of a real person's name, so safe to match anywhere in the local part. */
 const DESK_SUBSTRINGS = /(sales|invoice|billing|noreply|no-reply|webmaster|postmaster|estimat|customerservice|techsupport)/i;

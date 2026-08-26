@@ -116,7 +116,39 @@ function place(zone, dayCounts, perDay) {
   console.log(`${DRY ? 'DRY RUN: ' : ''}scheduling ${ordered.length} lead(s), max ${PER_DAY}/day, ` +
     `each at 09:00-11:00 in the recipient's own zone\n`);
 
+  /**
+   * Days already spoken for by leads scheduled in an EARLIER run.
+   *
+   * Without this the counter starts empty every time, so a second run books its own 12 a day on
+   * top of whatever was already there. Adding 30 new leads to an existing queue of 18 put 24
+   * sends on one morning against a cap of 12, from a mailbox that had been sending three a day.
+   * The cap is a property of the sending identity and the calendar, not of one invocation.
+   */
   const dayCounts = new Map();
+  {
+    // Count every booked send this run is NOT going to place, whichever mode it is in. Two
+    // separate ways of undercounting produced two separate over-booked mornings:
+    //   - a plain run ignored the existing queue entirely and put 24 on a day capped at 12
+    //   - a --reschedule run rebuilt the queued leads but never saw the follow-ups, which sit at
+    //     status 'sent' and are scheduled by the sender rather than here, giving 15 on a 12 day
+    // Excluding by id rather than by status covers both without having to reason about which.
+    const placing = new Set(leads.map(l => l.id));
+    const { data: already } = await supabase.from(TABLE)
+      .select('id, scheduled_send_at')
+      .not('scheduled_send_at', 'is', null)
+      .in('status', ['queued', 'sent']);
+    let held = 0;
+    for (const r of (already || [])) {
+      if (placing.has(r.id)) continue;
+      dayCounts.set(r.scheduled_send_at.slice(0, 10), (dayCounts.get(r.scheduled_send_at.slice(0, 10)) || 0) + 1);
+      held++;
+    }
+    if (held) {
+      const busiest = [...dayCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+      console.log(`${held} send(s) already booked and untouched by this run, busiest day ${busiest[0]} at ${busiest[1]}/${PER_DAY}
+`);
+    }
+  }
   const zoneTally = {};
   const perDayCount = {};
   let n = 0;
