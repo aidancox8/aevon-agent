@@ -189,8 +189,26 @@ const UNUSABLE = [
    'wrong desk, will not route an HR pitch'],
 ];
 
-/** Why this address is not worth saving, or null if it is fine. */
+/**
+ * Template addresses that ship with a website theme and belong to nobody. Distinct from the
+ * `^example` prefix rule, because these are placeholder DOMAINS with an ordinary local part:
+ * info@domain.com and info@domainname.com both came back from a real site's demo content.
+ */
+const PLACEHOLDER_DOMAIN = /@(domain|domainname|yourdomain|yoursite|mysite|website|example|email|sentry\.wixpress)\.[a-z]/i;
+
+/**
+ * Why this address is not worth saving, or null if it is fine.
+ *
+ * The email is cleaned BEFORE the rules run. %20sales@progressiverubber.com got saved because
+ * the wrong-desk rule is anchored at the start of the local part, and a URL-encoded space in
+ * front of "sales" walked straight past it. A guard that a stray artifact can step around is not
+ * a guard, so anything carrying percent-encoding is rejected outright rather than tidied up: it
+ * means the extractor grabbed a fragment of a URL, not an address a human published.
+ */
 function unusableReason(email, website) {
+  if (/%[0-9a-f]{2}/i.test(email)) return 'percent-encoding, a URL fragment rather than an address';
+  if (/[\s<>"'(),;]/.test(email)) return 'contains characters no address has';
+  if (PLACEHOLDER_DOMAIN.test(email)) return 'placeholder domain from a site template';
   for (const [re, why] of UNUSABLE) if (re.test(email)) return why;
   // Off-domain. The sender blocks these outright, because an address on someone else's domain is
   // usually a supplier, a web designer, or a font author rather than the company.
