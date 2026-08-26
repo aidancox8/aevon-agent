@@ -80,6 +80,17 @@ jobs:
           GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
         run: node cadre/reply-scan.js
 
+      # Reports only, never sends. Prints the MX result, every send-time gate, the local
+      # arrival time for each recipient and one full rendered message, so a bad batch is visible
+      # in the run log rather than discovered from a bounce report.
+      - name: Pre-flight report
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          CADRE_MAILING_ADDRESS: ${{ vars.CADRE_MAILING_ADDRESS }}
+        run: node cadre/preflight.js
+
       - name: Run Cadre sender
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

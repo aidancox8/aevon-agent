@@ -45,6 +45,36 @@ const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
 const { google } = require('googleapis');
 const { signature } = require('../lib/signature');
+const dns = require('dns').promises;
+// Pin clean resolvers. An ISP that hijacks NXDOMAIN injects A records for dead domains and would
+// turn the check below into a rubber stamp.
+try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) { /* keep system resolvers */ }
+
+/**
+ * Does this domain have a mail server? A domain with no MX hard-bounces every time, and a hard
+ * bounce costs the sending domain's reputation for all three campaigns, not just this one.
+ *
+ * sender.js (Aevon) has had this since June. This file never did, which meant the only thing
+ * standing between a dead domain and a bounce was that the addresses happened to be hand-checked.
+ * Cached per run, so repeated domains cost one lookup.
+ */
+const mxCache = new Map();
+async function domainAcceptsMail(email) {
+  const domain = (String(email).split('@')[1] || '').toLowerCase().trim();
+  if (!domain) return false;
+  if (mxCache.has(domain)) return mxCache.get(domain);
+  let ok;
+  try {
+    const mx = await dns.resolveMx(domain);
+    ok = Array.isArray(mx) && mx.some(r => r && r.exchange && r.exchange.trim());
+  } catch (e) {
+    // ENOTFOUND / ENODATA means it genuinely cannot receive mail. Everything else (timeout,
+    // SERVFAIL) is transient and must not condemn a good address.
+    ok = !(e.code === 'ENOTFOUND' || e.code === 'ENODATA');
+  }
+  mxCache.set(domain, ok);
+  return ok;
+}
 
 const TABLE = 'cadre_leads';
 const EVENTS = 'cadre_email_events';
@@ -317,7 +347,12 @@ async function bounceRate() {
       continue;
     }
 
-    const block = blockReason(lead, stepNo);
+    let block = blockReason(lead, stepNo);
+    // Checked here rather than inside blockReason because it needs a DNS round trip and
+    // blockReason is synchronous everywhere else it is used.
+    if (!block && !(await domainAcceptsMail(lead.email))) {
+      block = `${String(lead.email).split('@')[1]} has no mail server, would hard-bounce`;
+    }
     if (block) {
       console.log(`  [block] ${lead.business_name} - ${block}`);
       blocked++;

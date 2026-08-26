@@ -273,6 +273,19 @@
   "notes": "[US] Found via SimplyHired phrase \"certification tracking\" in pennsylvania. Job title: Director of Nursing (DON)."
  },
  {
+  "business_name": "Ware Presbyterian Village",
+  "city": "Oxford, PA",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Assist with licensure and certification tracking.",
+  "signal_url": "https://www.simplyhired.com/job/FDRm9zEJBGtAkBNAsFLLvjgRLyoofWRb-Y05-SS7X3SWZDPsgJY4aA",
+  "signal_date": "2026-08-25",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: certification tracking",
+  "notes": "[US] Found via SimplyHired phrase \"certification tracking\" in pennsylvania. Job title: Assistant Director of Nursing (ADON)."
+ },
+ {
   "business_name": "Advocate Aurora Health",
   "city": "Oak Brook, IL",
   "industry": "other",
@@ -832,19 +845,6 @@
   "notes": "[US] Found via SimplyHired phrase \"certification records\" in arizona. Job title: Safety Administrator."
  },
  {
-  "business_name": "Allied Universal",
-  "city": "Phoenix, AZ",
-  "industry": "security",
-  "source": "simplyhired",
-  "signal_type": "hiring_credentialing",
-  "signal_quote": "Maintain accurate attendance, training, and certification records.",
-  "signal_url": "https://www.simplyhired.com/job/Z2QOu-SHR2VMNfhTq_7HAt0ARR5F7rzXsf3YsKrJh-6n-907fngQhw",
-  "signal_date": "2026-08-25",
-  "qualification_score": 6,
-  "personalization_basis": "published signal: certification records",
-  "notes": "[US] Found via SimplyHired phrase \"certification records\" in arizona. Job title: State-Certified Unarmed Guard Card Instructor."
- },
- {
   "business_name": "Gold Tech Industries",
   "city": "Tempe, AZ",
   "industry": "other",
@@ -856,6 +856,19 @@
   "qualification_score": 6,
   "personalization_basis": "published signal: certification records",
   "notes": "[US] Found via SimplyHired phrase \"certification records\" in arizona. Job title: Manager of Special Process."
+ },
+ {
+  "business_name": "Allied Universal",
+  "city": "Phoenix, AZ",
+  "industry": "security",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Maintain accurate attendance, training, and certification records.",
+  "signal_url": "https://www.simplyhired.com/job/Z2QOu-SHR2VMNfhTq_7HAt0ARR5F7rzXsf3YsKrJh-6n-907fngQhw",
+  "signal_date": "2026-08-25",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: certification records",
+  "notes": "[US] Found via SimplyHired phrase \"certification records\" in arizona. Job title: State-Certified Unarmed Guard Card Instructor."
  },
  {
   "business_name": "TNT Crane & Rigging",
@@ -1339,19 +1352,6 @@
   "notes": "[US] Found via SimplyHired phrase \"certification records\" in iowa. Job title: NDT Company Level 3."
  },
  {
-  "business_name": "Anytime Fitness Alachua",
-  "city": "Alachua, FL",
-  "industry": "recreation",
-  "source": "simplyhired",
-  "signal_type": "hiring_credentialing",
-  "signal_quote": "Maintain up-to-date liability insurance and certification records such as CPR/AED operation and first aid training.",
-  "signal_url": "https://www.simplyhired.com/job/ZfKYrtzy0PbTBZljVMcuPMrCBI3Qdze7_LkxB_E5ht2FA5tpD8s7Qg",
-  "signal_date": "2026-08-25",
-  "qualification_score": 6,
-  "personalization_basis": "published signal: certification records",
-  "notes": "[US] Found via SimplyHired phrase \"certification records\" in florida. Job title: Certified Personal Trainer."
- },
- {
   "business_name": "Safe Harbor Marinas",
   "city": "West Palm Beach, FL",
   "industry": "transport",
@@ -1363,6 +1363,19 @@
   "qualification_score": 6,
   "personalization_basis": "published signal: certification records",
   "notes": "[US] Found via SimplyHired phrase \"certification records\" in florida. Job title: Trade Manager - Piping Department."
+ },
+ {
+  "business_name": "Anytime Fitness Alachua",
+  "city": "Alachua, FL",
+  "industry": "recreation",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Maintain up-to-date liability insurance and certification records such as CPR/AED operation and first aid training.",
+  "signal_url": "https://www.simplyhired.com/job/ZfKYrtzy0PbTBZljVMcuPMrCBI3Qdze7_LkxB_E5ht2FA5tpD8s7Qg",
+  "signal_date": "2026-08-25",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: certification records",
+  "notes": "[US] Found via SimplyHired phrase \"certification records\" in florida. Job title: Certified Personal Trainer."
  },
  {
   "business_name": "MEGA CONTRACTING GROUP LLC",
@@ -1402,19 +1415,6 @@
   "qualification_score": 6,
   "personalization_basis": "published signal: certification records",
   "notes": "[UK] Found via SimplyHired phrase \"certification records\" in england. Job title: Freelance Streetworks /NRSWA tutor."
- },
- {
-  "business_name": "Oxford Builders Supplies",
-  "city": "Calgary, AB",
-  "industry": "other",
-  "source": "simplyhired",
-  "signal_type": "hiring_credentialing",
-  "signal_quote": "Develop and maintain inspection, certification, and recertification programs for: Familiarity with equipment inspections, certification requirements, and safety…",
-  "signal_url": "https://www.simplyhired.ca/job/IajNLYxaopN6Nso92gWmxEQDDIxQkUcQnq_M5aRyXULCBOzwmuZJjw",
-  "signal_date": "2026-08-25",
-  "qualification_score": 7,
-  "personalization_basis": "published signal: recertification",
-  "notes": "[CA] Found via SimplyHired phrase \"recertification\" in alberta. Job title: Assistant Yard Manager."
  },
  {
   "business_name": "HealthPoint",
@@ -1638,19 +1638,6 @@
   "notes": "[UK] Found via SimplyHired phrase \"recertification\" in england. Job title: Regional Assessor Speculative CVs."
  },
  {
-  "business_name": "JPMorganChase",
-  "city": "London",
-  "industry": "other",
-  "source": "simplyhired",
-  "signal_type": "hiring_credentialing",
-  "signal_quote": "Manage business hygiene and governance (training, access recertifications, resiliency planning, expense approvals, meeting agendas, offsite planning) and…",
-  "signal_url": "https://www.simplyhired.co.uk/job/L0y4in1uwulwqifCy6oCdRujEynfEvbv6pnYAda6q2mYwxvD2siyFw",
-  "signal_date": "2026-08-25",
-  "qualification_score": 7,
-  "personalization_basis": "published signal: recertification",
-  "notes": "[UK] Found via SimplyHired phrase \"recertification\" in london. Job title: Commercial & Investment Bank - Business Manager - Vice President."
- },
- {
   "business_name": "The North Transportation",
   "city": "Concord, ON",
   "industry": "transport",
@@ -1727,6 +1714,19 @@
   "qualification_score": 6,
   "personalization_basis": "published signal: driver qualification files",
   "notes": "[US] Found via SimplyHired phrase \"driver qualification files\" in pennsylvania. Job title: Senior Logistics Manager."
+ },
+ {
+  "business_name": "Pinnacle Transport Group",
+  "city": "Selinsgrove, PA",
+  "industry": "transport",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Ensure all DOT driver qualification files remain accurate and compliant.",
+  "signal_url": "https://www.simplyhired.com/job/wnCD6vaxdRKHxn2QvLmGFMPWmgGajGCAgrfoVo81glFtHKfofHNvng",
+  "signal_date": "2026-08-25",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: driver qualification files",
+  "notes": "[US] Found via SimplyHired phrase \"driver qualification files\" in pennsylvania. Job title: Logistics Assistant."
  },
  {
   "business_name": "FW Logistics",
@@ -1937,19 +1937,6 @@
   "notes": "[US] Found via SimplyHired phrase \"driver qualification files\" in california. Job title: Safety Coordinator."
  },
  {
-  "business_name": "Second Harvest Food Bank of Orange County",
-  "city": "Irvine, CA",
-  "industry": "transport",
-  "source": "simplyhired",
-  "signal_type": "hiring_credentialing",
-  "signal_quote": "Ensure all driver qualification files (DQ files) and records are maintained in compliance with all regulatory agencies, including FMCSA, DOT, DMV EPN, and…",
-  "signal_url": "https://www.simplyhired.com/job/0H6BpCrVpBjPHZm5GzpNhs-_cedgDet3o53HdI7zJMpCafz8d9FLYQ",
-  "signal_date": "2026-08-25",
-  "qualification_score": 6,
-  "personalization_basis": "published signal: driver qualification files",
-  "notes": "[US] Found via SimplyHired phrase \"driver qualification files\" in california. Job title: Transportation Managing Director."
- },
- {
   "business_name": "Southeast - STA",
   "city": "Jacksonville, FL",
   "industry": "transport",
@@ -2022,7 +2009,7 @@
   "signal_type": "hiring_credentialing",
   "signal_quote": "Track certifications of on-site staff to ensure all property managers are certified and maintain the certification while working on Housing Alliance projects.",
   "signal_url": "https://www.simplyhired.com/job/BcdwCsNjm1Zuf2Mo96j9DExIAugr8zksryH8QyaC-BjtI57gU6BiAg",
-  "signal_date": "2026-08-26",
+  "signal_date": "2026-08-25",
   "qualification_score": 6,
   "personalization_basis": "published signal: track certifications",
   "notes": "[US] Found via SimplyHired phrase \"track certifications\" in texas. Job title: Director of Compliance."
@@ -2035,7 +2022,7 @@
   "signal_type": "hiring_credentialing",
   "signal_quote": "Recruit, train, schedule, supervise, develop and track certifications of staff to deliver high quality programs and services that respond to member needs.",
   "signal_url": "https://www.simplyhired.com/job/xDJUZYX74UDrFqn8ajhUQBsiNLhkpYmOqd5PaWswG5Ye0pOjakC68Q",
-  "signal_date": "2026-08-26",
+  "signal_date": "2026-08-25",
   "qualification_score": 6,
   "personalization_basis": "published signal: track certifications",
   "notes": "[US] Found via SimplyHired phrase \"track certifications\" in pennsylvania. Job title: Senior Director."
@@ -2048,7 +2035,7 @@
   "signal_type": "hiring_credentialing",
   "signal_quote": "Help track certifications, licenses, and performance review deadlines to ensure compliance.",
   "signal_url": "https://www.simplyhired.com/job/v4rr0kfd-IOdIutpAhw_KobtBitvn5JklHA1vkVswC8-_jHBbSdNqw",
-  "signal_date": "2026-08-26",
+  "signal_date": "2026-08-25",
   "qualification_score": 6,
   "personalization_basis": "published signal: track certifications",
   "notes": "[US] Found via SimplyHired phrase \"track certifications\" in indiana. Job title: HR Coordinator (Part-Time)."
@@ -2249,6 +2236,19 @@
   "notes": "[US] Found via SimplyHired phrase \"training compliance\" in missouri. Job title: HR & Talent Operations Specialist."
  },
  {
+  "business_name": "Novartis",
+  "city": "Durham, NC",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Demonstrated leadership experience managing teams, developing talent, driving performance, fostering training compliance, and building a culture of…",
+  "signal_url": "https://www.simplyhired.com/job/1h-oQkwSqqvprtlcOpGXxqLxEd50-0uzKQsByfUT32c4EK5EyI-aVw",
+  "signal_date": "2026-08-26",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: training compliance",
+  "notes": "[US] Found via SimplyHired phrase \"training compliance\" in north carolina. Job title: Head Quality Systems and Compliance (Assoc Dir)."
+ },
+ {
   "business_name": "Home Depot / THD",
   "city": "Overland Park, KS",
   "industry": "other",
@@ -2312,5 +2312,109 @@
   "qualification_score": 6,
   "personalization_basis": "published signal: training compliance",
   "notes": "[UK] Found via SimplyHired phrase \"training compliance\" in leeds. Job title: Training Instructor."
+ },
+ {
+  "business_name": "Pilgrim's Europe",
+  "city": "Bristol",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Manage and develop site services team, driving strong performance, training compliance and adherence to site standards.",
+  "signal_url": "https://www.simplyhired.co.uk/job/138iHh8wHcYFfFnjr-_JhhFwv-5GmB9Tg3Bi_XXCbHmJcJQBEO3XNQ",
+  "signal_date": "2026-08-26",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: training compliance",
+  "notes": "[UK] Found via SimplyHired phrase \"training compliance\" in bristol. Job title: Site Services Supervisor."
+ },
+ {
+  "business_name": "BAAF",
+  "city": "London",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Activities to support the licence scheme include managing and tracking licence renewals, coordinating the release of new and updated forms, enrolling new…",
+  "signal_url": "https://www.simplyhired.co.uk/job/-_t_eRTOdo63yroJv9jq6IXZ7mrUVLACZvm1bMm-fQZOwhUaWi7Dfg",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: licence renewals",
+  "notes": "[UK] Found via SimplyHired phrase \"licence renewals\" in london. Job title: Member Services Manager."
+ },
+ {
+  "business_name": "Mimecast",
+  "city": "London",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Manage commercial relationships for networking hardware, software, and services - including procurement, licence renewals, vendor performance evaluation,…",
+  "signal_url": "https://www.simplyhired.co.uk/job/Lc9YrIv66BVU2IFOis2zTDRS94fWRtU9seJpNbIb26VNmSadDGKOQw",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: licence renewals",
+  "notes": "[UK] Found via SimplyHired phrase \"licence renewals\" in london. Job title: Senior Engineering Manager - Cloud Networking."
+ },
+ {
+  "business_name": "Gill Group Limited",
+  "city": "Birmingham",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Liaise with external immigration advisers or solicitors to manage sponsorship licence renewals, visa applications, and compliance visits.",
+  "signal_url": "https://www.simplyhired.co.uk/job/nx0QUeaRpOmAOSUH826TXkqrTtgKhXAs-iDMKTpwOJhI4gaR54B5mQ",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: licence renewals",
+  "notes": "[UK] Found via SimplyHired phrase \"licence renewals\" in birmingham. Job title: HR and Compliance Co-Ordinator."
+ },
+ {
+  "business_name": "Kandor Management",
+  "city": "Burnaby, BC",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Tracking certifications and license renewals (e.",
+  "signal_url": "https://www.simplyhired.ca/job/-jX9QsHC3eq1_AROA7YZxis8go41UXG67ZNmSOv6NLJ3UUPJA9PB4Q",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: license renewals",
+  "notes": "[CA] Found via SimplyHired phrase \"license renewals\" in british columbia. Job title: Operations Coordinator (Guardteck)."
+ },
+ {
+  "business_name": "Ventum Financial Corp.",
+  "city": "Vancouver, BC",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Manage license renewals and track advisor compliance designations, ensuring all advisors meet provincial requirements.",
+  "signal_url": "https://www.simplyhired.ca/job/17HzHc0CKahIupCaS1WEdW0HhvckvLvgkL7HIymWLGhHio7KyhwCCg",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: license renewals",
+  "notes": "[CA] Found via SimplyHired phrase \"license renewals\" in british columbia. Job title: VP, Ventum Insurance & VP, Wealth Services."
+ },
+ {
+  "business_name": "Easter Seals Alberta",
+  "city": "Calgary, AB",
+  "industry": "recreation",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Manage business license renewals and maintenance.",
+  "signal_url": "https://www.simplyhired.ca/job/UPMt_Ygj20N8GHq_-VsgATH7sY8looijJDkATNXndgSUI2BPyUIbtQ",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: license renewals",
+  "notes": "[CA] Found via SimplyHired phrase \"license renewals\" in alberta. Job title: Executive Assistant."
+ },
+ {
+  "business_name": "L3Harris Technologies",
+  "city": "Mirabel, QC",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Working closely with IT Shared Services on tracking license renewals, equipment end of life and application total cost of ownership;",
+  "signal_url": "https://www.simplyhired.ca/job/8NRmbANyXVQwzJX7YQQk2IKbV1EIUjvOSnvSlw2oOM2MrIlhSTAK4Q",
+  "signal_date": "2026-08-26",
+  "qualification_score": 7,
+  "personalization_basis": "published signal: license renewals",
+  "notes": "[CA] Found via SimplyHired phrase \"license renewals\" in quebec. Job title: Systems Administrator (Engineering)."
  }
 ]
