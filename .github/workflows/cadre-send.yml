@@ -89,15 +89,25 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           CADRE_DAILY_CAP: ${{ vars.CADRE_DAILY_CAP || '12' }}
           CADRE_MAILING_ADDRESS: ${{ vars.CADRE_MAILING_ADDRESS }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+          # gmail | resend. Gmail so the sends land in Aidan's own Sent folder and thread
+          # naturally: 3,824 Resend sends left no trace he could search. The 5% breaker still
+          # works, because the reply scan above attributes Gmail bounces and writes them to the
+          # same events table the breaker reads. It is up to an hour behind a webhook, which at
+          # 12/day is one or two extra sends.
+          CADRE_VIA: ${{ vars.CADRE_VIA || 'gmail' }}
         run: |
           MANUAL_SEND="${{ github.event.inputs.live }}"
           ARMED="${{ vars.CADRE_ARMED }}"
           if [ "$MANUAL_SEND" = "SEND" ]; then
             echo "Manual send requested."
-            node cadre/sender.js --send
+            node cadre/sender.js --send --via "$CADRE_VIA"
           elif [ "${{ github.event_name }}" = "schedule" ] && [ "$ARMED" = "true" ]; then
-            echo "CADRE_ARMED is true, sending."
-            node cadre/sender.js --send
+            echo "CADRE_ARMED is true, sending via $CADRE_VIA."
+            node cadre/sender.js --send --via "$CADRE_VIA"
           else
             echo "Not armed (set repository variable CADRE_ARMED=true to go live). Dry run:"
             node cadre/sender.js

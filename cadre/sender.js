@@ -29,8 +29,8 @@
  * contain the quote, is not sendable. That is checked here, not assumed.
  *
  *   node cadre/sender.js                        dry run
- *   node cadre/sender.js --send                 send for real, through Resend
- *   node cadre/sender.js --send --via gmail     test send out of the real mailbox
+ *   node cadre/sender.js --send                 send for real (Gmail by default)
+ *   node cadre/sender.js --send --via resend    send through Resend instead
  *   node cadre/sender.js --limit 3              cap this run
  *
  * Timing, sequence and opt-out live in three sibling files, not here:
@@ -73,24 +73,36 @@ const FROM_NAME = 'Aidan Cox';
 const REPLY_TO = 'aidan@aevon.ca';
 
 /**
- * WHICH PIPE THE MAIL GOES DOWN.
+ * WHICH PIPE THE MAIL GOES DOWN. Gmail, as of 2026-08-25. Aidan's call, and he is right.
  *
- * Resend is the default and the only thing the scheduled runs use. It is the right choice for
- * volume for one reason that has nothing to do with deliverability: it reports bounces by
- * webhook, and the 5% breaker above depends on knowing the bounce rate. Gmail does not report
- * bounces at all, they only arrive later as a message in the inbox, so a bad list would burn the
- * domain for a day before anything noticed.
+ * The argument for Resend was that it reports bounces by webhook, and the 5% breaker above
+ * depends on knowing the bounce rate. That is real, but it is not decisive here:
+ * cadre/reply-scan.js now attributes Gmail bounces (a bounce comes from mailer-daemon, not the
+ * prospect, so it is matched on the recipient named inside the report) and writes them to the
+ * same events table bounceRate() reads. It runs immediately before this sender on every hourly
+ * cycle, so the breaker is at most an hour behind a webhook. At a 12/day cap that is one or two
+ * extra sends before it trips.
  *
- * --via gmail exists for test sends, where the point is to see exactly what a real recipient
- * sees, threading and signature and all, out of the actual mailbox. Aidan's call, 2026-08-25.
- * It is deliberately not available in CI.
+ * The argument for Gmail turned out to be the stronger one, and it is not about deliverability,
+ * since both send from aevon.ca under the same SPF, DKIM and DMARC. It is that Resend sends
+ * leave no trace in the mailbox: 3,824 Aevon emails have gone out through it and the Sent folder
+ * holds 46 messages. None of that outreach is searchable, quotable, or visible next to the reply
+ * it produced. Gmail sends thread properly and land in Sent.
+ *
+ * Keep Resend reachable rather than deleting it. Set the CADRE_VIA repository variable to
+ * 'resend' to switch back, for instance if the daily cap ever rises near Workspace's 2,000
+ * external recipients a day, or if bounce latency starts to matter.
  */
 const VIA = (() => {
   const i = process.argv.indexOf('--via');
-  const v = i > -1 ? String(process.argv[i + 1] || '').toLowerCase() : 'resend';
+  const v = i > -1 ? String(process.argv[i + 1] || '').toLowerCase()
+                   : (process.env.CADRE_VIA || 'gmail').toLowerCase();
   if (!['resend', 'gmail'].includes(v)) throw new Error(`--via must be resend or gmail, got "${v}"`);
-  if (v === 'gmail' && process.env.GITHUB_ACTIONS) {
-    throw new Error('--via gmail is for hand-run test sends only, not for scheduled runs');
+  if (v === 'gmail' && !process.env.GMAIL_OAUTH_REFRESH_TOKEN) {
+    throw new Error('--via gmail needs GMAIL_OAUTH_REFRESH_TOKEN. Run: node get-gmail-token.js');
+  }
+  if (v === 'resend' && !process.env.RESEND_API_KEY) {
+    throw new Error('--via resend needs RESEND_API_KEY');
   }
   return v;
 })();

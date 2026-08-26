@@ -58,6 +58,41 @@ function isBounce(payload, fromEmail) {
   return /report-type=delivery-status/i.test(header(payload, 'Content-Type'));
 }
 
+/**
+ * WHO did the bounce concern?
+ *
+ * This is the whole reason bounces need separate handling. A bounce is not FROM the prospect, it
+ * is from a mail server, so none of the normal matching works: the From is
+ * mailer-daemon@googlemail.com, the Subject is "Delivery Status Notification (Failure)", and the
+ * domain belongs to Google. The lead lookup missed on all three and the message was skipped.
+ *
+ * That failure was silent and self-concealing. The sender's 5% circuit breaker counts `bounced`
+ * events, so a bounce that never gets recorded reads as a healthy list. On Resend the webhook
+ * records them independently and the hole never showed; on Gmail there is no webhook, so this
+ * function is the only thing standing between a dead list and the sending domain.
+ *
+ * Three places the real recipient hides, in order of reliability.
+ */
+function bouncedRecipient(payload, rawSource) {
+  const failed = header(payload, 'X-Failed-Recipients');
+  if (failed) return addressOf(failed);
+
+  // RFC 3464 delivery-status part. The authoritative answer when it is present.
+  const final = String(rawSource || '').match(/^Final-Recipient:\s*rfc822;\s*(\S+)/im)
+             || String(rawSource || '').match(/^Original-Recipient:\s*rfc822;\s*(\S+)/im);
+  if (final) return addressOf(final[1]);
+
+  // Last resort: the quoted original inside the bounce body. Take the first address that is not
+  // ours and not the reporting server's, which in practice is the recipient that failed.
+  for (const m of String(rawSource || '').matchAll(/[\w.+-]+@[\w.-]+\.\w{2,}/g)) {
+    const a = m[0].toLowerCase();
+    if (a === GMAIL_USER) continue;
+    if (/mailer-daemon|postmaster|googlemail\.com$|google\.com$/i.test(a)) continue;
+    return a;
+  }
+  return '';
+}
+
 /** Out-of-office and other robots. Not a human answer, so it must not stop or advance anything. */
 function isAutoReply(payload, subject) {
   const auto = header(payload, 'Auto-Submitted');
@@ -104,7 +139,7 @@ function classify(text) {
 const STATUS_FOR = { opt_out: 'unsubscribed', interested: 'replied', referral: 'replied', reply: 'replied' };
 
 /** Exported so check-cadre-replies.js tests the real classifier, not a copy of it. */
-module.exports = { classify, isOptOut, isBounce, isAutoReply };
+module.exports = { classify, isOptOut, isBounce, isAutoReply, bouncedRecipient };
 
 // Only scan the mailbox when run directly. Required as a module, this file just exposes the
 // classifier, so a test cannot accidentally reach into the inbox.
@@ -156,20 +191,36 @@ if (require.main !== module) return;
     if (!from || from === GMAIL_USER) continue;
     const subject = header(payload, 'Subject');
 
-    // Match: exact address, then a domain only one lead owns, then our own subject coming back.
-    const lead = byEmail.get(from) || byDomain.get(domainOf(from)) || bySubject.get(normSubject(subject));
-    if (!lead) continue;
-
+    // BOUNCES FIRST, and matched differently. A bounce is from a mail server, not the prospect,
+    // so the From, the domain and the Subject all belong to Google rather than to the lead. It
+    // has to be attributed by the recipient named INSIDE the report. Handling it after the
+    // normal lookup meant every Gmail bounce hit `continue` and was never recorded, which the
+    // 5% breaker would have read as a perfectly healthy list.
     if (isBounce(payload, from)) {
+      const rawMsg = await gmail.users.messages.get({ userId: 'me', id, format: 'raw' });
+      const rawSource = Buffer.from(rawMsg.data.raw, 'base64').toString('utf8');
+      const failedTo = bouncedRecipient(payload, rawSource);
+      const hit = failedTo ? (byEmail.get(failedTo) || byDomain.get(domainOf(failedTo))) : null;
+
       bounces++;
-      console.log(`  [bounce]    ${lead.business_name} <${from}>`);
+      if (!hit) {
+        // Say so rather than swallowing it. An unattributed bounce still means the list is worse
+        // than the numbers claim, and silence is what made this invisible in the first place.
+        console.log(`  [bounce]    UNATTRIBUTED, failed recipient ${failedTo || 'not found'} matches no lead`);
+        continue;
+      }
+      console.log(`  [bounce]    ${hit.business_name} <${failedTo}>`);
       if (!DRY) {
-        await supabase.from(TABLE).update({ status: 'bounced', scheduled_send_at: null }).eq('id', lead.id);
-        await supabase.from(EVENTS).insert({ lead_id: lead.id, event_type: 'bounced',
-          metadata: { source: 'reply-scan', inbound_message_id: msgId, from } });
+        await supabase.from(TABLE).update({ status: 'bounced', scheduled_send_at: null }).eq('id', hit.id);
+        await supabase.from(EVENTS).insert({ lead_id: hit.id, event_type: 'bounced',
+          metadata: { source: 'reply-scan', inbound_message_id: msgId, reported_by: from, failed_recipient: failedTo } });
       }
       continue;
     }
+
+    // Match: exact address, then a domain only one lead owns, then our own subject coming back.
+    const lead = byEmail.get(from) || byDomain.get(domainOf(from)) || bySubject.get(normSubject(subject));
+    if (!lead) continue;
 
     if (isAutoReply(payload, subject)) {
       autos++;
