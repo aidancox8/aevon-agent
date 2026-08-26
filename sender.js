@@ -94,9 +94,23 @@ if (!LIVE) {
 // Bounce circuit breaker. 5% is the level at which the major providers begin throttling.
 // The window is measured in recent send/bounce events, not days, so a quiet weekend does
 // not distort it.
-// The PT hours the send workflow is scheduled to run (cron '0 16-23 * * 1-5' = 9am-4pm PT).
-// Used to pace the daily cap across runs; keep in step with .github/workflows/send-outreach.yml.
-const SEND_HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
+
+/**
+ * The UTC hours this workflow's cron actually fires: '0 16-23 * * 1-5'.
+ *
+ * KEPT IN UTC ON PURPOSE. This used to be [9..16], the same hours expressed in Pacific, compared
+ * against a Pacific clock. That is correct for exactly as long as Pacific is UTC-7. GitHub cron
+ * has no timezone support and is always UTC, so when daylight saving ends the workflow starts
+ * firing 08:00-15:00 Pacific while this list still claims 09:00-16:00.
+ *
+ * The failure is silent and costs half the day's volume. On the 15:00 run, which is the last one
+ * that actually happens, SEND_HOURS says two runs remain, so the pacer sends half the remainder
+ * and saves the rest for a 16:00 run that never comes. Every weekday, all winter, at roughly half
+ * the configured cap, with nothing in the log to say so.
+ *
+ * Comparing UTC to UTC cannot drift. Keep this in step with .github/workflows/send-outreach.yml.
+ */
+const SEND_HOURS_UTC = [16, 17, 18, 19, 20, 21, 22, 23];
 
 const BOUNCE_LIMIT      = parseFloat(process.env.BOUNCE_LIMIT || '0.05');
 const BOUNCE_WINDOW     = parseInt(process.env.BOUNCE_WINDOW || '500', 10);
@@ -405,10 +419,8 @@ async function run() {
   // a bigger slice for the next, and the final run of the window flushes whatever is left,
   // so the daily total still lands on DAILY_CAP.
   const remaining = (() => {
-    const hour = parseInt(new Date().toLocaleString('en-US', {
-      timeZone: 'America/Vancouver', hour: '2-digit', hour12: false,
-    }), 10);
-    const runsLeft = SEND_HOURS.filter(h => h >= hour).length;
+    const hour = new Date().getUTCHours();
+    const runsLeft = SEND_HOURS_UTC.filter(h => h >= hour).length;
     if (runsLeft <= 1) return dailyRemaining;          // last run, or off-schedule: flush
     const slice = Math.ceil(dailyRemaining / runsLeft);
     console.log(`Pacing: ${slice} this run (${dailyRemaining} left of ${DAILY_CAP}, ${runsLeft} run(s) to go).`);

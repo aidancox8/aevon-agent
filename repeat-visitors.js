@@ -15,7 +15,21 @@ require('dotenv').config();
 const { Resend } = require('resend');
 const supabase = require('./lib/supabase');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/**
+ * Built on first use, not at module load. `new Resend(key)` throws when the key is absent, so
+ * constructing it here means any script that merely REQUIRES this file needs a live key. That is
+ * what killed four consecutive Cadre runs: a guard step imported the sender to render a template,
+ * had only the Supabase secrets, and crashed before anything ran. Guarded by check-workflows.js.
+ */
+let _resend = null;
+function resendClient() {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error('RESEND_API_KEY is not set');
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
 const FROM = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'Aidan from Aevon';
 const TO = 'aidan@aevon.ca';
@@ -177,7 +191,7 @@ async function run() {
 
   if (repeats.length === 0 && interested.length === 0) {
     if (deliver.alert) {
-      await resend.emails.send({
+      await resendClient().emails.send({
         from: `${FROM_NAME} <${FROM}>`, reply_to: TO, to: TO,
         subject: '[Aevon ALERT] open-tracking hurting deliverability',
         text: deliver.line + '\n\nNo warm signals today.',
@@ -213,7 +227,7 @@ async function run() {
   if (repeats.length) subjBits.push(`${repeats.length} repeat visitor${repeats.length > 1 ? 's' : ''}`);
   if (deliver.alert) subjBits.push('DELIVERABILITY ALERT');
 
-  const { error: sendErr } = await resend.emails.send({
+  const { error: sendErr } = await resendClient().emails.send({
     from: `${FROM_NAME} <${FROM}>`,
     reply_to: TO,
     to: TO,

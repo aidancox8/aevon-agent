@@ -26,7 +26,21 @@ const LIVE = process.argv.includes('--send') || process.env.TEMPO_SEND === '1';
 
 // Tempo can run on its OWN Resend account + subdomain sender (reputation isolation +
 // separate free quota). Set TEMPO_RESEND_API_KEY / TEMPO_FROM_EMAIL in .env; falls back to Aevon otherwise.
-const resend = new Resend(process.env.TEMPO_RESEND_API_KEY || process.env.RESEND_API_KEY);
+/**
+ * Built on first use, not at module load. `new Resend(key)` throws when the key is absent, so
+ * constructing it here means any script that merely REQUIRES this file needs a live key. That is
+ * what killed four consecutive Cadre runs: a guard step imported the sender to render a template,
+ * had only the Supabase secrets, and crashed before anything ran. Guarded by check-workflows.js.
+ */
+let _resend = null;
+function resendClient() {
+  if (!_resend) {
+    const key = process.env.TEMPO_RESEND_API_KEY || process.env.RESEND_API_KEY;
+    if (!key) throw new Error('TEMPO_RESEND_API_KEY or RESEND_API_KEY is not set');
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
 const FROM = process.env.TEMPO_FROM_EMAIL || process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'Aidan from Aevon';
 const FOLLOWUP_DELAY_DAYS = 5;
@@ -42,7 +56,7 @@ const BOUNCE_MIN_SAMPLE = parseInt(process.env.TEMPO_BOUNCE_MIN_SAMPLE || '40', 
 async function notifyBounceHalt(pct, sentN, bounceN) {
   if (!FROM) return;
   try {
-    await resend.emails.send({
+    await resendClient().emails.send({
       from: `${FROM_NAME} <${FROM}>`, to: 'aidan@aevon.ca',
       subject: `[Tempo ALERT] Sending halted, bounce rate ${pct}%`,
       text: `The Tempo sender stopped before sending.\n\n`
@@ -370,7 +384,7 @@ async function run() {
     if (!LIVE) { console.log(`ok — "${subject}"`); sent++; continue; }
 
     try {
-      const { data: sendData, error: sendError } = await resend.emails.send({
+      const { data: sendData, error: sendError } = await resendClient().emails.send({
         from: `${FROM_NAME} <${FROM}>`,
         reply_to: 'aidan@aevon.ca',
         to: lead.email,

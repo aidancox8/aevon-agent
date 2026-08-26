@@ -64,6 +64,7 @@ jobs:
         run: |
           node check-email-shape.js
           node check-signature.js
+          node check-schedules.js
           node check-copy-lock.js
 
       # Runs BEFORE the sender, deliberately. Anyone who replied or asked to be left alone in the
