@@ -78,7 +78,25 @@ async function domainAcceptsMail(email) {
 
 const TABLE = 'cadre_leads';
 const EVENTS = 'cadre_email_events';
-const resend = new Resend(process.env.RESEND_API_KEY);
+/**
+ * Built on first use, not at module load.
+ *
+ * `new Resend(key)` throws when the key is absent, so constructing it here meant any script that
+ * merely REQUIRED this file needed a live Resend key. check-email-shape.js requires it to render
+ * toHtml(), and its workflow step only carries the Supabase secrets, so the guard crashed before
+ * the sender ever ran. Four consecutive scheduled runs failed that way and sent nothing, each
+ * one firing an alert email that said the sender had failed rather than that the guard had.
+ *
+ * Requiring a module should never need credentials. Sending should.
+ */
+let _resend = null;
+function resendClient() {
+  if (!_resend) {
+    if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not set');
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 const { zoneFor, nextSendSlot } = require('./timezone');
 
 /**
@@ -401,7 +419,7 @@ async function bounceRate() {
         });
       } catch (e) { sendErr = e; }
     } else {
-      ({ data, error: sendErr } = await resend.emails.send({
+      ({ data, error: sendErr } = await resendClient().emails.send({
         from: `${FROM_NAME} <${FROM}>`,
         reply_to: REPLY_TO,
         to: lead.email,
