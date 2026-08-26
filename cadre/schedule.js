@@ -48,8 +48,15 @@ const PER_DAY = (() => {
 /** Keep already-scheduled leads where they are unless asked to redo them. */
 const RESCHEDULE = process.argv.includes('--reschedule');
 
-/** How wide the 09:00 window is, in minutes. 120 puts the last send of a day at 11:00 local. */
-const WINDOW_MIN = 120;
+/**
+ * How wide the booking window is, in minutes. 60 puts the last booked slot at 10:00 local.
+ *
+ * Was 120 (slots up to 10:50). On the first live day GitHub's cron fired up to 50 minutes late,
+ * which it routinely does under load, and 4 of 12 sends landed past 11:00 local, the worst at
+ * 12:15. Cron delay only ever pushes LATER, so the fix is to book earlier: slots at 09:00-10:00
+ * plus up to an hour of delay still land inside the 09:00-11:00 window the research points at.
+ */
+const WINDOW_MIN = 60;
 
 const domainOf = e => String(e || '').split('@')[1] || '';
 

@@ -444,10 +444,14 @@ async function bounceRate() {
     // Book the next touch now, in their zone, or close the sequence out. Doing it here rather
     // than in a nightly job means a lead can never sit half-advanced: the row that records the
     // send is the same row that records what happens next.
+    // Book the next touch whenever the sequence has one, REGARDLESS of whether its copy is
+    // written yet. The first live day proved the old hasNext gate wrong: 10 of 12 leads had no
+    // follow-up copy at send time, got no booking, and their sequences silently ended at one
+    // touch. Nothing would ever have revisited them. With the slot always booked, missing copy
+    // surfaces loudly instead: the sender blocks "step N copy not written" when it comes due and
+    // preflight flags it days earlier, both of which are prompts to write it rather than silence.
     const nextStep = stepNo + 1;
-    const hasNext = SEQUENCE[nextStep] &&
-      lead[SEQUENCE[nextStep].subject] && lead[SEQUENCE[nextStep].body];
-    const nextAt = (stage.gapSlots && hasNext)
+    const nextAt = (stage.gapSlots && SEQUENCE[nextStep])
       ? nextSendSlot(zoneFor(lead.city || lead.address, lead.address), stage.gapSlots, 20).toISOString()
       : null;
 
