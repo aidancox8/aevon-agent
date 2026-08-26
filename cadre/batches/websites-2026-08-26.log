@@ -1,0 +1,78 @@
+◇ injected env (21) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+looking up 71 lead(s) with no website
+
+  ok   Empire Roofing                      http://www.empireroofingcorporation.com/
+  ok   ODC Tooling and Molds               http://www.odctooling.com/
+  ok   Supreme Motors                      https://www.suprememotors.ca/
+  ok   Acorn Stairlifts (Canada) Inc.      https://www.acornstairlifts.ca/scid/11150
+  ok   Umbrella Family and Child Centres   https://www.umbrellafamily.com/locations/cathy-wever/
+  skip OSCO Group Services Limited         found "OSCO Construction Group - Corporate Office" but wrong city (400 Chesley Dr, Saint John, NB E2K 5L6, Canada)
+  ok   White Rock Mechanical Services      http://www.whiterockmech.com/
+  none Southwest Construction Management   no confident match
+  ok   Normandin Inc.                      http://www.normandininc.com/
+  ok   Groupe Madysta                      http://www.madysta.ca/
+  skip Mark Motors Group                   found "Mark Motors Group" but wrong city (611 Montréal Rd, Ottawa, ON K1K 0T8, Canada)
+  ok   Design Build Solutions Limited      http://designbuildsolutions.ca/
+  ok   East Coast Wild Blueberry           https://www.eastcoastwildblueberry.ca/
+  none YHU Terminal                        no confident match
+  none The Inland Group of Companies       no confident match
+  ok   JBS Expedite LTD                    https://www.jbsexpedite.com/
+  ok   ETRO Construction Ltd.              http://www.etroconstruction.com/
+  skip JDS Energy & Mining                 found "JDS Energy & Mining Inc" but wrong city (999 W Hastings St #900, Vancouver, BC V6C 2W2, Canada)
+  ok   MacLean Engineering & Marketing Co  https://macleanengineering.com/
+  skip Saand                               found "Saand" but wrong city (250 Brockport Dr, Etobicoke, ON M9W 5S1, Canada)
+  ok   Cyclone Manufacturing Inc.          http://www.cyclonemfg.com/
+  ok   Real Food for Real Kids             https://rfrk.com/
+  none Believe Support Services            listed but has no website
+  ok   Daybar Industries Ltd               https://www.daybar.com/
+  none Mount Polley Mining Corporation     no confident match
+  none Fortins                             no confident match
+  ok   Inglenook Creche Childcare Centre   https://inglenookcreche.ca/
+  skip CAM Industrial Solutions LLC        found "CAM Industrial Solutions LLC." but wrong city (320 Parent Way, Fort McMurray, AB T9H 5E6, Canada)
+  none A.C. Lighting                       no confident match
+  ok   Vision Profile Extrusions Limited   https://visionextrusionsgroup.com/
+  ok   CAD Rail Fleet Services             https://www.cadrailfleetservices.ca/
+  none Electra Battery Materials           no confident match
+  none Fleet Canada Inc                    listed but has no website
+  skip Arrow Machine and Fabrication Grou  found "Arrow Machine And Fabrication Group" but wrong city (151 Arrow Rd, Guelph, ON N1K 1S8, Canada)
+  ok   ADJ Industries Inc                  http://www.adjindustries.com/
+  ok   eCycle Solutions Inc.               http://www.ecyclesolutions.com/
+  none Canadian Flatbeds Ltd.              no confident match
+  ok   Doug Coleman Trucking               http://dougcolemantrucking.com/
+  none Emicare Cleaning Solutions          no confident match
+  skip Blue Nile TS                        found "Blue Nile" but wrong city (7977A Tysons Corner Center, Tysons, VA 22102, USA)
+  skip Transportation Resource Management  found "Transportation Management Services LLC" but wrong city (16600 Table Mountain Pkwy, Golden, CO 80403, USA)
+  skip Baker Electric                      found "Baker Electric Inc." but wrong city (3520 E Stapp Ave, Visalia, CA 93292, USA)
+  ok   Rice Contracting Ltd                https://ricecontracting.com/
+  skip Food Process Solutions              found "FPS Food Process Solutions Corp" but wrong city (13911 Wireless Way Ste 110, Richmond, BC V6V 3B9, Canada)
+  skip Gabriel Miller Inc.                 found "Gabriel Miller Inc" but wrong city (1850 Rue Provinciale, Québec, QC G1N 4A2, Canada)
+  skip Sunny Corner Enterprises Inc        found "Sunny Corner Enterprises Inc." but wrong city (259 Dalton Ave, Miramichi, NB E1V 3C4, Canada)
+  ok   A. Harvey & Company Ltd.            https://aharvey.com/
+  none Blundon's Trucking & Excavating Lt  no confident match
+  ok   Maritect Investigations & Security  https://maritectsecurity.com/
+  ok   Classic Fire + Life Safety          https://classicfls.com/contact-us/
+  skip Earthscape Play                     found "Earthscape Playgrounds" but wrong city (7215 Wellington Rd 86, Mapleton, ON N0B 2S0, Canada)
+  skip Virox Technologies                  found "Virox Technologies Inc." but wrong city (2770 Coventry Rd, Oakville, ON L6H 6R1, Canada)
+  skip Convertus                           found "Convertus Group - Head Office" but wrong city (307 Commissioners Rd W Unit 8, London, ON N6J 3K2, Canada)
+  ok   Valard Construction                 https://www.valard.com/
+  none Family Options                      no confident match
+  ok   Wilder Concepts Inc.                https://www.wilderconcepts.ca/
+  none NeuPath Center for Pain and Spine   no confident match
+  skip Wheelchair Accessible Transit       found "Wheelchair accessible transit" but wrong city (41 Bridge St, Harcourt, ON K0L 2H0, Canada)
+  skip OEG Energy Group                    found "OEG" but wrong city (Midmill Business Park, Tofthills Way, Kintore, Inverurie AB51 0QG, UK)
+  ok   President Transport Ltd             https://presidenttransport.com/
+  ok   Kenn Borek Air Ltd.                 http://www.borekair.com/
+  none Tacten Industrial Inc               no confident match
+  none Quincaillerie Richelieu Ltee        no confident match
+  skip The Better Together Group           found "Better Together Recruitment Agency" but wrong city (Genesis Business Centre, 32 - 46 King St, Alfreton DE55 7DQ, UK)
+  skip Amplify Logistics                   found "Amplify Logistics Cold Storage Toronto" but wrong city (79 Easton Rd, Brantford, ON N3P 1J4, Canada)
+  ok   Confidential                        http://shoppersconfidential.com/
+  ok   Seaspan ULC                         http://seaspan.com/
+  ok   cam | industrial                    https://camindustrial.net/
+  none Andrew Peller Limited               listed but has no website
+  ok   De Havilland                        https://dehavilland.com/
+  ok   Five Corners Meat Company Ltd.      http://www.donaldsfinefoods.com/
+
+Found 35 website(s). 19 rejected on city, 17 with no confident match.
+Next: node tempo/hunt-emails.js --table cadre_leads

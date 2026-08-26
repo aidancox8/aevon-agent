@@ -1,0 +1,27 @@
+◇ injected env (21) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+[Tempo] Hunting emails for 20 lead(s) without one...
+
+[ATS Traffic Ltd.] sales-edm@atstraffic.ca (personal, 9 pages) | also: info@atstraffic.ca
+[Progressive Rubber Industries Inc.] urethane@progressiverubber.com (personal, 2 pages) | also: sales@progressiverubber.com, %20sales@progressiverubber.com, darren.carefoot@lynum.com, johnp@lynum.com, sales@lynum.com
+[WF Steel & Crane] craneservice@wfsteelandcrane.com (personal, 3 pages)
+[Full Circle Electronics CO LLC] briand@westechrecyclers.com (personal, OFF-DOMAIN, 6 pages) | also: valeries@resellelectronics.com, dhuff@westechrecyclers.com, info@fcelect.com
+[Perfection Industrial Finishing] hr@pif-az.com (generic, OFF-DOMAIN, 11 pages)
+[NatureBest Pre-Cut and Produce, LLC] sales@naturebestprecut.com (role, 11 pages)
+[Montebello Packaging] customerservice@montebellopkg.com (personal, OFF-DOMAIN, 2 pages)
+[Hydra-Power Systems, Inc.] sales@hpsx.com (role, 11 pages) | also: support@hpsx.com
+[Pacline Corporation] sales@pacline.com (role, 2 pages) | also: demo@divi.express
+[Steeler Inc.] sales@steeler.com (role, 11 pages) | also: hello@steeler.com, jobs@steeler.com
+[GNB Global Inc.] example@mysite.com (personal, OFF-DOMAIN, 2 pages) | also: sales@gnb.group
+[Right at Home Realty] example@email.com (personal, OFF-DOMAIN, 4 pages)
+[Homelife Maple Leaf Realty Ltd., Brokerage] nsehgal62@yahoo.ca (personal, OFF-DOMAIN, 2 pages)
+[RFNOW Inc.] techsupport@rfnow.net (personal, OFF-DOMAIN, 2 pages) | also: residential.sales@rfnow.net, custexp@rfnow.net, business.sales@rfnow.net, wholesale@rfnow.net, marketing@rfnow.net
+[Interior Plumbing & Heating Ltd.] nothing found (11 pages)
+[FST Logistics] sales@fstlogistics.com (role, 11 pages)
+[Aurora Furniture Manufacturing Ltd.] sales@aurorafurnituremfg.ca (role, 4 pages) | also: technical.support@amaxleather.com
+[MacKay Contracting Ltd.] info@mackaybuilds.com (generic, OFF-DOMAIN, 11 pages)
+[Alliance Maintenance Services] ddelf@alliance-maintenance.net (personal, OFF-DOMAIN, 2 pages) | also: amsrecruit@alliance-maintenance.net
+[RG Roadways Ltd.] jonpinhorn.typedesign@gmail.com (personal, OFF-DOMAIN, 2 pages) | also: amkryukov@gmail.com, impallari@gmail.com, hello@rfuenzalida.com
+
+Done. 19 of 20 clinics updated with an email.
+Next: node tempo/personalizer.js

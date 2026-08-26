@@ -169,6 +169,39 @@ function effectiveQuality(e) {
 const CADRE_PREFERRED = ['hr', 'humanresources', 'human.resources', 'people', 'peopleandculture',
   'safety', 'compliance', 'training', 'operations', 'ops', 'admin', 'office'];
 
+/**
+ * Addresses the sender will refuse, so there is no point saving them.
+ *
+ * The 2026-08-26 Cadre run wrote 19 addresses the sender then rejected outright: seven sales@
+ * desks, two literal placeholders (example@mysite.com, example@email.com), two Google Fonts
+ * author gmails scraped out of a stylesheet, and four on a completely different domain from the
+ * company's own site. Every one of them counted as "found", which made the reachable list look
+ * a third larger than it was and stopped the hunter ever retrying those companies.
+ *
+ * Better to record nothing and stay honest. These mirror the guards in cadre/sender.js; if that
+ * file's rules change, change them here too or the hunter starts banking addresses again that
+ * will never be sent.
+ */
+const UNUSABLE = [
+  [/^(your|email|name|test|example)/i, 'placeholder'],
+  [/@(gmail|hotmail|outlook|yahoo|icloud|live|aol|proton|gmx)\./i, 'freemail, usually a scraping artifact'],
+  [/^(sales|sales-[a-z]+|service|servicedesk|support|techsupport|billing|accounts|accountspayable|accountsreceivable|invoices|orders|parts|shipping|dispatch|marketing|media|press|webmaster|noreply|no-reply|donations|volunteer|urethane|craneservice|fire|security|reception|bookings|quotes|estimating|customerservice|custexp)@/i,
+   'wrong desk, will not route an HR pitch'],
+];
+
+/** Why this address is not worth saving, or null if it is fine. */
+function unusableReason(email, website) {
+  for (const [re, why] of UNUSABLE) if (re.test(email)) return why;
+  // Off-domain. The sender blocks these outright, because an address on someone else's domain is
+  // usually a supplier, a web designer, or a font author rather than the company.
+  const host = siteHost(website);
+  if (host) {
+    const bare = h => String(h || '').replace(/^www\./, '').split('.').slice(-2).join('.');
+    if (bare(email.split('@')[1]) !== bare(host)) return `off-domain, site is ${bare(host)}`;
+  }
+  return null;
+}
+
 function pickBest(emails, website) {
   if (!emails.length) return null;
   const host = siteHost(website);
@@ -180,7 +213,11 @@ function pickBest(emails, website) {
     const relevant = TABLE === 'cadre_leads' && CADRE_PREFERRED.includes(local) ? 1 : 0;
     return onDomain * 100 + relevant * 20 + q; // own-domain, then the right desk, then quality
   };
-  return emails.sort((a, b) => rank(b) - rank(a))[0];
+  // Discard anything the sender would refuse BEFORE ranking, so a usable third choice wins over
+  // an unusable first one instead of the row being filled with something that can never go out.
+  const usable = emails.filter(e => !unusableReason(e, website));
+  if (!usable.length) return null;
+  return usable.sort((a, b) => rank(b) - rank(a))[0];
 }
 
 async function huntSite(website) {
