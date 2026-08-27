@@ -118,6 +118,13 @@ jobs:
           if [ "$MANUAL_SEND" = "SEND" ]; then
             echo "Manual send requested."
             node cadre/sender.js --send --via "$CADRE_VIA"
+          # AUTO is the backstop path: send-outreach.yml dispatches it hourly because GitHub's
+          # scheduler silently dropped every one of this workflow's slots on 2026-08-27 while
+          # running every other workflow normally. AUTO is treated exactly like a scheduled run,
+          # so CADRE_ARMED stays the single switch that decides whether anything sends.
+          elif [ "$MANUAL_SEND" = "AUTO" ] && [ "$ARMED" = "true" ]; then
+            echo "Backstop dispatch and CADRE_ARMED is true, sending via $CADRE_VIA."
+            node cadre/sender.js --send --via "$CADRE_VIA"
           elif [ "${{ github.event_name }}" = "schedule" ] && [ "$ARMED" = "true" ]; then
             echo "CADRE_ARMED is true, sending via $CADRE_VIA."
             node cadre/sender.js --send --via "$CADRE_VIA"

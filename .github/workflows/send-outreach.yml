@@ -8,6 +8,11 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
+    # actions:write lets the backstop step dispatch cadre-send; contents:read is what checkout
+    # needs. Declaring permissions narrows the default token rather than widening it.
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +48,18 @@ jobs:
           DAILY_CAP: ${{ secrets.DAILY_CAP }}
           FOLLOWUP_MAX_SHARE: ${{ secrets.FOLLOWUP_MAX_SHARE }}
         run: node sender.js
+
+      # BACKSTOP FOR THE CADRE SCHEDULER. On 2026-08-27 GitHub dropped every scheduled slot of
+      # cadre-send.yml for the whole day while running this workflow on time, and 12 due sends
+      # sat unsent until a manual flush. This workflow demonstrably fires, so it re-dispatches
+      # cadre-send each run. Safe to fire redundantly: cadre-send has a concurrency group, counts
+      # its daily cap from events, sends only what is due, and AUTO still requires CADRE_ARMED.
+      - name: Nudge the Cadre sender
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run cadre-send.yml -f live=AUTO --repo ${{ github.repository }}
 
       - name: Alert on failure
         if: failure()
