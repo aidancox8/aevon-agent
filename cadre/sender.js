@@ -98,6 +98,7 @@ function resendClient() {
   return _resend;
 }
 const { zoneFor, nextSendSlot } = require('./timezone');
+const { applyAsk } = require('./offer');
 
 /**
  * THE SEQUENCE. One touch throws away most of the campaign: across published cold-email data
@@ -405,7 +406,22 @@ async function bounceRate() {
     // arriving as a second unrelated cold email.
     const subject = stepNo === 0 ? rawSubject
       : (/^re:/i.test(rawSubject) ? rawSubject : `Re: ${lead.email_subject}`);
-    const body = rawBody.trim() + FOOTER;
+
+    // Substitute the closing ask. THIS LINE WAS MISSING ON THE FIRST LIVE DAY: applyAsk existed
+    // in cadre/offer.js, preflight used it to render its sample, and the sender never called it,
+    // so all twelve emails on 2026-08-26 went out ending with the literal token {{ASK}}. The
+    // one thing a template system must never do is show the recipient the template.
+    const body = applyAsk(rawBody.trim(), stepNo, lead.id) + FOOTER;
+
+    // Belt and braces: no body with an unresolved token leaves this process, whatever produced
+    // it. A blocked send costs one slot; a visible {{TOKEN}} tells the prospect they are line
+    // items in a mail merge, which is fatal to the entire premise of this campaign.
+    if (/\{\{[A-Z_]+\}\}/.test(body)) {
+      console.log(`  [block] ${lead.business_name} - body still contains an unresolved template token`);
+      blocked++;
+      if (LIVE) await log(lead.id, 'held', { reason: 'unresolved template token', email: lead.email });
+      continue;
+    }
     process.stdout.write(`  ${String(stepNo + 1)}/3 ${lead.business_name.slice(0, 30).padEnd(32)}${lead.email.padEnd(34)}`);
 
     if (!LIVE) { console.log(`[dry] "${subject}"`); sent++; continue; }

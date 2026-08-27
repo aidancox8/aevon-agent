@@ -66,6 +66,7 @@ jobs:
           node check-signature.js
           node check-schedules.js
           node check-copy-lock.js
+          node check-cadre-ask.js
 
       # Runs BEFORE the sender, deliberately. Anyone who replied or asked to be left alone in the
       # last hour is moved out of 'queued' here, so this run cannot email them. Doing it after
