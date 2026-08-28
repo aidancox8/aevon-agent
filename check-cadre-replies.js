@@ -92,6 +92,17 @@ for (const [label, payload, from, want] of DETECT) {
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}`);
 }
 
-const total = CASES.length + BOUNCES.length + DETECT.length;
+// The dedup set must cover every event type the scanner writes with an inbound message id.
+// It once covered only 'replied', so each real bounce was re-recorded by every hourly scan:
+// two dead mailboxes grew six 'bounced' events in a day and were headed for a breaker halt
+// built entirely of duplicates.
+const scanSrc = require('fs').readFileSync('./cadre/reply-scan.js', 'utf8');
+{
+  const ok = /\.in\('event_type', \['replied', 'bounced', 'held'\]\)/.test(scanSrc);
+  if (!ok) bad++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} dedup set covers replied, bounced and held`);
+}
+
+const total = CASES.length + BOUNCES.length + DETECT.length + 1;
 console.log(`\n${total - bad}/${total} passed`);
 process.exit(bad ? 1 : 0);

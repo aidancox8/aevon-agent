@@ -168,8 +168,13 @@ if (require.main !== module) return;
     if (l.email_subject) bySubject.set(normSubject(l.email_subject), l);
   }
 
-  // Never handle the same inbound message twice.
-  const { data: prior } = await supabase.from(EVENTS).select('metadata').eq('event_type', 'replied');
+  // Never handle the same inbound message twice. EVERY event type that records an inbound
+  // message id belongs in this set, not just 'replied': the first version filtered on 'replied'
+  // alone, so bounce reports were re-processed by every hourly scan and each real bounce grew a
+  // duplicate 'bounced' event per run. Three days of that would have tripped the 5% breaker on
+  // two genuine bounces and halted the campaign on arithmetic rather than on reality.
+  const { data: prior } = await supabase.from(EVENTS)
+    .select('metadata').in('event_type', ['replied', 'bounced', 'held']);
   const seen = new Set((prior || []).map(e => e.metadata && e.metadata.inbound_message_id).filter(Boolean));
 
   const list = await gmail.users.messages.list({

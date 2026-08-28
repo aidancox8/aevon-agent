@@ -1,0 +1,15 @@
+[
+ {
+  "business_name": "Knauf Insulation",
+  "city": "McGregor, TX",
+  "industry": "trades",
+  "source": "simplyhired",
+  "signal_type": "manual_tracking",
+  "signal_quote": "Manage training matrix for all plant positions.",
+  "signal_url": "https://www.simplyhired.com/job/7IBQdZkRDhOyjUOv6Bl0BUHhii45FItsbXMIdHAAnVL8pNj6qvVEtA",
+  "signal_date": "2026-08-27",
+  "qualification_score": 9,
+  "personalization_basis": "published signal: training matrix",
+  "notes": "[US] Found via SimplyHired phrase \"training matrix\" in texas. Job title: Training Coordinator."
+ }
+]

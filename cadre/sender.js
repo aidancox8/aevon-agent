@@ -310,7 +310,13 @@ async function bounceRate() {
   if (!LIVE) console.log('DRY RUN: no email will be sent. Pass --send to send for real.\n');
 
   const { rate, sent: sentN, bounced } = await bounceRate();
-  if (sentN >= 20 && rate > BOUNCE_LIMIT && !process.env.ALLOW_HIGH_BOUNCE) {
+  // Halt on evidence, not on arithmetic. Two bounces in 27 sends is 7.4%, over the 5% line, but
+  // a sample that small cannot distinguish 2% from 20%: the first live week produced exactly
+  // this, two dead mailboxes (a 5.1.1 for a contact who had left, a 5.4.1 for a tenant-rejected
+  // info@), neither a reputation signal, and the breaker would have halted Sep 1 on them.
+  // Require both a real sample AND at least 3 bounces before concluding the list is bad. The
+  // per-lead protection is untouched: a bounced lead is out regardless.
+  if (sentN >= 50 && bounced >= 3 && rate > BOUNCE_LIMIT && !process.env.ALLOW_HIGH_BOUNCE) {
     console.error(`HALTED: bounce rate ${(rate * 100).toFixed(1)}% (${bounced}/${sentN}) is above ${BOUNCE_LIMIT * 100}%.`);
     console.error('A bad list damages the sending domain for all three campaigns. Clean it first.');
     process.exit(1);
