@@ -417,7 +417,14 @@ async function bounceRate() {
     // in cadre/offer.js, preflight used it to render its sample, and the sender never called it,
     // so all twelve emails on 2026-08-26 went out ending with the literal token {{ASK}}. The
     // one thing a template system must never do is show the recipient the template.
-    const body = applyAsk(rawBody.trim(), stepNo, lead.id) + FOOTER;
+    // SUBSTITUTE ONLY, NEVER APPEND. applyAsk's fallback appends an ask when a body has no
+    // token and no closing question. That fallback exists for legacy Aevon copy; here every body
+    // is hand-written and complete, and the fallback fired on exactly the email built to ask for
+    // nothing: the touch-3 close-out ("no reply needed and I will leave it there") gained a
+    // stapled "If I have guessed wrong just say so and I will leave it there", two goodbyes,
+    // machine-stitched, on all fifty-plus final touches. A body without the token ships as
+    // written, byte for byte.
+    const body = (rawBody.includes('{{ASK}}') ? applyAsk(rawBody.trim(), stepNo, lead.id) : rawBody.trim()) + FOOTER;
 
     // Belt and braces: no body with an unresolved token leaves this process, whatever produced
     // it. A blocked send costs one slot; a visible {{TOKEN}} tells the prospect they are line

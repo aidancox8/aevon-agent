@@ -24,7 +24,8 @@ const check = (label, cond, detail = '') => {
 (async () => {
   // 1. The sender must actually call applyAsk on the body it sends, and gate on leftovers.
   const src = fs.readFileSync('./cadre/sender.js', 'utf8');
-  check('sender composes the body through applyAsk', /const body = applyAsk\(rawBody/.test(src));
+  check('sender composes token-bearing bodies through applyAsk',
+    /rawBody\.includes\('\{\{ASK\}\}'\) \? applyAsk\(rawBody/.test(src));
   check('sender refuses any body with an unresolved token', /\\\{\\\{\[A-Z_\]\+\\\}\\\}/.test(src));
 
   // 2. Every stored body, first touch and follow-ups, must resolve cleanly.
@@ -50,7 +51,24 @@ const check = (label, cond, detail = '') => {
   }
   check(`all ${leads.length} leads' stored copy resolves with a closing ask`, dirty === 0, dirty ? `${dirty} dirty` : '');
 
-  // 3. Same lead always gets the same ask, so a re-run cannot change a sent email's sibling.
+  // 3. A body WITHOUT the token must pass through byte-identical. applyAsk's append-fallback
+  // once stapled "If I have guessed wrong just say so and I will leave it there" onto every
+  // touch-3 close-out, the one email designed to ask for nothing. The sender now substitutes
+  // only; this asserts both the sender clause and the behaviour on real stored close-outs.
+  check('sender never appends an ask to a token-free body',
+    /rawBody\.includes\('\{\{ASK\}\}'\) \? applyAsk/.test(src));
+  {
+    const closeouts = leads.filter(l => l.followup2_body && !l.followup2_body.includes('{{ASK}}'));
+    const mangled = closeouts.filter(l => {
+      const sent = l.followup2_body.includes('{{ASK}}')
+        ? applyAsk(l.followup2_body.trim(), 2, l.id) : l.followup2_body.trim();
+      return sent !== l.followup2_body.trim();
+    });
+    check(`all ${closeouts.length} close-outs ship exactly as written`, mangled.length === 0,
+      mangled.length ? mangled[0].business_name : '');
+  }
+
+  // 4. Same lead always gets the same ask, so a re-run cannot change a sent email's sibling.
   const sample = leads.find(l => l.email_body && l.email_body.includes('{{ASK}}'));
   if (sample) {
     check('substitution is deterministic per lead',
