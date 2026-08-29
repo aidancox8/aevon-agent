@@ -64,16 +64,21 @@ async function readAll(table, cols) {
   return out;
 }
 
+// Labels are for Aidan's eyes in the digest. "Aevon" alone was ambiguous, since Aevon is the
+// company and every campaign sends under it; the first campaign is AEVON GENERAL OUTREACH,
+// renamed 2026-08-29 at his request.
 const CAMPAIGNS = [
-  { label: 'TEMPO', sub: 'clinic scheduling', leads: 'tempo_leads', events: 'tempo_email_events', perDay: 20, sendDays: 'Mon-Fri' },
+  // PAUSED 2026-08-26 behind TEMPO_ARMED after 346 delivered, 0 replies ever. Kept in the digest
+  // so the pause is visible rather than the campaign quietly vanishing from the report.
+  { label: 'TEMPO', sub: 'clinic scheduling (paused)', leads: 'tempo_leads', events: 'tempo_email_events', perDay: 20, sendDays: 'paused' },
   // perDay must track the DAILY_CAP secret (85) or the runway estimate lies. segmented=true
   // means new sequences only start in the industries that have replied, so the runway has to
   // count those leads and not the whole queue.
-  { label: 'AEVON', sub: 'AI consulting',     leads: 'leads',       events: 'email_events',       perDay: 85, sendDays: 'Mon-Fri', segmented: true, campaign: 'aevon' },
-  // Third campaign, HR and credentials. perDay is deliberately tiny: the thing being tested is
-  // whether the argument works, not whether volume works. Aevon already answered that with
-  // 3,506 sends and zero meetings.
-  { label: 'CADRE', sub: 'HR + credentials',  leads: 'cadre_leads', events: 'cadre_email_events', perDay: 5,  sendDays: 'Mon-Fri', campaign: 'cadre' },
+  { label: 'AEVON GENERAL OUTREACH', sub: 'custom software, BC SMBs', leads: 'leads', events: 'email_events', perDay: 85, sendDays: 'Mon-Fri', segmented: true, campaign: 'aevon' },
+  // Third campaign, HR and credentials. perDay tracks CADRE_DAILY_CAP (12), and the send days
+  // are Tue-Thu only, which is all the scheduler ever books; this entry once said 5/day Mon-Fri
+  // and the runway estimate lied in both directions at once.
+  { label: 'CADRE', sub: 'HR + credentials',  leads: 'cadre_leads', events: 'cadre_email_events', perDay: 12, sendDays: 'Tue-Thu', campaign: 'cadre' },
 ];
 
 /**
