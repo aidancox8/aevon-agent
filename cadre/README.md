@@ -230,3 +230,19 @@ Worth knowing before step 1: the reports are daily XML from every major provider
 messages a day into the mailbox cadre/reply-scan.js reads. They come from addresses like
 noreply-dmarc-support@google.com, match no lead and are skipped harmlessly, but they are noise. A
 Gmail filter or a dedicated `dmarc@aevon.ca` alias fixes that.
+
+## The finder runs on the laptop, deliberately
+
+Tried on GitHub Actions 2026-08-28 and SimplyHired 403'd every one of 84 queries: it blocks
+datacenter IPs outright. The workflow was removed the same day rather than left green-and-useless
+(it had reported success while finding nothing, which is the worst kind of failure).
+
+So discovery is a laptop task, run when the machine will stay awake:
+
+    node cadre/lead-finder.js
+
+Weekly is the right cadence; postings churn on the order of a week, and re-running sooner mostly
+re-finds what the dedup discards (84 queries on 2026-08-28 yielded one new company against the
+2026-08-25 sweep). After a sweep: `node cadre/find-websites.js`, then
+`node tempo/hunt-emails.js --table cadre_leads`, then write copy. The finder now exits non-zero
+if every query fails, so a blocked environment can no longer look like a quiet week.

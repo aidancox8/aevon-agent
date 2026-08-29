@@ -388,8 +388,10 @@ if (require.main === module) (async () => {
   for (const phrase of phrases) {
     for (const target of targets) {
       let r;
+      globalThis.__queriesTried = (globalThis.__queriesTried || 0) + 1;
       try { r = await search(phrase, target); }
       catch (e) { console.log(`  ! ${phrase} / ${target.place}: ${e.response ? e.response.status : e.code}`); continue; }
+      globalThis.__queriesOk = (globalThis.__queriesOk || 0) + 1;
       await new Promise(res => setTimeout(res, GAP_MS));
       if (consecutiveDnsFailures >= 3) {
         console.log('  … resolver struggling, pausing 60s');
@@ -486,4 +488,12 @@ if (require.main === module) (async () => {
   }
   console.log(`\nInserted ${ok}${failed ? `, ${failed} failed (re-run: node cadre/ingest.js ${batchPath})` : ''}.`);
   console.log(`Next: node tempo/hunt-emails.js --table ${TABLE}`);
-})().catch(e => { console.error('lead finder failed:', e.message); process.exit(1); });
+})().then(() => {
+  // A sweep where EVERY query failed must not exit 0. The first Actions dispatch 403'd all 84
+  // queries (SimplyHired blocks datacenter IPs), reported success, and saved nothing: a silent
+  // zero wearing a green tick. The counters are set in the query loop.
+  if (globalThis.__queriesTried > 10 && globalThis.__queriesOk === 0) {
+    console.error(`ALL ${globalThis.__queriesTried} queries failed. This environment cannot reach the source.`);
+    process.exit(1);
+  }
+}).catch(e => { console.error('lead finder failed:', e.message); process.exit(1); });
