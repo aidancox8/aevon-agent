@@ -1,0 +1,73 @@
+name: Cadre - Find Leads
+
+# The finder used to run on Aidan's laptop, which meant it died whenever the machine slept:
+# three consecutive background runs were killed mid-sweep on 2026-08-27/28, saving one lead
+# between them. The sends were already laptop-independent; this makes discovery match.
+#
+# WEEKLY, NOT HOURLY, because the input is job postings and postings churn on the order of a
+# week. Re-running sooner mostly re-finds what the dedup then discards: the 2026-08-28 re-run of
+# the 2026-08-25 query space produced 84 queries' worth of hits and exactly one new company.
+#
+# The chain is discovery -> websites -> addresses, in one job, because each step feeds the next
+# and none is useful alone. Every script checkpoints and the database is the store, so a dropped
+# runner costs the tail of one sweep, not the sweep.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 13 * * 1'   # Mondays 13:30 UTC, so fresh leads are written and hunted before
+                            # the Tuesday send window opens
+
+concurrency:
+  group: cadre-find
+  cancel-in-progress: false
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Find signal leads
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node cadre/lead-finder.js
+
+      - name: Find websites for leads without one
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: node cadre/find-websites.js
+
+      - name: Hunt addresses on those websites
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node tempo/hunt-emails.js --table cadre_leads
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: |
+          node -e "
+          const { Resend } = require('resend');
+          new Resend(process.env.RESEND_API_KEY).emails.send({
+            from: 'Aevon <' + process.env.FROM_EMAIL + '>',
+            to: 'aidan@aevon.ca',
+            subject: '[Aevon ALERT] Cadre lead finder failed',
+            text: 'The Cadre finder workflow failed. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          });"
