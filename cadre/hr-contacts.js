@@ -34,7 +34,13 @@
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-const dns = require('dns').promises;
+const dnsBase = require('dns');
+// The system resolver on this machine fails MX lookups wholesale: a first run reported
+// "no MX" for novartis.com and homedepot.com, which is plainly wrong. sender.js has pinned
+// public resolvers since June for the same reason. Without this the script silently
+// concludes every domain is dead.
+try { dnsBase.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) { /* keep system resolvers */ }
+const dns = dnsBase.promises;
 const supabase = require('../lib/supabase');
 
 const TABLE = 'cadre_leads';
