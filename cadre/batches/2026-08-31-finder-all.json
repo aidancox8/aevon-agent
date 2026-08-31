@@ -1,0 +1,28 @@
+[
+ {
+  "business_name": "Can States Express",
+  "city": "Milton, ON",
+  "industry": "transport",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Maintain driver qualification files (DQF) in compliance with DOT/FMCSA regulations.",
+  "signal_url": "https://www.simplyhired.ca/job/NtpfbitzTlihf8VNOtvmron89okf--WvGp1V6VvND7YIogZvv49mnQ",
+  "signal_date": "2026-08-31",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: driver qualification files",
+  "notes": "[CA] Found via SimplyHired phrase \"driver qualification files\" in ontario. Job title: Hiring Safety Admin for Trucking Company."
+ },
+ {
+  "business_name": "RAPIDX TRANSPORT INC",
+  "city": "Mississauga, ON",
+  "industry": "transport",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Monitoring and managing driver qualification files and other compliance documentation.",
+  "signal_url": "https://www.simplyhired.ca/job/4vE2TnV31EDoGYNdzfWw8MkVLA-efBsjFxM6mhYnSy_rWO8tCvJ80g",
+  "signal_date": "2026-08-31",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: driver qualification files",
+  "notes": "[CA] Found via SimplyHired phrase \"driver qualification files\" in ontario. Job title: Safety and Compliance Coordinator (Transportation)."
+ }
+]

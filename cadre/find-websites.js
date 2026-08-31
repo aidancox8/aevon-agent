@@ -50,19 +50,48 @@ function namesMatch(a, b) {
 }
 
 /**
- * Is the place in the city we already have for this lead?
+ * Is this Places result plausibly the same company we already have?
  *
- * Accents have to come off BOTH sides. The lead table stores city names ASCII-folded by the job
- * scraper ("Trois-Rivieres QC", "Saint-Valerien-de-Milton QC") while Places returns them properly
- * spelled ("Trois-Rivieres" with the accent). Comparing raw strings rejected every Quebec lead
- * that actually matched, which looked like a data problem and was a comparison problem.
+ * City-exact matching was wrong and was the single reason this script returned almost nothing.
+ * The lead's city comes from a JOB POSTING, which names where the work is; Places returns the
+ * company's REGISTERED ADDRESS. A Richmond BC manufacturer advertising a Vancouver BC role was
+ * rejected as "wrong city" even though it was obviously the same business. Measured on a sample
+ * of 12 leads, city-exact accepted zero of them.
+ *
+ * So the test is REGION, not city: same province or state is close enough when the name already
+ * matched strictly, and the name test is what actually guards against "Empire Roofing" in a
+ * dozen cities. City is still used, as a bonus rather than a requirement.
+ *
+ * Accents come off BOTH sides. The lead table stores city names ASCII-folded by the job scraper
+ * ("Trois-Rivieres QC") while Places returns them properly spelled. Comparing raw strings
+ * rejected every Quebec lead that matched, which looked like a data problem and was a
+ * comparison problem.
  */
 const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-function cityMatches(leadCity, formattedAddress) {
-  const city = fold(leadCity).replace(/\s+[a-z]{2}$/, '').trim();
-  if (!city) return true;                       // nothing to contradict
-  return fold(formattedAddress).includes(city);
+/** "Sugar Land, TX" -> "tx"; "Abbotsford BC" -> "bc"; "Watford" -> null. */
+function regionOf(leadCity) {
+  const m = fold(leadCity).match(/[,\s]\s*([a-z]{2})\s*$/);
+  return m ? m[1] : null;
+}
+
+/** "Sugar Land, TX" -> "sugar land"; "Abbotsford BC" -> "abbotsford". */
+function cityOf(leadCity) {
+  return fold(leadCity).replace(/[,\s]\s*[a-z]{2}\s*$/, '').replace(/,\s*$/, '').trim();
+}
+
+function placeMatches(leadCity, formattedAddress) {
+  const addr = fold(formattedAddress);
+  if (!addr) return false;
+  const region = regionOf(leadCity);
+  const city = cityOf(leadCity);
+  // Region is the real gate when we have one: a two-letter code appears in the formatted
+  // address as its own token, so match it that way rather than as a substring ("on" would
+  // otherwise hit "Toronto").
+  if (region) return new RegExp('(^|[, ])' + region + '([, ]|$)', 'i').test(addr);
+  // No region code (UK and Irish towns mostly). Fall back to the town name.
+  if (city) return addr.includes(city);
+  return true; // nothing to contradict
 }
 
 const SOCIAL = /(facebook|instagram|linkedin|twitter|x\.com|youtube|tiktok|indeed|glassdoor|ziprecruiter|yelp|bbb\.org|mapquest|yellowpages|google\.com)/i;
@@ -104,16 +133,27 @@ async function lookup(name, city) {
       continue;
     }
 
-    const hit = places.find(p =>
-      p.websiteUri && !SOCIAL.test(p.websiteUri)
-      && namesMatch(lead.business_name, p.displayName && p.displayName.text)
-      && cityMatches(lead.city, p.formattedAddress));
+    const usable = places.filter(p => p.websiteUri && !SOCIAL.test(p.websiteUri)
+      && namesMatch(lead.business_name, p.displayName && p.displayName.text));
+
+    // Same region is the ordinary case.
+    let hit = usable.find(p => placeMatches(lead.city, p.formattedAddress));
+
+    // Cross-region fallback, for national companies hiring away from head office (a Gatineau QC
+    // posting whose company is registered in Ottawa ON, across the river). Only when the
+    // normalised name matches EXACTLY and is the ONLY exact match Places returned: a generic
+    // name like "Empire Roofing" comes back several times over and is refused here, which is the
+    // collision the region test exists to prevent.
+    if (!hit) {
+      const exact = usable.filter(p => norm(p.displayName && p.displayName.text) === norm(lead.business_name));
+      if (exact.length === 1) hit = exact[0];
+    }
 
     if (!hit) {
       // Say WHY, so the gap is legible rather than just a smaller number. A near miss on the
       // name is a very different problem from the company having no web presence at all.
       const near = places.find(p => namesMatch(lead.business_name, p.displayName && p.displayName.text));
-      if (near && near.websiteUri) { rejected++; console.log(`  skip ${String(lead.business_name).slice(0, 34).padEnd(36)}found "${near.displayName.text}" but wrong city (${near.formattedAddress || '?'})`); }
+      if (near && near.websiteUri) { rejected++; console.log(`  skip ${String(lead.business_name).slice(0, 34).padEnd(36)}found "${near.displayName.text}" but wrong region (${near.formattedAddress || '?'})`); }
       else if (near) { missing++; console.log(`  none ${String(lead.business_name).slice(0, 34).padEnd(36)}listed but has no website`); }
       else { missing++; console.log(`  none ${String(lead.business_name).slice(0, 34).padEnd(36)}no confident match`); }
       continue;
@@ -128,6 +168,6 @@ async function lookup(name, city) {
     }
   }
 
-  console.log(`\nFound ${found} website(s). ${rejected} rejected on city, ${missing} with no confident match.`);
+  console.log(`\nFound ${found} website(s). ${rejected} rejected on region, ${missing} with no confident match.`);
   if (found) console.log('Next: node tempo/hunt-emails.js --table cadre_leads');
 })().catch(e => { console.error('find-websites failed:', e.message); process.exit(1); });

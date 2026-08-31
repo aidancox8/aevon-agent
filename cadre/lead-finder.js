@@ -85,6 +85,25 @@ const PHRASES = [
   'licence expiry',        // UK, IE, CA
   'license expiry',        // US
   'training programme',    // UK, IE
+
+  // Added 2026-08-30. The list above was exhausted: a full CA+US+UK sweep of it returned 26 new
+  // companies, and zero on the top phrases in Ontario and BC. These are the same KIND of phrase,
+  // an artifact with a name that somebody is paid to keep current, which is what makes
+  // "training matrix" work. Anything vaguer than that returns regulators and staffing agencies
+  // whose business IS credentialing, rather than employers who struggle with it.
+  'skills matrix',
+  'qualification matrix',
+  'certification matrix',
+  'training tracker',
+  'training records up to date',
+  'renewal tracking',
+  'expiring certifications',
+  'certificates of competency',   // UK/IE phrasing
+  'competency records',
+  'ticket tracking',              // "tickets" is the trades word in CA
+  'CSCS cards',                   // UK construction, expires every 5 years
+  'white card',                   // AU construction induction
+  'high risk work licence',       // AU, fixed renewal cycle
 ];
 
 /**
