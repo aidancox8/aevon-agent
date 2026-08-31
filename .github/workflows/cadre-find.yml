@@ -1,0 +1,100 @@
+name: Cadre - Find Leads
+
+# The finder is the one Cadre step that genuinely cannot run on a laptop. A full sweep is
+# ~30 phrases across ~60 locations at a 4s gap, so it runs for hours, and it writes only at
+# the END of the sweep. Two local runs were lost to the machine sleeping, both several hours
+# in, both having found real companies. Nothing was saved either time.
+#
+# On a runner it either completes or fails loudly, and either way the batch JSON is kept as an
+# artifact so a killed run is still inspectable.
+#
+# Deliberately NOT on a frequent schedule. The signal is job ads, which do not turn over daily,
+# and re-sweeping the same phrases mostly re-finds companies already in the table. Weekly is
+# generous; the dispatch input is there for when the phrase list changes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'core (CA+US+UK), all, or one of ca/us/uk/ie/au'
+        required: false
+        default: 'core'
+      phrases:
+        description: 'Max phrases to sweep (blank = all)'
+        required: false
+        default: ''
+      locations:
+        description: 'Max locations per phrase (blank = all)'
+        required: false
+        default: ''
+  schedule:
+    # Sundays 4am PT. Ahead of the week's enrich runs so new companies get websites, addresses
+    # and copy before the sender wants them.
+    - cron: '0 11 * * 0'
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    # A full --region all sweep is the long case. This is a backstop so a hung run fails
+    # loudly rather than ending as a silent cancellation.
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sweep job boards for the signal
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          node cadre/lead-finder.js \
+            --region ${{ github.event_name == 'schedule' && 'all' || inputs.region }} \
+            ${{ inputs.phrases != '' && format('--phrases {0}', inputs.phrases) || '' }} \
+            ${{ inputs.locations != '' && format('--locations {0}', inputs.locations) || '' }}
+
+      # Keep the batch even when the run is cancelled or the write step failed, so a lost
+      # sweep is still readable instead of being thrown away with the runner.
+      - name: Keep the batch file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cadre-batch
+          path: cadre/batches/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Report the table after the sweep
+        if: success()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          node -e "
+          const s = require('./lib/supabase');
+          (async () => {
+            const { data } = await s.from('cadre_leads').select('status,email,website');
+            console.log('total leads   :', data.length);
+            console.log('with a website:', data.filter(r => r.website).length);
+            console.log('with an email :', data.filter(r => r.email && r.email.includes('@')).length);
+          })();
+          "
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"from":"Aevon <aidan@aevon.ca>","to":["aidan@aevon.ca"],"subject":"[Aevon ALERT] Cadre lead finder failed","text":"cadre-find.yml failed. See the run log."}' \
+            > /dev/null
