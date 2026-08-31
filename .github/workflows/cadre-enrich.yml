@@ -1,0 +1,103 @@
+name: Cadre - Enrich and Personalize
+
+# The Cadre pipeline had no workflow for anything before the sender. find-websites,
+# hunt-emails and the personalizer only ever ran when someone typed them on a laptop, which
+# is why 84 leads sat with a real address and no copy while the sender had nothing to send.
+# A step that only runs when a human remembers is a step that stops running.
+#
+# Order matters and is the whole point: a website makes an address findable, an address makes
+# copy worth writing, and copy is what the sender needs. Each step only touches rows the
+# previous one filled, so re-running is cheap and idempotent.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max leads to personalize (blank = all)'
+        required: false
+        default: ''
+      skip_enrich:
+        description: 'Skip the website and email hunt, only write copy'
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    # 5am PT weekdays, an hour ahead of the Cadre sender so fresh copy is ready for it.
+    - cron: '0 12 * * 1-5'
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    # A backstop so a hung run fails loudly instead of ending as a silent 6h cancellation.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Attach a website to leads that have none. Job boards give a company name and a city
+      # and usually no homepage, and the email hunter has nothing to crawl without one.
+      - name: Find websites
+        if: ${{ inputs.skip_enrich != true }}
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node cadre/find-websites.js
+
+      # Crawl those sites for a published address. Only real published addresses are saved
+      # here; hr-contacts.js is the separate, deliberate guessing path and is not run
+      # automatically, because it writes unverified addresses.
+      - name: Hunt published email addresses
+        if: ${{ inputs.skip_enrich != true }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node tempo/hunt-emails.js --table cadre_leads
+
+      - name: Write copy for leads that have none
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_AGENT: ${{ secrets.GEMINI_API_KEY_AGENT }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node cadre/personalizer.js ${{ github.event_name == 'schedule' && '--limit 120' || (inputs.limit != '' && format('--limit {0}', inputs.limit) || '') }}
+
+      - name: Report what is now sendable
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          node -e "
+          const s = require('./lib/supabase');
+          (async () => {
+            const { data } = await s.from('cadre_leads').select('status,email,email_subject,email_body');
+            const q = data.filter(r => r.status === 'queued' && r.email && r.email.includes('@'));
+            const ready = q.filter(r => r.email_subject && r.email_body && r.email_body.length > 40);
+            console.log('ready to send  :', ready.length);
+            console.log('needing copy   :', q.length - ready.length);
+            console.log('parked guesses :', data.filter(r => r.status === 'needs_review').length);
+          })();
+          "
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"from":"Aevon <aidan@aevon.ca>","to":["aidan@aevon.ca"],"subject":"[Aevon ALERT] Cadre enrich failed","text":"cadre-enrich.yml failed. See the run log."}' \
+            > /dev/null
