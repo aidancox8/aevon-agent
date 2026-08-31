@@ -1,0 +1,41 @@
+[
+ {
+  "business_name": "Capital Health",
+  "city": "Bellevue, WA",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Maintains current certification and competency records of self and assigned staff to ensure compliance with hospital and state regulatory requirements.",
+  "signal_url": "https://www.simplyhired.com/job/ABGYrvLoLDWqB2hhlHbkIt_khEzbNTd-T61Tc3glVnk2aIl56kIXuQ",
+  "signal_date": "2026-08-31",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: competency records",
+  "notes": "[US] Found via SimplyHired phrase \"competency records\" in washington. Job title: EMT Supervisor."
+ },
+ {
+  "business_name": "Yakima Valley Farm Workers Clinic",
+  "city": "Toppenish, WA",
+  "industry": "health",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Logs calls into ticket tracking system, providing details including caller name, nature of the issue, diagnostic and troubleshooting steps, and resolution.",
+  "signal_url": "https://www.simplyhired.com/job/yle9ss0APhyT-hIYbT7-o_HTFNbf7StVd9z-t3qvKpkVPU38l4x97w",
+  "signal_date": "2026-08-31",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: ticket tracking",
+  "notes": "[US] Found via SimplyHired phrase \"ticket tracking\" in washington. Job title: Help Desk Specialist."
+ },
+ {
+  "business_name": "T-Mobile USA, Inc.",
+  "city": "Bellevue, WA",
+  "industry": "other",
+  "source": "simplyhired",
+  "signal_type": "hiring_credentialing",
+  "signal_quote": "Initiates measures to maintain progress toward resolution of impairment/outages such as ticket tracking, resource assignment, escalations, engaging higher tier…",
+  "signal_url": "https://www.simplyhired.com/job/73uWkrkM1ITXw4PRS9N_WWEZ2R_qp6OQPCaNof1tAJ1NDzD0a-emng",
+  "signal_date": "2026-08-31",
+  "qualification_score": 6,
+  "personalization_basis": "published signal: ticket tracking",
+  "notes": "[US] Found via SimplyHired phrase \"ticket tracking\" in washington. Job title: Account Manager, Technical."
+ }
+]

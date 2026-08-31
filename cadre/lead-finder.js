@@ -47,8 +47,25 @@ const arg = (name, fallback) => {
 const MAX_PHRASES = arg('phrases', 99);
 const MAX_LOCATIONS = arg('locations', 99);
 const GAP_MS = 4000;
-/** Individual postings to open per query when the snippet omits the phrase. */
-const DEEP_PER_QUERY = 6;
+/**
+ * Individual postings to open per query when the snippet omits the phrase.
+ *
+ * THIS WAS THE CEILING, and it was invisible. Measured on "training matrix" / ontario:
+ * SimplyHired reports 51 matches, returns 20 on page one, and puts the phrase in ZERO of the
+ * 20 snippets. So every result needs the posting opened, and at 6 the finder examined 6 of 20
+ * and skipped 14 without a word. The log line "51 hits +0" reads as "nothing new here" when
+ * what happened is "we looked at six of them".
+ *
+ * A full page is 20. The cost is one request each, so the gap below is what keeps it polite
+ * rather than the cap. Override with --deep for a quick sweep.
+ */
+const DEEP_PER_QUERY = (() => {
+  const i = process.argv.indexOf('--deep');
+  return i > -1 ? parseInt(process.argv[i + 1], 10) : 20;
+})();
+
+/** Pause between opening individual postings. */
+const DEEP_GAP_MS = 700;
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36',
@@ -67,43 +84,87 @@ const HEADERS = {
  * "certification records" need no variant, which is part of why they travel so well.
  */
 const PHRASES = [
+  // Rewritten 2026-08-31 from research into what employers ACTUALLY write, with verbatim
+  // examples behind each. The governing finding:
+  //
+  //   A CARD NAME never works. "CSCS", "White Card", "VOC", "HRWL", "Blue Card", "Safe Pass"
+  //   are always phrased as a requirement ON THE APPLICANT, so they return labour-hire
+  //   agencies and training providers. What works is the VERB PHRASE naming the internal
+  //   record somebody is paid to keep: "maintain the...", "keep... up to date",
+  //   "monitor expiry dates", "audit-ready".
+  //
+  // Four phrases added earlier the same day are removed here for exactly that reason:
+  // 'CSCS cards', 'white card', 'high risk work licence', and 'expiring certifications'.
+  // 'ticket tracking' is removed as well, for a different reason: in Canada it is a homonym
+  // that returns IT helpdesk and ServiceNow roles, not safety tickets.
+
+  // The matrix family. Highest yield by a wide margin, in every country tested.
   'training matrix',
-  'certification tracking',
-  'certification expiry',
-  'maintain training records',
-  'employee certifications',
-  'certification records',
-  'recertification',
+  'maintain the training matrix',
+  'company training matrix',
+  'safety training matrix',
+  'health and safety training matrix',
+  'training matrix records',
   'competency matrix',
-  'driver qualification files',
+  'competence matrix',
+  'skills matrix',
+  'qualification matrix',
+
+  // The record, named as internal work.
+  'maintain accurate training records',
+  'maintain training records',
+  'training and competency records',
+  'training and competence records',
+  'competency records',
+  'certification records',
+  'training register',
+  'certification register',
+  'orientation records',
+  'training records and certificates',
+
+  // Expiry, stated as somebody's job.
+  'monitor expiry dates',
+  'monitor licence expiry dates',
+  'certification expiry',
+  'certification tracking',
   'track certifications',
   'certifications are up to date',
+  'recertification',
+  'renewal tracking',
+
+  // Named systems. A company that calls it a system already has the problem and a budget.
+  'competency management system',
+  'training management system',
   'training compliance',
+
+  // Transport and DOT. 'driver qualification files' is the strongest single phrase in the US.
+  'driver qualification files',
+  'DQ files',
+  'FMCSA Clearinghouse',
+
+  // Contractor prequalification platforms. Naming one is proof of an ongoing tracking burden.
+  'ISNetworld',
+  'ComplyWorks',
+  'Cognibox',
+  'Constructionline',
+  'SafeContractor',
+
+  // Gas and pipeline. 49 CFR 192 Subpart N makes the OPERATOR keep per-task records, which is
+  // the cleanest regulatory fit found anywhere in the US.
+  'operator qualification',
+  'covered tasks',
+
+  // Care, where the duty sits on the organisation rather than the registrant.
+  'statutory and mandatory training',
+  'Core Skills Training Framework',
+  'mandatory training compliance',
+
   // Spelling variants. Each finds postings the other cannot see.
   'licence renewals',      // UK, IE, CA
   'license renewals',      // US
   'licence expiry',        // UK, IE, CA
   'license expiry',        // US
   'training programme',    // UK, IE
-
-  // Added 2026-08-30. The list above was exhausted: a full CA+US+UK sweep of it returned 26 new
-  // companies, and zero on the top phrases in Ontario and BC. These are the same KIND of phrase,
-  // an artifact with a name that somebody is paid to keep current, which is what makes
-  // "training matrix" work. Anything vaguer than that returns regulators and staffing agencies
-  // whose business IS credentialing, rather than employers who struggle with it.
-  'skills matrix',
-  'qualification matrix',
-  'certification matrix',
-  'training tracker',
-  'training records up to date',
-  'renewal tracking',
-  'expiring certifications',
-  'certificates of competency',   // UK/IE phrasing
-  'competency records',
-  'ticket tracking',              // "tickets" is the trades word in CA
-  'CSCS cards',                   // UK construction, expires every 5 years
-  'white card',                   // AU construction induction
-  'high risk work licence',       // AU, fixed renewal cycle
 ];
 
 /**
@@ -430,7 +491,7 @@ if (require.main === module) (async () => {
           // but only for a few per query so this does not turn into 20 requests a search.
           if (deepUsed >= DEEP_PER_QUERY) continue;
           deepUsed++;
-          await new Promise(r => setTimeout(r, 1200));
+          await new Promise(r => setTimeout(r, DEEP_GAP_MS));
           const deep = await deepQuote(target, job, phrase);
           if (!deep) continue;
           quoteSource = deep;
