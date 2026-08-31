@@ -234,7 +234,7 @@ const FOOTER = signature({
   optOut: 'Not relevant? Reply with a no and I will not email again.',
   address: MAILING_ADDRESS,
   tagline: 'Staff records, training and credentials in one system.',
-  // The clickable sandbox at aevon.ca/cadre.html, live 2026-08-29: the actual product with an
+  // The live demo, the actual product with an
   // invented company loaded. Naked URL, text equals destination.
   demo: 'https://cadre-demo.web.app/dashboard',
 });
