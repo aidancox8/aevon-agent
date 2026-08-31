@@ -306,6 +306,12 @@ the whole of it.
 THE SHAPE, follow it exactly:
 ${shape}
 
+Each "Line" above is its own PARAGRAPH. Separate them with a BLANK line, i.e. two newline
+characters (
+
+) in the JSON string, never one. An email that arrives as a single block does
+not get read on a phone, and the validator rejects it.
+
 HARD RULES
 - Body between 55 and 80 words total.
 - Subject 2 to 4 words, lowercase, no punctuation at the end. Concrete, drawn from their own
