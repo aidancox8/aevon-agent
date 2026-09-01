@@ -202,6 +202,30 @@ function emailRisk(email) {
   return null;
 }
 
+/**
+ * Cap a string to a length and URL-encode it, without ever throwing.
+ *
+ * Business names come from Google Places and a few of them contain astral-plane
+ * characters: emoji, or the mathematical-bold letters some realtors use to stand out
+ * in a listing ("𝐍𝐀𝐕𝐈𝐃 𝐊𝐀𝐑𝐈𝐌𝐈"). Those occupy TWO UTF-16 units each, so a plain
+ * .slice(n) can cut between a surrogate pair and leave half a character behind.
+ * encodeURIComponent then throws `URIError: URI malformed`, which on 2026-09-01 killed
+ * an entire Send Outreach run after the follow-ups had gone out and before any of the
+ * 11 new emails did. One lead in 9,081, sitting at status='queued', would have failed
+ * every subsequent run until it was cleared.
+ *
+ * Array.from splits by code point, so a pair is never severed. The replaces are belt
+ * and braces for a lone surrogate that was already malformed in the source data.
+ */
+function safeQueryValue(value, maxChars) {
+  const points = Array.from(value == null ? '' : String(value));
+  const clipped = (maxChars ? points.slice(0, maxChars) : points).join('');
+  const sane = clipped
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')   // high surrogate with no low
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, ''); // low surrogate with no high
+  return encodeURIComponent(sane);
+}
+
 // Pick the best landing page for a lead. Insurance brokerages get the vertical
 // page built for them; everyone else gets the general interactive demos.
 function landingFor(industry, leadId, businessName) {
@@ -209,8 +233,8 @@ function landingFor(industry, leadId, businessName) {
   // renders it BRANDED to this business, so every prospect sees the same Front
   // Desk agent running in their own world. The reel strips ?ref on load and keeps
   // industry/biz, so ref stays last. Business name is capped + URL-encoded.
-  let q = `industry=${encodeURIComponent(industry || '')}`;
-  if (businessName) q += `&biz=${encodeURIComponent(String(businessName).slice(0, 42))}`;
+  let q = `industry=${safeQueryValue(industry)}`;
+  if (businessName) q += `&biz=${safeQueryValue(businessName, 42)}`;
   return `https://aevon.ca/agent-reel.html?${q}&ref=${leadId}`;
 }
 
