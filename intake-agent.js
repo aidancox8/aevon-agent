@@ -12,8 +12,20 @@
  *   3. qualifies it against the owner's criteria
  *   4. drafts a reply in the owner's voice, offering a booking link when a
  *      call/appointment is warranted
- *   5. leaves the draft in Gmail Drafts for the owner to approve  (NEVER sends)
+ *   5. leaves the draft in Gmail Drafts for the owner to approve
  *   6. records what it did to a local log (per-client, no shared DB needed)
+ *
+ * AUTONOMY. Step 5 is a dial, not a fixed behaviour, because that is what the offer
+ * promises: everything sits in drafts for the owner's approval at first, and once they
+ * trust how it sounds they let the first reply go out on its own. Drafting is the
+ * DEFAULT and auto-send is off unless a client config opts in AND the environment is
+ * armed. See canAutoSend() for every condition and why each one is there.
+ *
+ * AEVON'S OWN MAILBOX CAN NEVER AUTO-SEND. CLAUDE.md rule 1 in this repo is that no
+ * email is ever sent to a lead or prospect without Aidan's approval. That rule governs
+ * Aevon's outreach; this toggle exists for CLIENT deployments, where the client is the
+ * approver of their own replies to their own customers. To keep the two from ever being
+ * confused, an aevon.ca sending address is refused in code, not by remembering.
  *
  * It is config-driven: everything client-specific lives in CONFIG, so deploying
  * for a new client is "swap the config + their Gmail OAuth creds." That is the
@@ -29,6 +41,8 @@
  *   node intake-agent.js               process new inbound, draft replies
  *   node intake-agent.js --dry         classify + print, but do not touch Gmail Drafts
  *   node intake-agent.js --config tech-neighbour   use a named client config
+ *   node intake-agent.js --drafts-only force drafting even for an auto-send client
+ *   node intake-agent.js --autonomy    print the resolved autonomy decision and exit
  */
 
 require('dotenv').config();
@@ -42,11 +56,21 @@ const { createGenerate } = require('./lib/gemini');
 const generate = createGenerate(process.env.GEMINI_API_KEY);
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry');
+const DRAFTS_ONLY = args.includes('--drafts-only');
+const EXPLAIN_ONLY = args.includes('--autonomy');
 const configName = (args[args.indexOf('--config') + 1] && args.includes('--config')) ? args[args.indexOf('--config') + 1] : 'default';
 
 // ── Client configs ────────────────────────────────────────────────
 // One block per client. This is the entire per-client surface. Everything the
 // agent needs to sound like them and qualify like them lives here.
+//
+// Autonomy fields, both optional and both safe when absent:
+//   autoSend          false (default) = always draft. true = eligible to send, but
+//                     still subject to every check in canAutoSend().
+//   autoSendDailyCap  hard ceiling on sends per calendar day for this client. A
+//                     client that opts in without naming one gets AUTOSEND_CAP_FALLBACK,
+//                     because "unlimited" is never the right answer for a loop that
+//                     emails strangers on someone else's behalf.
 const CONFIGS = {
   // Dogfood target: the user's real residential-IT business. Swap GMAIL creds to
   // techneighbourbc@gmail.com's OAuth to run it live on their actual inquiries.
@@ -63,6 +87,10 @@ const CONFIGS = {
     // into this account), so it never touches Aevon's inbox.
     gmailUser: process.env.TN_GMAIL_USER || 'techneighbourbc@gmail.com',
     refreshTokenEnv: 'TN_GMAIL_OAUTH_REFRESH_TOKEN',
+    // Aidan's own business. Left on drafts deliberately: this is the dogfood
+    // mailbox, and it is the one place we get to read every reply before it goes
+    // out and judge whether the voice is good enough to trust unattended.
+    autoSend: false,
   },
   // Fallback so the agent is always runnable for a smoke test against any inbox.
   default: {
@@ -76,6 +104,7 @@ const CONFIGS = {
     signature: '',
     gmailUser: process.env.GMAIL_USER,
     refreshTokenEnv: 'GMAIL_OAUTH_REFRESH_TOKEN',
+    autoSend: false,
   },
 };
 const CFG = CONFIGS[configName] || CONFIGS.default;
@@ -84,6 +113,107 @@ const GMAIL_USER = CFG.gmailUser;
 const REFRESH_TOKEN = process.env[CFG.refreshTokenEnv];
 const LOOKBACK_DAYS = 3;
 const LOG_PATH = path.join(__dirname, `intake-log.${configName}.jsonl`);
+
+// ── Autonomy ──────────────────────────────────────────────────────
+// Sending mail unattended on someone else's behalf is the one thing in this file
+// that cannot be undone, so every condition below fails CLOSED: anything unknown,
+// unparseable or unset results in a draft, never a send.
+
+// A client who opts in without naming a cap still gets one.
+const AUTOSEND_CAP_FALLBACK = 20;
+
+// Mailboxes that may never auto-send regardless of config, because they are ours
+// and CLAUDE.md rule 1 governs them. This is a structural block, not a reminder.
+const PROTECTED_SENDER_PATTERNS = [/@aevon\.ca$/i, /^aidan@/i];
+
+// Addresses no reply should ever be fired at unattended. A human reading a draft
+// would spot these instantly; an unattended loop would not.
+const AUTOMATED_SENDER_PATTERNS = [
+  /^(no-?reply|do-?not-?reply|donotreply)@/i,
+  /^(mailer-daemon|postmaster|bounce|bounces|abuse)@/i,
+  /^(notification|notifications|alerts?|updates?|news|newsletter)@/i,
+  /^(support|billing|receipts?|invoices?)@/i,
+];
+
+// A generated reply that trips any of these is not fit to leave unread.
+const UNSAFE_DRAFT_PATTERNS = [
+  /\[[^\]]{2,}\]/,           // unfilled placeholder like [Name] or [your area]
+  /\{\{[\s\S]*?\}\}/,        // unrendered template token
+  /\bas an ai\b/i,           // the model talking about itself
+  /\bI (?:cannot|can't|am unable to)\b/i,
+  /\bTODO\b/,
+  /\bLorem ipsum\b/i,
+];
+
+const ARMED = String(process.env.INTAKE_AUTOSEND_ARMED || '').toLowerCase() === 'true';
+
+function isProtectedSender(addr) {
+  return PROTECTED_SENDER_PATTERNS.some((re) => re.test(String(addr || '')));
+}
+function isAutomatedRecipient(addr) {
+  return AUTOMATED_SENDER_PATTERNS.some((re) => re.test(String(addr || '')));
+}
+function draftIsSafeToSend(text) {
+  const t = String(text || '').trim();
+  if (t.length < 40) return { ok: false, why: 'reply is too short to be a real answer' };
+  if (t.length > 4000) return { ok: false, why: 'reply is implausibly long' };
+  const bad = UNSAFE_DRAFT_PATTERNS.find((re) => re.test(t));
+  if (bad) return { ok: false, why: `reply matched an unsafe pattern (${bad})` };
+  return { ok: true };
+}
+
+/**
+ * How many auto-sends this config has already made today, read back from the log
+ * rather than held in memory, so the cap survives restarts and hourly cron runs.
+ * An unreadable or corrupt log counts as "cap already reached", not as zero.
+ */
+function autoSentToday() {
+  let lines;
+  try {
+    lines = fs.readFileSync(LOG_PATH, 'utf8').trim().split('\n').filter(Boolean);
+  } catch (e) {
+    return e.code === 'ENOENT' ? { count: 0, recipients: new Set() } : null;
+  }
+  const today = new Date().toDateString();
+  const recipients = new Set();
+  let count = 0;
+  for (const line of lines) {
+    let row;
+    try { row = JSON.parse(line); } catch (e) { return null; }
+    if (!row.sent || !row.at) continue;
+    const when = new Date(row.at);
+    if (isNaN(when) || when.toDateString() !== today) continue;
+    count += 1;
+    if (row.from) recipients.add(String(row.from).toLowerCase());
+  }
+  return { count, recipients };
+}
+
+/**
+ * The single decision point. Returns { send: bool, why: string } and is the ONLY
+ * thing the main loop consults. Every caller-visible reason is a printable string
+ * so a run always says out loud why it drafted instead of sent.
+ */
+function autonomy() {
+  if (DRY) return { send: false, why: 'dry run' };
+  if (DRAFTS_ONLY) return { send: false, why: '--drafts-only was passed' };
+  if (CFG.autoSend !== true) return { send: false, why: `config "${configName}" has autoSend off` };
+  if (isProtectedSender(GMAIL_USER)) {
+    return { send: false, why: `${GMAIL_USER} is an Aevon mailbox and may never auto-send (CLAUDE.md rule 1)` };
+  }
+  if (!ARMED) return { send: false, why: 'INTAKE_AUTOSEND_ARMED is not "true" in the environment' };
+  const cap = Number.isFinite(CFG.autoSendDailyCap) ? CFG.autoSendDailyCap : AUTOSEND_CAP_FALLBACK;
+  if (!(cap > 0)) return { send: false, why: 'daily cap is not a positive number' };
+  return { send: true, why: `armed, cap ${cap}/day`, cap };
+}
+
+async function sendReply(gmail, { raw, threadId }) {
+  const res = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw, threadId },
+  });
+  return res.data.id;
+}
 
 // ── Gmail ─────────────────────────────────────────────────────────
 function gmailClient() {
@@ -189,10 +319,36 @@ async function buildRawDraft({ to, subject, inReplyTo, references, body }) {
 
 // ── Main ──────────────────────────────────────────────────────────
 async function run() {
+  const mode = autonomy();
+
+  // `--autonomy` answers "what would this run do, and why" without touching a mailbox.
+  // Worth having: the answer depends on a config field, an env var and the sending
+  // address at once, and guessing which one is off is how accidents happen.
+  if (EXPLAIN_ONLY) {
+    console.log(`config      : ${configName} ("${CFG.businessName}")`);
+    console.log(`mailbox     : ${GMAIL_USER || '(unset)'}`);
+    console.log(`autoSend    : ${CFG.autoSend === true}`);
+    console.log(`armed       : ${ARMED}`);
+    console.log(`decision    : ${mode.send ? 'SEND replies automatically' : 'DRAFT only'}`);
+    console.log(`because     : ${mode.why}`);
+    return;
+  }
+
   if (!REFRESH_TOKEN) {
     throw new Error(`${CFG.refreshTokenEnv} missing in .env. Authorize this mailbox: log into ${GMAIL_USER}, run get-gmail-token.js, and put the printed token in ${CFG.refreshTokenEnv}.`);
   }
-  console.log(`Intake agent for "${CFG.businessName}" (${configName})${DRY ? ' [DRY RUN]' : ''}\n`);
+  console.log(`Intake agent for "${CFG.businessName}" (${configName})${DRY ? ' [DRY RUN]' : ''}`);
+  console.log(mode.send ? `Autonomy: SENDING automatically (${mode.why})\n` : `Autonomy: drafts only (${mode.why})\n`);
+
+  // Read the day's send history once, up front. A null here means the log could not
+  // be trusted, and an untrustworthy cap is treated as an exhausted one.
+  let budget = mode.send ? autoSentToday() : { count: 0, recipients: new Set() };
+  if (mode.send && !budget) {
+    console.log('Could not read the send log, so this run will draft instead of send.\n');
+    mode.send = false;
+    budget = { count: 0, recipients: new Set() };
+  }
+
   const gmail = gmailClient();
   const processed = loadProcessed();
 
@@ -201,7 +357,7 @@ async function run() {
   const ids = (list.data.messages || []).map(m => m.id);
   console.log(`Found ${ids.length} candidate inbound message(s).\n`);
 
-  let inquiries = 0, drafted = 0, skipped = 0;
+  let inquiries = 0, drafted = 0, sent = 0, skipped = 0;
 
   for (const id of ids) {
     const full = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
@@ -226,21 +382,54 @@ async function run() {
     if (res.reason) console.log(`      ${res.reason}`);
     if (res.need) console.log(`      needs: ${res.need}${res.booking ? ' (booking warranted)' : ''}`);
 
-    let didDraft = false;
+    let didDraft = false, didSend = false, heldBecause = null;
     if (res.intent === 'inquiry' && res.qualified && res.draft && !DRY) {
+      let rawReply = null;
       try {
-        const rawDraft = await buildRawDraft({
+        rawReply = await buildRawDraft({
           to: fromEmail, subject, inReplyTo: rfcId,
           references: header(payload, 'References'), body: res.draft,
         });
-        await gmail.users.drafts.create({
-          userId: 'me',
-          requestBody: { message: { raw: rawDraft, threadId: full.data.threadId } },
-        });
-        didDraft = true; drafted++;
-        console.log(`      draft saved to Gmail Drafts`);
       } catch (err) {
-        console.log(`      (draft failed: ${err.message})`);
+        console.log(`      (could not compose a reply: ${err.message})`);
+      }
+
+      // Per-message checks, applied only when the run is allowed to send at all.
+      // Each one demotes this message to a draft rather than aborting the run, so a
+      // single odd inquiry never stops the rest from being handled.
+      let sendThis = mode.send && !!rawReply;
+      if (sendThis) {
+        const safety = draftIsSafeToSend(res.draft);
+        if (!safety.ok) { sendThis = false; heldBecause = safety.why; }
+        else if (isAutomatedRecipient(fromEmail)) { sendThis = false; heldBecause = 'recipient looks like an automated address'; }
+        else if (budget.recipients.has(fromEmail)) { sendThis = false; heldBecause = 'already auto-replied to this address today'; }
+        else if (budget.count >= mode.cap) { sendThis = false; heldBecause = `daily cap of ${mode.cap} reached`; }
+      }
+
+      if (sendThis) {
+        try {
+          await sendReply(gmail, { raw: rawReply, threadId: full.data.threadId });
+          didSend = true; sent++;
+          budget.count += 1;
+          budget.recipients.add(fromEmail);
+          console.log(`      reply SENT (${budget.count}/${mode.cap} today)`);
+        } catch (err) {
+          // A failed send must never silently drop the reply. Fall through to a draft.
+          heldBecause = `send failed: ${err.message}`;
+        }
+      }
+
+      if (!didSend && rawReply) {
+        try {
+          await gmail.users.drafts.create({
+            userId: 'me',
+            requestBody: { message: { raw: rawReply, threadId: full.data.threadId } },
+          });
+          didDraft = true; drafted++;
+          console.log(`      draft saved to Gmail Drafts${heldBecause ? `  [held: ${heldBecause}]` : ''}`);
+        } catch (err) {
+          console.log(`      (draft failed: ${err.message})`);
+        }
       }
     } else if (res.intent === 'inquiry' && res.qualified && DRY) {
       console.log(`      draft (dry):\n${res.draft.split('\n').map(l => '        ' + l).join('\n')}`);
@@ -249,11 +438,24 @@ async function run() {
 
     appendLog({ message_id: rfcId, from: fromEmail, subject: subject || null,
       intent: res.intent, qualified: !!res.qualified, need: res.need || null,
-      booking: !!res.booking, drafted: didDraft, at: new Date().toISOString() });
+      booking: !!res.booking, drafted: didDraft, sent: didSend,
+      held: heldBecause, at: new Date().toISOString() });
     processed.add(rfcId);
   }
 
-  console.log(`\nDone. Inquiries: ${inquiries} | Drafts: ${drafted} | Skipped: ${skipped}`);
+  console.log(`\nDone. Inquiries: ${inquiries} | Sent: ${sent} | Drafts: ${drafted} | Skipped: ${skipped}`);
 }
 
-run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
+// Only run when invoked directly, so check-intake-autonomy.js can require the safety
+// helpers and assert on them without opening a mailbox.
+if (require.main === module) {
+  run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
+}
+
+module.exports = {
+  autonomy,
+  draftIsSafeToSend,
+  isProtectedSender,
+  isAutomatedRecipient,
+  AUTOSEND_CAP_FALLBACK,
+};

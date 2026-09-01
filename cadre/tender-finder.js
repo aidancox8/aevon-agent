@@ -42,6 +42,31 @@ const MAX_PAGES = arg('pages', 40);
 const PAGE_SIZE = 100;
 
 /**
+ * Two UK sources, same OCDS shape, neither needing a key.
+ *
+ * Find a Tender carries HIGH-VALUE notices (roughly the old OJEU thresholds). Contracts Finder
+ * carries everything from about GBP 12k, which is where an organisation the size of a Cadre
+ * buyer actually appears. Contracts Finder is the better fit, so it is the default.
+ */
+const SOURCES = {
+  cf: {
+    label: 'Contracts Finder',
+    url: (since) => `https://www.contractsfinder.service.gov.uk/Published/Notices/OCDS/Search?publishedFrom=${since}&limit=${PAGE_SIZE}`,
+  },
+  fts: {
+    label: 'Find a Tender',
+    url: (since) => `https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?limit=${PAGE_SIZE}&updatedFrom=${since}`,
+  },
+};
+const SOURCE_KEYS = (() => {
+  const i = process.argv.indexOf('--source');
+  const v = i > -1 ? String(process.argv[i + 1] || '').toLowerCase() : 'cf';
+  if (v === 'both') return ['cf', 'fts'];
+  if (!SOURCES[v]) throw new Error('--source must be cf, fts or both');
+  return [v];
+})();
+
+/**
  * What we are looking for in a notice.
  *
  * Deliberately narrower than the job-ad phrase list. A tender saying "training" is a training
@@ -135,63 +160,64 @@ function contactFrom(parties) {
   const seenEmail = new Set((existing || []).map((r) => String(r.email || '').toLowerCase().trim()).filter(Boolean));
 
   const since = new Date(Date.now() - DAYS * 86400000).toISOString().slice(0, 19);
-  let url = `https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?limit=${PAGE_SIZE}&updatedFrom=${since}`;
-  console.log(`${DRY ? 'DRY RUN. ' : ''}Scanning Find a Tender back ${DAYS} days, up to ${MAX_PAGES} pages.\n`);
-
   const found = [];
   let scanned = 0;
-  for (let page = 0; page < MAX_PAGES && url; page += 1) {
-    let pkg;
-    try { pkg = await get(url); }
-    catch (e) { console.log(`  ! page ${page + 1}: ${e.message}`); break; }
 
-    for (const rel of pkg.releases || []) {
-      scanned += 1;
-      const t = rel.tender || {};
-      const haystack = `${t.title || ''} ${t.description || ''}`;
-      if (NOT_WANTED.some((re) => re.test(haystack))) continue;
+  for (const key of SOURCE_KEYS) {
+    const src = SOURCES[key];
+    let url = src.url(since);
+    console.log(`${DRY ? 'DRY RUN. ' : ''}${src.label}: back ${DAYS} days, up to ${MAX_PAGES} pages.`);
 
-      const phrase = WANTED.find((w) => haystack.toLowerCase().includes(w));
-      if (!phrase) continue;
+    for (let page = 0; page < MAX_PAGES && url; page += 1) {
+      let pkg;
+      try { pkg = await get(url); }
+      catch (e) { console.log(`  ! ${src.label} page ${page + 1}: ${e.message}`); break; }
 
-      const org = (rel.buyer && rel.buyer.name) || '';
-      const key = org.toLowerCase().trim();
-      if (!org || seenName.has(key)) continue;
-      const dnc = excludedOrgReason(org, null);
-      if (dnc) { console.log(`  ! excluded org: ${org}`); continue; }
+      for (const rel of pkg.releases || []) {
+        scanned += 1;
+        const t = rel.tender || {};
+        const haystack = `${t.title || ''} ${t.description || ''}`;
+        if (NOT_WANTED.some((re) => re.test(haystack))) continue;
 
-      const contact = contactFrom(rel.parties);
-      if (!contact || !contact.email || seenEmail.has(contact.email)) continue;
+        const phrase = WANTED.find((w) => haystack.toLowerCase().includes(w));
+        if (!phrase) continue;
 
-      const quote = extractQuote(haystack, phrase);
-      if (quote.length < 30) continue;
+        const org = (rel.buyer && rel.buyer.name) || '';
+        const nameKey = org.toLowerCase().trim();
+        if (!org || seenName.has(nameKey)) continue;
+        const dnc = excludedOrgReason(org, null);
+        if (dnc) { console.log(`  ! excluded org: ${org}`); continue; }
 
-      seenName.add(key);
-      seenEmail.add(contact.email);
-      found.push({
-        business_name: org,
-        email: contact.email,
-        email_quality: 'role',
-        contact_name: contact.name,
-        city: contact.town,
-        source: 'find-a-tender',
-        signal_type: 'tender',
-        signal_quote: quote,
-        signal_url: (rel.links && rel.links.self) || `https://www.find-tender.service.gov.uk/Notice/${rel.id}`,
-        signal_date: rel.date ? rel.date.slice(0, 10) : null,
-        // Intent beats inference: they wrote a specification for this. Scored above a job ad,
-        // but parked for review rather than queued, because public-sector procurement is a
-        // different motion and deserves a human read before anything goes out.
-        qualification_score: 9,
-        qualification_notes: `Published a procurement notice mentioning "${phrase}".`,
-        status: 'needs_review',
-      });
-      console.log(`  ok   ${org.slice(0, 40).padEnd(42)}${contact.email}`);
-      console.log(`       "${quote.slice(0, 110)}"`);
+        const contact = contactFrom(rel.parties);
+        if (!contact || !contact.email || seenEmail.has(contact.email)) continue;
+
+        const quote = extractQuote(haystack, phrase);
+        if (quote.length < 30) continue;
+
+        seenName.add(nameKey);
+        seenEmail.add(contact.email);
+        found.push({
+          business_name: org,
+          email: contact.email,
+          email_quality: 'role',
+          contact_name: contact.name,
+          city: contact.town,
+          source: key === 'cf' ? 'contracts-finder' : 'find-a-tender',
+          signal_type: 'tender',
+          signal_quote: quote,
+          signal_url: (rel.links && rel.links.self) || null,
+          signal_date: rel.date ? rel.date.slice(0, 10) : null,
+          qualification_score: 9,
+          qualification_notes: `Published a procurement notice mentioning "${phrase}".`,
+          status: 'needs_review',
+        });
+        console.log(`  ok   ${org.slice(0, 38).padEnd(40)}${contact.email}`);
+        console.log(`       "${quote.slice(0, 105)}"`);
+      }
+
+      url = (pkg.links && pkg.links.next) || null;
+      if (url) await sleep(PAGE_GAP_MS);
     }
-
-    url = (pkg.links && pkg.links.next) || null;
-    if (url) await sleep(PAGE_GAP_MS);
   }
 
   console.log(`\nScanned ${scanned} notices. ${found.length} organisation(s) actively procuring this.`);
