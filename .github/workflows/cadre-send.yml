@@ -33,9 +33,15 @@ on:
         required: false
         default: 'dry-run'
   schedule:
-    # Every hour, 08:00-19:00 UTC, Tuesday to Thursday. Covers 09:00 in London through
+    # Every hour, 08:00-19:00 UTC, Monday to Friday. Covers 09:00 in London through
     # 11:00 in Vancouver, which spans every zone any lead on the list sits in.
-    - cron: '5 8-19 * * 2-4'
+    #
+    # Was Tuesday to Thursday (2-4), on the usual advice that mid-week gets read. That
+    # capped throughput at three send days a week, and worse, cadre/schedule.js books
+    # slots on ANY weekday, so a lead booked for a Monday sat unsent until Tuesday and
+    # piled onto that day's batch. The scheduler and the sender now agree on which days
+    # exist, which is the part that actually mattered.
+    - cron: '5 8-19 * * 1-5'
 
 # Two runs sending at once would each read the same "sent today" count and both think there is
 # room, which is the one way the daily cap can be beaten. Queue them instead.
