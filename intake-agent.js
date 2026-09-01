@@ -58,6 +58,7 @@ const args = process.argv.slice(2);
 const DRY = args.includes('--dry');
 const DRAFTS_ONLY = args.includes('--drafts-only');
 const EXPLAIN_ONLY = args.includes('--autonomy');
+const SAMPLE = args.includes('--sample');
 const configName = (args[args.indexOf('--config') + 1] && args.includes('--config')) ? args[args.indexOf('--config') + 1] : 'default';
 
 // ── Client configs ────────────────────────────────────────────────
@@ -90,6 +91,70 @@ const CONFIGS = {
     // Aidan's own business. Left on drafts deliberately: this is the dogfood
     // mailbox, and it is the one place we get to read every reply before it goes
     // out and judge whether the voice is good enough to trust unattended.
+    autoSend: false,
+  },
+  /**
+   * PROVISIONAL. Written 2026-09-01 for the Thursday call, from what Sofia has actually said
+   * in the thread and nothing else. She has NOT confirmed any of the qualification criteria,
+   * her voice, or where the handoff lands, so treat every field here as a starting draft to
+   * be corrected live on the call rather than as a spec.
+   *
+   * What is known, in her words: leads come from Facebook and Google ads into landing pages,
+   * into a CRM, where an ISA calls them until they reach someone and then forwards them to
+   * her. She lives near JBLM. She lost her Zillow territory when they moved to Flex.
+   *
+   * WHERE THIS AGENT SITS. On HER side of the ISA handoff, not in front of it. The ISA does
+   * the calling; this answers the ones already forwarded to her while she is out showing
+   * houses. That is the only part of her funnel nothing currently covers, and it is the only
+   * part that is a Gmail inbox, which is what this build reads. Everything upstream is CRM
+   * and telephony and is a separate scope.
+   *
+   * Not wired to a mailbox: there is no token for her account and there will not be one
+   * unless she buys. `--config skyline --dry` runs the classifier and prints what it would
+   * write, which is the honest thing to demo.
+   */
+  skyline: {
+    businessName: 'Skyline Properties',
+    ownerName: 'Sofia',
+    whatWeDo: 'residential real estate brokerage in the South Puget Sound, working with military families relocating to and from Joint Base Lewis-McChord, including VA-financed purchases and PCS-timed sales.',
+    serviceArea: 'the South Puget Sound area of Washington, within reach of JBLM',
+    voice: 'warm, direct and brief; writes like a busy broker on her phone between showings, plain sentences, no real estate jargon, no exclamation marks.',
+    qualify: 'A good inquiry is someone buying or selling a home in the South Puget Sound area, most often a service member or spouse with PCS orders to or from JBLM. Vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone outside Washington are NOT qualified.',
+    // The point of a build over an off-the-shelf tool. A general assistant asks "what is your
+    // budget and timeline"; it does not know that a report date is the deadline everything
+    // else hangs off, or that a missing COE is what stalls a VA closing.
+    askFor: [
+      'report date, or the month they need to be in',
+      'whether orders are in hand or still pending',
+      'VA or conventional, and if VA whether they have their Certificate of Eligibility',
+      'price range',
+      'on-base or off-base, and how far from the gate they will drive',
+      'whether they have a house to sell at the current duty station',
+    ],
+    bookingLink: '',
+    signature: '\n\nSofia Epps\nR.E. Broker, Skyline Properties',
+    // Runnable with --sample, so the classifier can be demonstrated on a call without a
+    // token, a mailbox, or anyone's real mail. Written to cover the three shapes that
+    // actually arrive: a strong PCS buyer, someone who does not know what a VA loan is,
+    // and a lead with nothing in it worth chasing yet.
+    samples: [
+      { fromName: 'Marcus Ellison', fromEmail: 'm.ellison84@gmail.com',
+        subject: 'PCSing to JBLM in November',
+        body: 'Hi, just got my orders today. Reporting to Lewis-McChord November 3rd, coming from Fort Campbell. My wife and I want to buy rather than rent this time. Planning to use my VA loan, first time using it. Looking off-base, ideally under 30 minutes from the gate, three bedrooms if we can get it. We fly out for a house hunting trip the second week of October. Are you available then?' },
+      { fromName: 'Danielle Ruiz', fromEmail: 'dani.ruiz.pnw@gmail.com',
+        subject: 'Question about VA loans',
+        body: 'Hello, my husband is being stationed at Lewis-McChord in January and we are starting to look. Everyone tells us to use the VA loan but honestly I do not understand it. Do we need money down? What is the certificate everyone keeps mentioning? We have never bought before. Thank you, Danielle' },
+      { fromName: 'tyler', fromEmail: 'tyler.mcgrath22@gmail.com',
+        subject: 'housing',
+        body: 'hey whats housing like around base, how much am i looking at' },
+      { fromName: 'Krista at LeadFlow', fromEmail: 'krista@leadflowpro.io',
+        subject: 'Exclusive buyer leads in your ZIP',
+        body: 'Hi Sofia, I work with top producing agents in Pierce County and we have exclusive buyer leads available in your area. Do you have 15 minutes this week to discuss how we can fill your pipeline? Happy to send over our pricing sheet.' },
+    ],
+    gmailUser: process.env.SKYLINE_GMAIL_USER || 'sofia.epps@example.invalid',
+    refreshTokenEnv: 'SKYLINE_GMAIL_OAUTH_REFRESH_TOKEN',
+    // Drafts only, and it stays that way through the trial no matter what the offer says.
+    // She has not seen a single reply in her own voice yet, so there is nothing to trust.
     autoSend: false,
   },
   // Fallback so the agent is always runnable for a smoke test against any inbox.
@@ -277,11 +342,17 @@ STEP 1 - Classify this message as EXACTLY one of:
 STEP 2 - Only if intent is "inquiry": qualify it.
 - qualified: true if it fits "${CFG.qualify}", else false with a one-line reason.
 - Extract: what they need (one line), and whether a call/appointment is the right next step (booking: true/false).
+${(CFG.askFor && CFG.askFor.length) ? `- These are the facts ${CFG.ownerName} needs before this lead is workable:
+${CFG.askFor.map((q) => `    - ${q}`).join('\n')}
+  For each one, decide from the message whether it is already ANSWERED or still MISSING. Put the
+  answered ones in "known" as short "label: value" strings, and list the missing ones in "missing".
+  Never guess a value that is not in the message, and never ask about something already answered.` : ''}
 
 STEP 3 - Only if intent is "inquiry" AND qualified: write a reply draft.
 - Address them by first name if you can infer it.
 - In the owner's voice (${CFG.voice}). 3-6 sentences, plain English, no buzzwords, no em dashes.
 - Acknowledge their specific need, give one genuinely useful line (reassurance or a clarifying question), and move toward the next step.
+${(CFG.askFor && CFG.askFor.length) ? `- Ask for AT MOST TWO of the missing facts, the two that matter most for this particular message. A reply that asks for six things reads like a form and gets ignored. The rest can be asked later.` : ''}
 ${CFG.bookingLink ? `- If booking is true, invite them to grab a time and include this exact link on its own line: ${CFG.bookingLink}` : ''}
 - Do NOT quote a firm price, invent details, or overpromise. No sign-off (added separately).
 
@@ -291,7 +362,9 @@ Respond with JSON only:
   "qualified": true/false,
   "reason": "<one short sentence>",
   "need": "<one line or empty>",
-  "booking": true/false,
+  "booking": true/false,${(CFG.askFor && CFG.askFor.length) ? `
+  "known": ["<label: value>", ...],
+  "missing": ["<the fact still needed>", ...],` : ''}
   "draft": "<reply text, or empty string>"
 }`;
 
@@ -331,6 +404,28 @@ async function run() {
     console.log(`armed       : ${ARMED}`);
     console.log(`decision    : ${mode.send ? 'SEND replies automatically' : 'DRAFT only'}`);
     console.log(`because     : ${mode.why}`);
+    return;
+  }
+
+  // `--sample` runs the classifier against the config's own example messages. No mailbox, no
+  // OAuth token, nothing written anywhere. It exists so the agent can be shown working on a
+  // call before a prospect has granted access to anything, which is the only order that makes
+  // sense: nobody hands over their inbox to see whether the thing is any good.
+  if (SAMPLE) {
+    const samples = CFG.samples || [];
+    if (!samples.length) throw new Error(`config "${configName}" has no samples to run. Add a samples: [] block.`);
+    console.log(`Sample run for "${CFG.businessName}" (${configName}). Nothing is read or written.\n`);
+    for (const msg of samples) {
+      const res = await handleInquiry(msg);
+      const tag = res.intent === 'inquiry' ? (res.qualified ? 'QUALIFIED INQUIRY' : 'inquiry (not qualified)') : res.intent;
+      console.log(`── ${msg.fromName} <${msg.fromEmail}>  "${msg.subject}"`);
+      console.log(`   [${tag}]${res.reason ? '  ' + res.reason : ''}`);
+      if (res.need) console.log(`   needs: ${res.need}${res.booking ? '  (booking warranted)' : ''}`);
+      if (res.known && res.known.length) console.log(`   known: ${res.known.join(' | ')}`);
+      if (res.missing && res.missing.length) console.log(`   still needed: ${res.missing.join(' | ')}`);
+      if (res.draft) console.log('\n' + res.draft.split('\n').map((l) => '     ' + l).join('\n'));
+      console.log();
+    }
     return;
   }
 
@@ -381,6 +476,10 @@ async function run() {
     console.log(`  [${tag}] ${msg.fromName || fromEmail} — "${subject || ''}"`);
     if (res.reason) console.log(`      ${res.reason}`);
     if (res.need) console.log(`      needs: ${res.need}${res.booking ? ' (booking warranted)' : ''}`);
+    // The qualification is the part worth watching on a demo: it shows the agent reading
+    // THEIR criteria out of a real message rather than writing a generic pleasantry.
+    if (res.known && res.known.length) console.log(`      known: ${res.known.join(' | ')}`);
+    if (res.missing && res.missing.length) console.log(`      still needed: ${res.missing.join(' | ')}`);
 
     let didDraft = false, didSend = false, heldBecause = null;
     if (res.intent === 'inquiry' && res.qualified && res.draft && !DRY) {
@@ -438,7 +537,8 @@ async function run() {
 
     appendLog({ message_id: rfcId, from: fromEmail, subject: subject || null,
       intent: res.intent, qualified: !!res.qualified, need: res.need || null,
-      booking: !!res.booking, drafted: didDraft, sent: didSend,
+      booking: !!res.booking, known: res.known || null, missing: res.missing || null,
+      drafted: didDraft, sent: didSend,
       held: heldBecause, at: new Date().toISOString() });
     processed.add(rfcId);
   }
