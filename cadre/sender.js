@@ -359,7 +359,26 @@ async function bounceRate() {
   if (error) throw new Error(error.message);
 
   const batch = (due || []).slice(0, LIMIT ? Math.min(LIMIT, room) : room);
-  if (!batch.length) { console.log('Nothing scheduled and due.'); return; }
+  if (!batch.length) {
+    // "Nothing due" is the correct message on a quiet hour and the WRONG message when the
+    // queue is full of leads nobody ever booked a slot for. Those two states looked identical
+    // for weeks: on 2026-09-01, 190 of 226 queued leads had no scheduled_send_at, and every
+    // run printed this line and exited 0 while the campaign sat still. Say which one it is.
+    const { data: stranded } = await supabase.from(TABLE)
+      .select('id', { count: 'exact', head: false })
+      .eq('status', 'queued')
+      .is('scheduled_send_at', null)
+      .not('email', 'is', null)
+      .not('email_subject', 'is', null);
+    const n = (stranded || []).length;
+    if (n) {
+      console.log(`Nothing due right now, but ${n} queued lead(s) have copy and NO send slot.`);
+      console.log('They will never send until they are booked. Run: node cadre/schedule.js');
+    } else {
+      console.log('Nothing scheduled and due.');
+    }
+    return;
+  }
 
   console.log(`${LIVE ? 'Sending' : 'Would send'} ${batch.length} via ${VIA} ` +
     `(${already}/${DAILY_CAP} sent today)\n`);

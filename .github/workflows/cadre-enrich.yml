@@ -73,6 +73,26 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node cadre/personalizer.js ${{ github.event_name == 'schedule' && '--limit 120' || (inputs.limit != '' && format('--limit {0}', inputs.limit) || '') }}
 
+      # WITHOUT THIS STEP NOTHING SENDS, AND IT SAYS NOTHING ABOUT IT.
+      #
+      # cadre/sender.js only picks up leads whose scheduled_send_at is due. A lead that is
+      # queued, enriched and has copy written but no slot is invisible to it forever, and the
+      # run prints "Nothing scheduled and due." and exits 0.
+      #
+      # That is not hypothetical. On 2026-09-01, 190 of 226 queued leads had no slot. Only 36
+      # had ever been booked, the campaign had sent 36 emails in its lifetime, and every hourly
+      # run for days had reported success while doing nothing. Scheduling was a manual command
+      # nobody remembered to run.
+      #
+      # It is idempotent: already-booked leads are left alone unless --reschedule is passed.
+      - name: Book send slots for anything new
+        env:
+          CADRE_DAILY_CAP: ${{ vars.CADRE_DAILY_CAP || '12' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node cadre/schedule.js
+
       - name: Report what is now sendable
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
