@@ -213,11 +213,11 @@ const APPROACHES = [
     name: 'trigger',
     shape: [
       'Line 1: "Hi {FIRST},"',
-      'Line 2: Say you saw the posting, then QUOTE THEIR SENTENCE exactly.',
-      'Line 3: BRIDGE from their quote to onboarding. In one plain sentence, say the records problem',
-      '        they advertised is what manual onboarding looks like from the outside. Base it only on',
-      '        facts given above and invent nothing about their workforce.',
-      'Line 4: One sentence, starting "I build software that", on the ONBOARDING and lifecycle, not on certificate tracking.',
+      'Line 2: Say you saw the posting, then QUOTE THE FRAGMENT GIVEN, exactly as given, in quotation marks.',
+      'Line 3: THE HOOK in one plain sentence: that ad means someone will be doing this by hand, and',
+      '        the tracking and chasing half of it is what software is for. Invent nothing about them.',
+      'Line 4: One sentence, starting "I built Cadre, which", on credentials on one record per person',
+      '        with renewals and reminders that run themselves.',
       'Line 5: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
     ].join('\n'),
   },
@@ -225,10 +225,11 @@ const APPROACHES = [
     name: 'pas',
     shape: [
       'Line 1: "Hi {FIRST},"',
-      'Line 2: State the problem in their own words: say where you saw it, then QUOTE THEIR SENTENCE exactly.',
-      'Line 3: ONE line on what it costs when onboarding is manual: how long a new person takes to',
-      '        be useful, or what gets missed. Concrete and understated. No fear-mongering.',
-      'Line 4: One sentence, starting "I build software that", on running onboarding end to end so the records look after themselves.',
+      'Line 2: State the problem in their own words: say where you saw it, then QUOTE THE FRAGMENT GIVEN, exactly as given, in quotation marks.',
+      'Line 3: ONE line on what it costs to track this by hand: a lapsed ticket found at an audit, or',
+      '        a renewal nobody chased. Concrete and understated. No fear-mongering.',
+      'Line 4: One sentence, starting "I built Cadre, which", on credentials on one record per person',
+      '        with renewals and reminders that run themselves.',
       'Line 5: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
     ].join('\n'),
   },
@@ -236,9 +237,9 @@ const APPROACHES = [
     name: 'question',
     shape: [
       'Line 1: "Hi {FIRST},"',
-      'Line 2: Say you saw the posting and QUOTE THEIR SENTENCE exactly.',
-      'Line 3: Ask how they onboard a new starter today. Genuinely curious, not rhetorical, not leading.',
-      'Line 4: One short sentence, starting "I build software that", under twenty words. This',
+      'Line 2: Say you saw the posting and QUOTE THE FRAGMENT GIVEN, exactly as given, in quotation marks.',
+      'Line 3: Ask how they track renewals today, spreadsheet or something else. Genuinely curious, not leading.',
+      'Line 4: One short sentence, starting "I built Cadre, which", under twenty words. This',
       '        version is mostly question, not pitch.',
       'Line 5: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
     ].join('\n'),
@@ -247,8 +248,8 @@ const APPROACHES = [
     name: 'short',
     shape: [
       'Line 1: "Hi {FIRST},"',
-      'Line 2: Say you saw the posting and QUOTE THEIR SENTENCE exactly.',
-      'Line 3: One sentence, starting "I build software that", on the ONBOARDING and lifecycle, not on certificate tracking.',
+      'Line 2: Say you saw the posting and QUOTE THE FRAGMENT GIVEN, exactly as given, in quotation marks.',
+      'Line 3: One sentence, starting "I built Cadre, which", on credentials on one record per person with renewals that run themselves.',
       'Line 4: The literal token {{ASK}} on its own line. Do NOT write a question of your own.',
       'TOTAL BODY UNDER 55 WORDS. No observation line at all. Nothing to argue with.',
     ].join('\n'),
@@ -260,6 +261,27 @@ function approachFor(lead) {
   let h = 0;
   for (const ch of String(lead.id || lead.business_name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return APPROACHES[h % APPROACHES.length];
+}
+
+
+/**
+ * Trim a scraped signal quote to something a human would actually quote.
+ *
+ * Quotes arrive truncated at the source: "Tracking certifications and license renewals (e." went
+ * out verbatim on 2026-09-01 and reads as broken. Others run to thirty words of JD boilerplate.
+ * Cut at the last natural boundary inside 14 words, drop a dangling open bracket, and never end
+ * on a fragment.
+ */
+function cleanQuote(q) {
+  let t = String(q || '').replace(/\s+/g, ' ').replace(/[…]+$/, '').trim();
+  t = t.replace(/\s*\([^)]*$/, '');              // dangling "(e." style opener
+  const words = t.split(' ');
+  if (words.length > 14) {
+    const head = words.slice(0, 14).join(' ');
+    const cut = Math.max(head.lastIndexOf(','), head.lastIndexOf(';'), head.lastIndexOf(' and '), head.lastIndexOf('.'));
+    t = cut > 25 ? head.slice(0, cut) : head;
+  }
+  return t.replace(/[,;:\s]+$/, '').replace(/^[a-z]/, (c) => c.toUpperCase());
 }
 
 function buildPrompt(lead) {
@@ -276,32 +298,28 @@ Industry: ${lead.industry}
 ${lead.staff_estimate ? `Roughly ${lead.staff_estimate} staff.` : ''}
 
 WHAT THEY PUBLISHED, in a recent job ad. This is the whole reason we are writing:
-"${lead.signal_quote}"
+"${cleanQuote(lead.signal_quote)}"
 
 WHAT WE SELL, and what to LEAD with
 
-Lead with ONBOARDING, not certificate tracking.
+Lead with EXACTLY what they said. The quote is a certification or training-records problem, so
+the email is about certification and training records. Do not pivot to onboarding, lifecycle,
+or anything they did not mention. Rewritten 2026-09-02 after 49 sends and 0 replies: emails that
+quoted a licensing problem and then pitched onboarding read as a non sequitur, and the product
+page at aevon.ca/cadre says "certification tracking software", so the email must say so too.
 
-The quote you are given is almost always about training records or certifications. That is the
-SIGNAL, meaning it is why we found them and why the email is relevant. It is not the pitch.
-Certificate tracking on its own is a filing cabinet, and there are dedicated tools that do only
-that. Onboarding is what an HR or safety manager is actually measured on: 20% of all staff
-turnover happens in the first 45 days, and 52% of new hires say admin dominated their first week.
+THE HOOK, and it is the only argument to make: they published a job ad for someone to keep
+these records by hand. That means they are about to pay a salary, in part, for expiry tracking
+and renewal chasing. Cadre is the part of that job software does: every credential on one record
+per person, renewal dates set on entry, reminders that start themselves at 60, 30 and 7 days,
+the manager copied a month out, and an audit-ready list on demand. The person they hire still
+does the human parts. The spreadsheet is what goes.
 
-The product runs the whole employee lifecycle on ONE record per person:
-  - Role-based onboarding. A new welder and a new receptionist get different paths.
-  - The training for that role is assigned as part of it, not chased separately afterwards.
-  - Completing the course auto-completes the onboarding step. Nobody re-keys anything.
-  - The credential is enrolled with its renewal date already set, so the reminders start
-    themselves at 60, 30 and 7 days and copy the manager a month before it lapses.
-  - Policies, documents and equipment are collected in the same flow.
+Say it plainly and once. Do not claim it replaces the hire.
 
-So the argument in the email is: the records problem they advertised is a SYMPTOM. It shows up in
-the spreadsheet because onboarding is manual end to end, and fixing the spreadsheet fixes the
-symptom.
-
-Reminders and expiry tracking may be mentioned as the tail of that sentence. They must never be
-the whole of it.
+The Cadre sentence names ONE concrete thing, under 25 words. Pick the one that fits their quote:
+renewals that chase themselves, or an audit-ready list on demand, or every credential on one
+record per person. Never all of them. A feature list reads as a brochure and gets deleted.
 
 THE SHAPE, follow it exactly:
 ${shape}
