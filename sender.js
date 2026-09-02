@@ -22,6 +22,7 @@ const { applyAsk } = require('./lib/offer');
 const { retiredOfferReason } = require('./lib/copy-guard');
 const { isActiveSegment, isSendableAddress, isWorthSending, isHotSegment } = require('./lib/segments');
 const { excludedOrgReason } = require('./tempo/dnc');
+const { loadSuppressions, isSuppressed } = require('./lib/suppression');
 const { signature } = require('./lib/signature');
 
 // Optional. CASL s.6(2) and CAN-SPAM both want a physical mailing address; Aidan declined one on
@@ -481,6 +482,11 @@ async function run() {
       console.error('ALLOW_HIGH_BOUNCE=1 set — continuing anyway.');
     } else if (sentN) {
       console.log(`Bounce rate ${(rate * 100).toFixed(1)}% over last ${sentN} sends (limit ${(BOUNCE_LIMIT * 100).toFixed(0)}%).`);
+
+  // One query, once per run, rather than per lead. Every opted-out or bounced address across
+  // every campaign table.
+  const SUPPRESSED = await loadSuppressions();
+  console.log(`Suppression list: ${SUPPRESSED.counted} address(es) across ${SUPPRESSED.tables.join(', ')}.`);
     }
   }
 
@@ -713,7 +719,13 @@ async function run() {
     // Never email Aidan's employer or the other excluded clinic. This list had no guard on
     // the Aevon side at all: the exclusion lived only in tempo/lead-finder.js, and Changepain
     // sat in this table and received two emails in June 2026 before anyone noticed.
-    const excluded = excludedOrgReason(lead.business_name, lead.email);
+    //
+    // isSuppressed() is a superset of excludedOrgReason(): it also refuses an address that
+    // opted out or bounced in ANY campaign, not just this one. Each campaign used to check
+    // only its own table, so a person who said no to Tempo stayed fair game in Aevon. On
+    // 2026-09-02 that was 10 live queued rows here and 158 in tempo_leads. Same sender, same
+    // mailbox, same person, and from their side they said no and got another email.
+    const excluded = isSuppressed(lead.email, lead.business_name, SUPPRESSED);
     if (excluded) {
       console.log(`SKIPPED (${excluded})`);
       await supabase.from('leads').update({

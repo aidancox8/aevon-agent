@@ -43,6 +43,10 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Resend } = require('resend');
 const supabase = require('../lib/supabase');
 const { excludedOrgReason } = require('../tempo/dnc');
+const { loadSuppressions, isSuppressed } = require('../lib/suppression');
+/** Populated once per run before any gate is evaluated. Null means "not loaded", and the
+ *  gate falls back to the org-only check rather than silently passing everything. */
+let SUPPRESSED = null;
 const { google } = require('googleapis');
 const { signature } = require('../lib/signature');
 const dns = require('dns').promises;
@@ -268,7 +272,12 @@ function blockReason(lead, stepNo) {
   if (lead.website && rootDomain(lead.email.split('@')[1]) !== rootDomain(lead.website)) {
     return `address domain does not match ${rootDomain(lead.website)}`;
   }
-  const org = excludedOrgReason(lead.business_name, lead.email);
+  // Superset of excludedOrgReason: also refuses an address that opted out or bounced in ANY
+  // campaign, not just this table. Cadre had 0 such rows on 2026-09-02, but it is the same
+  // sender and mailbox as Aevon and Tempo, so a person who declines one has declined all three.
+  const org = SUPPRESSED
+    ? isSuppressed(lead.email, lead.business_name, SUPPRESSED)
+    : excludedOrgReason(lead.business_name, lead.email);
   if (org) return org;
 
   if (!lead.signal_quote || lead.signal_quote.trim().length < 20) return 'no signal quote';
@@ -312,6 +321,8 @@ async function bounceRate() {
 (async () => {
   if (!LIVE) console.log('DRY RUN: no email will be sent. Pass --send to send for real.\n');
 
+  SUPPRESSED = await loadSuppressions();
+  console.log(`Suppression list: ${SUPPRESSED.counted} address(es) across ${SUPPRESSED.tables.join(', ')}.`);
   const { rate, sent: sentN, bounced } = await bounceRate();
   // Halt on evidence, not on arithmetic. Two bounces in 27 sends is 7.4%, over the 5% line, but
   // a sample that small cannot distinguish 2% from 20%: the first live week produced exactly
