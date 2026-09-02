@@ -53,6 +53,12 @@ const OPTED_OUT_DOMAINS = [
   // touch booked for 2026-08-30, which was cancelled. Note the address mismatch that let this
   // slip past automated matching: he writes from robert@, the row held rob@.
   'kornfeldlaw.com',
+  // Laura Cyprus (Manager, Business Development & Marketing) replied "no" 2026-09-02 to the
+  // Aevon "boughton law intake" email. A follow-up was booked for 2026-09-07 and was cancelled.
+  // The SAME address mismatch as Kornfeld above: she writes from lcyprus@, the row held pr@.
+  // Twice now. People reply from their own address, never the generic one we mailed, so the
+  // domain fallback in reply-processor's matchLead() is the thing actually doing the work.
+  'boughtonlaw.com',
 ];
 
 /** Returns a reason if this lead's employer or email domain is excluded outright, else null. */
