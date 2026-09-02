@@ -43,6 +43,8 @@
  *   node intake-agent.js --config tech-neighbour   use a named client config
  *   node intake-agent.js --drafts-only force drafting even for an auto-send client
  *   node intake-agent.js --autonomy    print the resolved autonomy decision and exit
+ *   node intake-agent.js --sample      run the config's canned examples, no mailbox needed
+ *   node intake-agent.js --try         run ONE message pasted on stdin, no mailbox needed
  */
 
 require('dotenv').config();
@@ -59,6 +61,33 @@ const DRY = args.includes('--dry');
 const DRAFTS_ONLY = args.includes('--drafts-only');
 const EXPLAIN_ONLY = args.includes('--autonomy');
 const SAMPLE = args.includes('--sample');
+/**
+ * `--try` runs ONE message the operator supplies, rather than the canned samples.
+ *
+ * The canned samples are messages we wrote, which makes them worth exactly nothing as
+ * evidence to a prospect: of course it handles the examples we invented. `--try` takes a real
+ * inquiry, pasted on stdin, so a prospect can hand over something from their own inbox and
+ * watch it work on that. Same classifier, same drafting, still no mailbox and nothing written.
+ *
+ *   pbpaste | node intake-agent.js --config skyline --try
+ *   node intake-agent.js --config skyline --try --from "Jane Doe <j@x.com>" --subject "3bd?"
+ *   (then paste, and press Ctrl+D on a blank line)
+ */
+const TRY = args.includes('--try');
+const flag = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i > -1 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : null;
+};
+
+function readStdin() {
+  return new Promise((resolve) => {
+    if (process.stdin.isTTY) console.log('Paste the inquiry, then press Ctrl+D on a blank line:\n');
+    let buf = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (c) => { buf += c; });
+    process.stdin.on('end', () => resolve(buf.trim()));
+  });
+}
 const configName = (args[args.indexOf('--config') + 1] && args.includes('--config')) ? args[args.indexOf('--config') + 1] : 'default';
 
 // ── Client configs ────────────────────────────────────────────────
@@ -411,11 +440,25 @@ async function run() {
   // OAuth token, nothing written anywhere. It exists so the agent can be shown working on a
   // call before a prospect has granted access to anything, which is the only order that makes
   // sense: nobody hands over their inbox to see whether the thing is any good.
-  if (SAMPLE) {
-    const samples = CFG.samples || [];
-    if (!samples.length) throw new Error(`config "${configName}" has no samples to run. Add a samples: [] block.`);
-    console.log(`Sample run for "${CFG.businessName}" (${configName}). Nothing is read or written.\n`);
-    for (const msg of samples) {
+  if (SAMPLE || TRY) {
+    let messages;
+    if (TRY) {
+      const body = await readStdin();
+      if (!body) throw new Error('Nothing on stdin. Pipe a message in, or paste and press Ctrl+D.');
+      const raw = flag('from') || 'A prospect <prospect@example.com>';
+      messages = [{
+        fromName: nameOf(raw) || raw.replace(/<.*>/, '').trim() || 'A prospect',
+        fromEmail: addressOf(raw),
+        subject: flag('subject') || '(no subject)',
+        body,
+      }];
+      console.log(`\nOne live message through "${CFG.businessName}" (${configName}). Nothing is read or written.\n`);
+    } else {
+      messages = CFG.samples || [];
+      if (!messages.length) throw new Error(`config "${configName}" has no samples to run. Add a samples: [] block.`);
+      console.log(`Sample run for "${CFG.businessName}" (${configName}). Nothing is read or written.\n`);
+    }
+    for (const msg of messages) {
       const res = await handleInquiry(msg);
       const tag = res.intent === 'inquiry' ? (res.qualified ? 'QUALIFIED INQUIRY' : 'inquiry (not qualified)') : res.intent;
       console.log(`── ${msg.fromName} <${msg.fromEmail}>  "${msg.subject}"`);
