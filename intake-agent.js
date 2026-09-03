@@ -1,5 +1,5 @@
 /**
- * intake-agent.js  —  the Front Desk intake build (MVP)
+ * intake-agent.js, the Front Desk intake build (MVP)
  *
  * RETIRED as the lead offer 2026-08-03, not deleted. The code works and can still be sold
  * to anyone who asks for exactly this, it is simply no longer what outreach pitches. See
@@ -29,7 +29,8 @@
  *
  * It is config-driven: everything client-specific lives in CONFIG, so deploying
  * for a new client is "swap the config + their Gmail OAuth creds." That is the
- * whole point — it proves "$1,500, live in a week" is real and repeatable.
+ * whole point: deploying for a new client is configuration, not a build. (The "$1,500, live in a
+ * week" framing this line used to carry was retired; see sales/front-desk-offer.md.)
  *
  * Reuses the proven Gmail-OAuth + Gemini plumbing from reply-processor.js.
  *
@@ -157,7 +158,7 @@ const CONFIGS = {
     ownerName: 'Sofia',
     whatWeDo: 'residential real estate brokerage in the South Puget Sound, working with military families relocating to and from Joint Base Lewis-McChord, including VA-financed purchases and PCS-timed sales.',
     serviceArea: 'the South Puget Sound area of Washington, within reach of JBLM',
-    voice: 'warm, direct and brief; writes like a busy broker on her phone between showings, plain sentences, no real estate jargon, no exclamation marks.',
+    voice: 'warm, direct and brief; writes like a busy broker on her phone between showings. Always I, never we, she works alone. Opens with "Hi" and their first name, then a comma. Plain sentences. Every question ends with a question mark, no real estate jargon, no exclamation marks.',
     qualify: 'A good inquiry is someone buying or selling a home in the South Puget Sound area, most often a service member or spouse with PCS orders to or from JBLM. Vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone outside Washington are NOT qualified.',
     // The point of a build over an off-the-shelf tool. A general assistant asks "what is your
     // budget and timeline"; it does not know that a report date is the deadline everything
@@ -526,7 +527,7 @@ async function run() {
     const res = await handleInquiry(msg);
 
     const tag = res.intent === 'inquiry' ? (res.qualified ? 'QUALIFIED INQUIRY' : 'inquiry (not qualified)') : res.intent;
-    console.log(`  [${tag}] ${msg.fromName || fromEmail} — "${subject || ''}"`);
+    console.log(`  [${tag}] ${msg.fromName || fromEmail}  "${subject || ''}"`);
     if (res.reason) console.log(`      ${res.reason}`);
     if (res.need) console.log(`      needs: ${res.need}${res.booking ? ' (booking warranted)' : ''}`);
     // The qualification is the part worth watching on a demo: it shows the agent reading
