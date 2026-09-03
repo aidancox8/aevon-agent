@@ -107,6 +107,11 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           CADRE_DAILY_CAP: ${{ vars.CADRE_DAILY_CAP || '12' }}
+          # Bounce breaker override. Set the repository variable to '1' ONLY after the list has
+          # been cleaned, and unset it once the rolling rate is back under 5%. First use
+          # 2026-09-03: a guessed hr@ test bounced 3 of 4, tripping the breaker at 5.7% (5/88);
+          # every guessed address was parked the same day, so the halt had done its job.
+          ALLOW_HIGH_BOUNCE: ${{ vars.ALLOW_HIGH_BOUNCE || '' }}
           CADRE_MAILING_ADDRESS: ${{ vars.CADRE_MAILING_ADDRESS }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
