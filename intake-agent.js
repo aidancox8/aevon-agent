@@ -71,7 +71,7 @@ const SAMPLE = args.includes('--sample');
  *
  *   pbpaste | node intake-agent.js --config skyline --try
  *   node intake-agent.js --config skyline --try --from "Jane Doe <j@x.com>" --subject "3bd?"
- *   (then paste, and press Ctrl+D on a blank line)
+ *   (then paste, and press Enter twice)
  */
 const TRY = args.includes('--try');
 const flag = (name) => {
@@ -80,11 +80,21 @@ const flag = (name) => {
 };
 
 function readStdin() {
+  // Interactive: a BLANK LINE ends the message. Ctrl+D is the Unix EOF and Ctrl+Z Enter is the
+  // Windows one, and neither is something to explain on a sales call. Piped input still works
+  // and still ends at EOF.
   return new Promise((resolve) => {
-    if (process.stdin.isTTY) console.log('Paste the inquiry, then press Ctrl+D on a blank line:\n');
     let buf = '';
     process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (c) => { buf += c; });
+    if (process.stdin.isTTY) {
+      console.log('Paste the inquiry, then press Enter twice (an empty line ends it):\n');
+      process.stdin.on('data', (c) => {
+        buf += c;
+        if (/\r?\n\s*\r?\n$/.test(buf) && buf.trim()) { process.stdin.pause(); resolve(buf.trim()); }
+      });
+    } else {
+      process.stdin.on('data', (c) => { buf += c; });
+    }
     process.stdin.on('end', () => resolve(buf.trim()));
   });
 }
