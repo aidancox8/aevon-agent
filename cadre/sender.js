@@ -268,6 +268,12 @@ function blockReason(lead, stepNo) {
   if (!lead.email) return 'no address';
   if (PLACEHOLDER.test(lead.email)) return 'placeholder address';
   if (FREEMAIL.test(lead.email)) return 'freemail address, likely a scraping artifact';
+  // Mid-market only, decided 2026-09-03. Under 50 a spreadsheet works and the owner keeps it;
+  // over 1,000 an HRIS already does this. The copy also says things like "at 400 people
+  // scheduling alone is a job", which must never land on a 15-person shop. Unknown size passes:
+  // the job ad itself is evidence they are big enough to hire for the record.
+  if (lead.staff_estimate && lead.staff_estimate < 50) return `${lead.staff_estimate} staff, too small for the pitch`;
+  if (lead.staff_estimate && lead.staff_estimate > 1000) return `${lead.staff_estimate} staff, will have an HRIS`;
   if (WRONG_DESK.test(lead.email)) return `${lead.email.split('@')[0]}@ will not route an HR pitch`;
   if (lead.website && rootDomain(lead.email.split('@')[1]) !== rootDomain(lead.website)) {
     return `address domain does not match ${rootDomain(lead.website)}`;
@@ -356,7 +362,7 @@ async function bounceRate() {
   const { data: due, error } = await supabase.from(TABLE)
     .select('id, business_name, email, website, contact_name, contact_role, city, address, signal_quote, signal_url, ' +
             'email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, ' +
-            'sequence_step, last_sent_at, qualification_score, scheduled_send_at')
+            'sequence_step, last_sent_at, qualification_score, scheduled_send_at, staff_estimate')
     // 'sent' is included because a lead stays `sent` between sequence steps. 'replied',
     // 'unsubscribed', 'bounced' and 'dont_contact' are absent on purpose: those are the four
     // ways a lead earns the right never to hear from us again.
