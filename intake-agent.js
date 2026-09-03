@@ -611,4 +611,10 @@ module.exports = {
   isProtectedSender,
   isAutomatedRecipient,
   AUTOSEND_CAP_FALLBACK,
+  // Exported for demo/skyline-demo.js, which reuses the same classifier and config
+  // rather than re-implementing the prompt. Nothing here changes CLI behaviour.
+  handleInquiry,
+  CONFIGS,
+  nameOf,
+  addressOf,
 };

@@ -1,0 +1,37 @@
+[
+  { "type": "showing", "title": "4821 NE Bridgeport Way, Lakewood", "start": "2026-09-10T09:00:00-07:00", "end": "2026-09-10T09:45:00-07:00" },
+  { "type": "call", "title": "Ruiz, VA loan questions", "start": "2026-09-10T10:00:00-07:00", "end": "2026-09-10T10:30:00-07:00" },
+  { "type": "showing", "title": "918 Idlewood Ave, DuPont", "start": "2026-09-10T10:45:00-07:00", "end": "2026-09-10T11:30:00-07:00" },
+  { "type": "personal", "title": "Kid pickup, half day", "start": "2026-09-10T12:00:00-07:00", "end": "2026-09-10T12:45:00-07:00" },
+  { "type": "call", "title": "McGrath, budget conversation", "start": "2026-09-10T13:00:00-07:00", "end": "2026-09-10T13:30:00-07:00" },
+  { "type": "showing", "title": "220 Sequoia Ct, Spanaway", "start": "2026-09-10T13:45:00-07:00", "end": "2026-09-10T14:30:00-07:00" },
+  { "type": "showing", "title": "5510 Steele St, near Lewis Main gate", "start": "2026-09-10T15:00:00-07:00", "end": "2026-09-10T15:45:00-07:00" },
+  { "type": "call", "title": "Listing consult, Whitfield referral", "start": "2026-09-10T16:15:00-07:00", "end": "2026-09-10T17:00:00-07:00" },
+  { "type": "showing", "title": "77 American Lake Dr, Steilacoom", "start": "2026-09-10T17:15:00-07:00", "end": "2026-09-10T18:00:00-07:00" },
+
+  { "type": "call", "title": "Danielle Ruiz, intro call on VA basics", "start": "2026-09-11T09:00:00-07:00", "end": "2026-09-11T09:30:00-07:00" },
+  { "type": "showing", "title": "300 Portland Ave, DuPont", "start": "2026-09-11T10:00:00-07:00", "end": "2026-09-11T11:00:00-07:00" },
+  { "type": "showing", "title": "142 Nisqually Rd, JBLM North", "start": "2026-09-11T13:30:00-07:00", "end": "2026-09-11T14:15:00-07:00" },
+  { "type": "call", "title": "Listing follow-up, Whitfield", "start": "2026-09-11T16:00:00-07:00", "end": "2026-09-11T16:30:00-07:00" },
+
+  { "type": "showing", "title": "Open house, 4821 NE Bridgeport Way, Lakewood", "start": "2026-09-12T10:00:00-07:00", "end": "2026-09-12T13:00:00-07:00" },
+  { "type": "call", "title": "Buyer follow-up, Ellison", "start": "2026-09-12T14:00:00-07:00", "end": "2026-09-12T14:30:00-07:00" },
+
+  { "type": "call", "title": "New lead, Torres, PCS orders", "start": "2026-09-14T09:00:00-07:00", "end": "2026-09-14T09:30:00-07:00" },
+  { "type": "showing", "title": "300 Portland Ave, DuPont", "start": "2026-09-14T09:30:00-07:00", "end": "2026-09-14T10:15:00-07:00" },
+  { "type": "showing", "title": "220 Sequoia Ct, Spanaway", "start": "2026-09-14T11:00:00-07:00", "end": "2026-09-14T11:45:00-07:00" },
+  { "type": "personal", "title": "Kid's school event", "start": "2026-09-14T13:00:00-07:00", "end": "2026-09-14T14:00:00-07:00" },
+  { "type": "call", "title": "Listing consult, Whitfield", "start": "2026-09-14T15:00:00-07:00", "end": "2026-09-14T15:30:00-07:00" },
+  { "type": "showing", "title": "77 American Lake Dr, Steilacoom", "start": "2026-09-14T16:00:00-07:00", "end": "2026-09-14T16:45:00-07:00" },
+
+  { "type": "personal", "title": "Dentist appointment", "start": "2026-09-15T09:00:00-07:00", "end": "2026-09-15T10:00:00-07:00" },
+  { "type": "call", "title": "Ruiz, COE questions", "start": "2026-09-15T10:30:00-07:00", "end": "2026-09-15T11:00:00-07:00" },
+  { "type": "showing", "title": "142 Nisqually Rd, JBLM North", "start": "2026-09-15T11:30:00-07:00", "end": "2026-09-15T12:15:00-07:00" },
+  { "type": "showing", "title": "5510 Steele St, near Lewis Main gate", "start": "2026-09-15T14:00:00-07:00", "end": "2026-09-15T14:45:00-07:00" },
+  { "type": "call", "title": "McGrath, budget conversation follow-up", "start": "2026-09-15T15:00:00-07:00", "end": "2026-09-15T15:30:00-07:00" },
+
+  { "type": "showing", "title": "918 Idlewood Ave, DuPont", "start": "2026-09-16T09:00:00-07:00", "end": "2026-09-16T09:45:00-07:00" },
+  { "type": "call", "title": "Whitfield, listing photos", "start": "2026-09-16T10:00:00-07:00", "end": "2026-09-16T10:30:00-07:00" },
+  { "type": "showing", "title": "300 Portland Ave, DuPont, offer walkthrough", "start": "2026-09-16T13:00:00-07:00", "end": "2026-09-16T13:45:00-07:00" },
+  { "type": "call", "title": "New lead, McGrath, financing check-in", "start": "2026-09-16T15:00:00-07:00", "end": "2026-09-16T15:30:00-07:00" }
+]
