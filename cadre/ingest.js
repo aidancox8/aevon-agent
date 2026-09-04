@@ -30,7 +30,12 @@ const FILE = process.argv[2];
 
 /** Regulated verticals. A workforce whose people cannot legally work on an expired ticket. */
 const VERTICALS = ['health', 'trades', 'transport', 'childcare', 'security', 'food', 'lab',
-  'education', 'manufacturing', 'property'];
+  'education', 'manufacturing', 'property',
+  // Everything lead-finder.js's inferIndustry can return. Until 2026-09-04 the list above was
+  // shorter than the finder's output, so a real lead tagged 'utilities' or 'warehousing' was
+  // rejected at the door (LuxWall, Freudenberg-NOK) with a message that read like bad data.
+  'utilities', 'agriculture', 'recreation', 'hospitality', 'environmental', 'facilities',
+  'warehousing', 'other'];
 
 const SIGNAL_TYPES = ['hiring_credentialing', 'hiring_compliance', 'manual_tracking', 'tool_gap'];
 
