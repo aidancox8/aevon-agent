@@ -61,25 +61,20 @@ const WINDOW_MIN = 60;
 const domainOf = e => String(e || '').split('@')[1] || '';
 
 /**
- * Interleave so consecutive sends go to different mail hosts where possible. Round-robins
- * across per-domain queues, taking the highest-scoring lead from each in turn.
+ * Best first, strictly. Rank is the address quality (a named or personal address outranks a
+ * generic info@ at any score), then the qualification score. Decided 2026-09-03: the previous
+ * round-robin across mail hosts let a weak lead on a rare domain jump the queue ahead of a
+ * strong one on a common domain, which is backwards for a list where the good leads are scarce.
+ *
  */
+const QUALITY_RANK = { personal: 3, treg: 3, role: 2, generic: 1 };
+function rankOf(l) {
+  return (QUALITY_RANK[l.email_quality] || 0) * 100 + (l.qualification_score || 0);
+}
 function interleaveByDomain(leads) {
-  const byDomain = new Map();
-  for (const l of leads) {
-    const d = domainOf(l.email).toLowerCase();
-    if (!byDomain.has(d)) byDomain.set(d, []);
-    byDomain.get(d).push(l);
-  }
-  for (const q of byDomain.values()) q.sort((a, b) => (b.qualification_score || 0) - (a.qualification_score || 0));
-  const queues = [...byDomain.values()].sort((a, b) => b.length - a.length);
-  const out = [];
-  while (out.length < leads.length) {
-    let moved = false;
-    for (const q of queues) if (q.length) { out.push(q.shift()); moved = true; }
-    if (!moved) break;
-  }
-  return out;
+  // Name kept so the call site reads the same. Strict rank order, no domain shuffling: Aidan's
+  // instruction was highest to lowest, and two leads at one company are already deduped upstream.
+  return [...leads].sort((a, b) => rankOf(b) - rankOf(a));
 }
 
 /**
@@ -105,7 +100,7 @@ function place(zone, dayCounts, perDay) {
 
 (async () => {
   let query = supabase.from(TABLE)
-    .select('id, business_name, email, city, address, qualification_score, scheduled_send_at, contact_name, status')
+    .select('id, business_name, email, email_quality, city, address, qualification_score, scheduled_send_at, contact_name, status')
     .eq('status', 'queued')
     .not('email_subject', 'is', null)
     .not('email', 'is', null);
