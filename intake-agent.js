@@ -165,7 +165,7 @@ const CONFIGS = {
     // else hangs off, or that a missing COE is what stalls a VA closing.
     askFor: [
       'report date, or the month they need to be in',
-      'whether orders are in hand or still pending',
+      'whether orders are in hand or still pending ("got orders", "orders came through", "just got my orders" all mean in hand)',
       'VA or conventional, and if VA whether they have their Certificate of Eligibility',
       'price range',
       'on-base or off-base, and how far from the gate they will drive',
@@ -196,6 +196,31 @@ const CONFIGS = {
     // Drafts only, and it stays that way through the trial no matter what the offer says.
     // She has not seen a single reply in her own voice yet, so there is nothing to trust.
     autoSend: false,
+    /**
+     * The GoHighLevel side, read by frontdesk/worker.js. calendarId is null until she gives us
+     * a token and we can list her calendars; while it is null the worker still offers slots
+     * against the fixture below, which is what the demo shows. The buffers are placeholders for
+     * whatever she says on the call: she was asked and the numbers were not caught.
+     */
+    frontDesk: {
+      calendarId: null,
+      reminderMinutesBefore: 30,
+      holdMinutes: 120,
+      rules: {
+        timezone: 'America/Los_Angeles',
+        hours: { start: '09:00', end: '18:00' },
+        days: [1, 2, 3, 4, 5, 6],
+        slotMin: 15, noticeMin: 120, horizonDays: 10, offer: 2, offerGapMin: 150,
+        bufferAfterCallMin: 5, bufferBeforeShowingMin: 20, bufferAfterShowingMin: 15,
+      },
+      // A plausible week for a busy broker, used only when no calendar is connected.
+      fixtureEvents: [
+        { start: '2026-09-10T18:00:00Z', end: '2026-09-10T19:00:00Z', type: 'showing' },
+        { start: '2026-09-10T19:15:00Z', end: '2026-09-10T19:30:00Z', type: 'call' },
+        { start: '2026-09-10T21:00:00Z', end: '2026-09-10T22:30:00Z', type: 'showing' },
+        { start: '2026-09-11T16:30:00Z', end: '2026-09-11T17:30:00Z', type: 'showing' },
+      ],
+    },
   },
   // Fallback so the agent is always runnable for a smoke test against any inbox.
   default: {
