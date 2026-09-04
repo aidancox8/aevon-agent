@@ -1,0 +1,322 @@
+[
+ {
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 751,
+  "words": 34,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 281,
+  "words": 45,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "z-ai/glm-5.2:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 153,
+  "words": 43,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "z-ai/glm-5.2:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 153,
+  "words": 37,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "minimax/minimax-m3:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 728,
+  "words": 42,
+  "reasoning": false,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "minimax/minimax-m3:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 1052,
+  "words": 30,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "thinkingmachines/inkling:free",
+  "effort": "none",
+  "status": 403,
+  "ms": 46,
+  "words": 0,
+  "reasoning": false,
+  "note": "thinkingmachines/inkling:free is only available on",
+  "ok": false
+ },
+ {
+  "model": "thinkingmachines/inkling:free",
+  "effort": "low",
+  "status": 403,
+  "ms": 35,
+  "words": 0,
+  "reasoning": false,
+  "note": "thinkingmachines/inkling:free is only available on",
+  "ok": false
+ },
+ {
+  "model": "nvidia/nemotron-3-super-120b-a12b:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 164,
+  "words": 43,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "nvidia/nemotron-3-super-120b-a12b:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 154,
+  "words": 51,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "google/gemma-4-31b-it:free",
+  "effort": "none",
+  "status": 429,
+  "ms": 139,
+  "words": 0,
+  "reasoning": false,
+  "note": "Provider returned error",
+  "ok": false
+ },
+ {
+  "model": "google/gemma-4-31b-it:free",
+  "effort": "low",
+  "status": 429,
+  "ms": 153,
+  "words": 0,
+  "reasoning": false,
+  "note": "Provider returned error",
+  "ok": false
+ },
+ {
+  "model": "poolside/laguna-s-2.1:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 699,
+  "words": 38,
+  "reasoning": false,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "poolside/laguna-s-2.1:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 1163,
+  "words": 33,
+  "reasoning": false,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "inclusionai/ling-3.0-flash-fin:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 549,
+  "words": 0,
+  "reasoning": true,
+  "note": "EMPTY",
+  "ok": false
+ },
+ {
+  "model": "inclusionai/ling-3.0-flash-fin:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 500,
+  "words": 29,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "minimax/minimax-m2.7:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 1071,
+  "words": 35,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "minimax/minimax-m2.7:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 1145,
+  "words": 0,
+  "reasoning": true,
+  "note": "EMPTY",
+  "ok": false
+ },
+ {
+  "model": "google/gemma-4-26b-a4b-it:free",
+  "effort": "none",
+  "status": 429,
+  "ms": 162,
+  "words": 0,
+  "reasoning": false,
+  "note": "Provider returned error",
+  "ok": false
+ },
+ {
+  "model": "google/gemma-4-26b-a4b-it:free",
+  "effort": "low",
+  "status": 429,
+  "ms": 131,
+  "words": 0,
+  "reasoning": false,
+  "note": "Provider returned error",
+  "ok": false
+ },
+ {
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "effort": "none",
+  "status": "ERR",
+  "ms": 156531,
+  "words": 0,
+  "reasoning": false,
+  "note": "terminated",
+  "ok": false
+ },
+ {
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 198,
+  "words": 608,
+  "reasoning": true,
+  "note": "leaks",
+  "ok": false
+ },
+ {
+  "model": "thinkingmachines/inkling-small:free",
+  "effort": "none",
+  "status": 403,
+  "ms": 24,
+  "words": 0,
+  "reasoning": false,
+  "note": "thinkingmachines/inkling-small:free is only availa",
+  "ok": false
+ },
+ {
+  "model": "thinkingmachines/inkling-small:free",
+  "effort": "low",
+  "status": 403,
+  "ms": 41,
+  "words": 0,
+  "reasoning": false,
+  "note": "thinkingmachines/inkling-small:free is only availa",
+  "ok": false
+ },
+ {
+  "model": "dots-studio/dots-3-note-preview:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 779,
+  "words": 0,
+  "reasoning": true,
+  "note": "EMPTY",
+  "ok": false
+ },
+ {
+  "model": "dots-studio/dots-3-note-preview:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 517,
+  "words": 0,
+  "reasoning": true,
+  "note": "EMPTY",
+  "ok": false
+ },
+ {
+  "model": "inclusionai/ling-3.0-flash-sante:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 541,
+  "words": 36,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "inclusionai/ling-3.0-flash-sante:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 629,
+  "words": 29,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "effort": "none",
+  "status": 200,
+  "ms": 191,
+  "words": 31,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "effort": "low",
+  "status": 200,
+  "ms": 185,
+  "words": 33,
+  "reasoning": true,
+  "note": "",
+  "ok": true
+ },
+ {
+  "model": "openrouter/free",
+  "effort": "none",
+  "status": 200,
+  "ms": 803,
+  "words": 41,
+  "reasoning": false,
+  "note": " ->minimax-m3:free",
+  "ok": true
+ },
+ {
+  "model": "openrouter/free",
+  "effort": "low",
+  "status": 200,
+  "ms": 533,
+  "words": 30,
+  "reasoning": true,
+  "note": " ->ling-3.0-flash-sante:free",
+  "ok": true
+ }
+]
