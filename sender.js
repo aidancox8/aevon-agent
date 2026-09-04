@@ -482,13 +482,15 @@ async function run() {
       console.error('ALLOW_HIGH_BOUNCE=1 set — continuing anyway.');
     } else if (sentN) {
       console.log(`Bounce rate ${(rate * 100).toFixed(1)}% over last ${sentN} sends (limit ${(BOUNCE_LIMIT * 100).toFixed(0)}%).`);
-
-  // One query, once per run, rather than per lead. Every opted-out or bounced address across
-  // every campaign table.
-  const SUPPRESSED = await loadSuppressions();
-  console.log(`Suppression list: ${SUPPRESSED.counted} address(es) across ${SUPPRESSED.tables.join(', ')}.`);
     }
   }
+
+  // One query, once per run, rather than per lead. Every opted-out or bounced address across
+  // every campaign table. Function scope on purpose: the first version of this sat inside the
+  // bounce-rate branch above and threw 'SUPPRESSED is not defined' on every live run for a day,
+  // while the dry run passed because the send loop never executes without --send.
+  const SUPPRESSED = await loadSuppressions();
+  console.log(`Suppression list: ${SUPPRESSED.counted} address(es) across ${SUPPRESSED.tables.join(', ')}.`);
 
   const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry, email_quality, city';
   const baseFilter = q => q
