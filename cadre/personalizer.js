@@ -342,7 +342,34 @@ HARD RULES
 - Do not invent anything about them beyond what is above.`;
 }
 
-module.exports = { reject, longestVerbatimRun, normalise };
+/**
+ * The JSON object in a model reply that may be wrapped in a chain of thought.
+ *
+ * The old `match(/\{[\s\S]*\}/)` was greedy from the FIRST brace, and the reasoning models on the
+ * free stack talk about "{{ASK}}" at length before answering, so the match began inside their
+ * notes and the parse failed on every lead. Walk the braces from the end instead and take the
+ * last balanced object that carries a subject.
+ */
+function extractJson(raw) {
+  const s = String(raw || '');
+  for (let end = s.lastIndexOf('}'); end > -1; end = s.lastIndexOf('}', end - 1)) {
+    let depth = 0;
+    for (let i = end; i >= 0; i--) {
+      if (s[i] === '}') depth++;
+      else if (s[i] === '{') depth--;
+      if (depth === 0) {
+        try {
+          const obj = JSON.parse(s.slice(i, end + 1));
+          if (obj && typeof obj === 'object' && 'subject' in obj) return obj;
+        } catch { /* not this one */ }
+        break;
+      }
+    }
+  }
+  return null;
+}
+
+module.exports = { reject, longestVerbatimRun, normalise, buildPrompt, extractJson };
 
 // Only run when invoked directly, so the validator can be unit tested without hitting a model
 // or the database.
@@ -376,11 +403,8 @@ if (require.main === module) (async () => {
       try { raw = await generate(buildPrompt(lead)); }
       catch (e) { lastReason = `model error: ${e.message}`; continue; }
 
-      let parsed;
-      try {
-        const m = String(raw).match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(m ? m[0] : raw);
-      } catch { lastReason = 'unparseable output'; continue; }
+      const parsed = extractJson(raw);
+      if (!parsed) { lastReason = 'unparseable output'; continue; }
 
       const subject = normalise(parsed.subject || '');
       const body = normalise(parsed.body || '');
