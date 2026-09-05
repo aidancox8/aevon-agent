@@ -105,9 +105,14 @@ function reject(subject, body, lead) {
   }
 
   // THE CHECK THAT MATTERS. Their words must survive intact.
-  const quoteWords = lead.signal_quote.trim().split(/\s+/).length;
+  // Checked against the fragment the model was SHOWN, not the raw scraped quote. Until 2026-09-05
+  // the prompt handed over cleanQuote(...) and this compared against the original, so a quote
+  // cleanQuote had cut to four words could never pass a six-word test, and six leads were
+  // skipped on every run with a message that blamed the model.
+  const shown = cleanQuote(lead.signal_quote);
+  const quoteWords = shown.trim().split(/\s+/).length;
   const need = Math.min(6, Math.max(3, quoteWords - 2));
-  const run = longestVerbatimRun(lead.signal_quote, body);
+  const run = Math.max(longestVerbatimRun(shown, body), longestVerbatimRun(lead.signal_quote, body));
   if (run < need) return `only ${run} consecutive words of their quote survived, need ${need}`;
 
 
@@ -276,12 +281,31 @@ function cleanQuote(q) {
   let t = String(q || '').replace(/\s+/g, ' ').replace(/[…]+$/, '').trim();
   t = t.replace(/\s*\([^)]*$/, '');              // dangling "(e." style opener
   const words = t.split(' ');
-  if (words.length > 14) {
-    const head = words.slice(0, 14).join(' ');
-    const cut = Math.max(head.lastIndexOf(','), head.lastIndexOf(';'), head.lastIndexOf(' and '), head.lastIndexOf('.'));
-    t = cut > 25 ? head.slice(0, cut) : head;
+  // A whole sentence of twenty words or fewer is quoted whole. Cutting "Verifies forklift
+  // operator certification records and related safety documentation are maintained in
+  // accordance with company and regulatory requirements" (18 words) at a clause boundary
+  // produced "...in accordance with company", which is worse than the extra four words.
+  if (words.length > 20) {
+    // Build the fragment from WHOLE clauses. The old version took the first 14 words and cut
+    // back to the last boundary, which produced "Ensures readiness for regulatory" (a stub the
+    // validator then rejected) or, with no boundary, "...such as semi-annual" (a mid-phrase
+    // chop that went into a body on 2026-09-05 and read like a bot). Add clauses from the start
+    // until there are at least six words, keep adding while the total stays under fifteen, and
+    // only fall back to a hard cut at twenty when the sentence has no boundaries at all.
+    const clauses = t.split(/(?<=[,;.])\s+|\s+(?=and\s)/).filter(Boolean);
+    let out = '';
+    for (const c of clauses) {
+      const next = (out ? out + ' ' : '') + c;
+      const n = next.split(' ').length;
+      if (out && out.split(' ').length >= 6 && n > 14) break;
+      if (n > 20) break;
+      out = next;
+    }
+    t = out.split(' ').length >= 6 ? out : words.slice(0, 20).join(' ');
   }
-  return t.replace(/[,;:\s]+$/, '').replace(/^[a-z]/, (c) => c.toUpperCase());
+  // Strip a dangling connective and its punctuation, twice, because "tracking, and" needs both.
+  const tail = (x) => x.replace(/[,;:.&\s]+$/, '').replace(/\s+(and|or|the|of|for|to|in|with|a|an|as|such|by|on|including|[A-Za-z])$/i, '');
+  return tail(tail(t)).replace(/[,;:.&\s]+$/, '').replace(/^[a-z]/, (c) => c.toUpperCase());
 }
 
 function buildPrompt(lead) {
