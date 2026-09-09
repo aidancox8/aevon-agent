@@ -1,0 +1,40 @@
+$ node demo/sofia.js "just got orders to JBLM, need a 3br off base, wife and 2 kids, report date Oct 15"
+Front Desk for "Skyline Properties" (skyline) [DRY, nothing written], Tue Sep 8, 9:36 PM
+  Marcus: [QUALIFIED] The sender is a service member with PCS orders to JBLM looking for housing in the service area.
+     known: report date: Oct 15 | orders: in hand | housing preference: off base
+     still needed: VA or conventional financing and COE status | price range | commute distance from gate | selling current home
+  would: add note {"contactId":"sim_12535551377","lines":9}
+  would: add tags {"contactId":"sim_12535551377","tags":["agent-read","qualified"]}
+  would: post draft as internal comment {"contactId":"sim_12535551377"}
+  would: tag agent-draft {"contactId":"sim_12535551377","tags":["agent-draft"]}
+     draft:
+       Hi Marcus, thank you for your service and welcome to the area. I can certainly help you find a home that fits your family before your report date. Are you planning to use a VA loan for this purchase? What is your preferred price range for a home?
+       I can do Wed Sep 9, 9:00 AM or Wed Sep 9, 11:30 AM. Reply C to take the first, or tell me what works.
+$ node demo/sofia.js "Wednesday morning works better for me"
+Front Desk for "Skyline Properties" (skyline) [DRY, nothing written], Tue Sep 8, 9:36 PM
+  Marcus: asked for Wednesday morning; re-offered 2 slot(s)
+  would: post draft as internal comment {"contactId":"sim_12535551377"}
+  would: tag agent-draft {"contactId":"sim_12535551377","tags":["agent-draft"]}
+     draft:
+       Hi Marcus, Wednesday morning works. I can do Wed Sep 9, 9:00 AM or Wed Sep 9, 11:30 AM. Reply C to take the first.
+$ node demo/sofia.js C
+Front Desk for "Skyline Properties" (skyline) [DRY, nothing written], Tue Sep 8, 9:36 PM
+  Marcus: confirmed slot 1
+  would: create appointment {"contactId":"sim_12535551377","startTime":"2026-09-09T16:00:00.000Z","title":"Call with Sofia, Marcus"}
+  would: send confirmation {"contactId":"sim_12535551377","message":"You are booked with Sofia for Wed Sep 9, 9:00 AM. Reply here if anything changes."}
+  would: tag booked {"contactId":"sim_12535551377","tags":["agent-booked"]}
+$ node demo/sofia.js --as "Dana Whitfield" "is 918 Idlewood in DuPont still available? can i see it this weekend"
+Front Desk for "Skyline Properties" (skyline) [DRY, nothing written], Tue Sep 8, 9:36 PM
+  Dana: [QUALIFIED] The sender is interested in a property in DuPont, which is within the service area near JBLM.
+     known: property: 918 Idlewood
+     still needed: report date | orders status | financing type | price range | location preference | current home sale status
+  would: add note {"contactId":"sim_12535551332","lines":9}
+  would: add tags {"contactId":"sim_12535551332","tags":["agent-read","qualified"]}
+  would: post draft as internal comment {"contactId":"sim_12535551332"}
+  would: tag agent-draft {"contactId":"sim_12535551332","tags":["agent-draft"]}
+     draft:
+       Hi Dana, I will check on the status of that home and get back to you. Are you planning a move to the JBLM area? Do you have your PCS orders in hand yet?
+       I can do Wed Sep 9, 9:00 AM or Wed Sep 9, 11:30 AM. Reply C to take the first, or tell me what works.
+$ node demo/sofia.js --as "Vendor" "Hi! We can get your website to the top of Google in 30 days. Interested?"
+Front Desk for "Skyline Properties" (skyline) [DRY, nothing written], Tue Sep 8, 9:36 PM
+  Vendor: [spam] This is a sales pitch from a vendor seeking to sell marketing services to the business.
