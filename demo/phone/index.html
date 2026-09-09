@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skyline Front Desk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #0C0E0D; --ink: #ECEEEA; --ink-2: #B7BDB5; --ink-3: #858C84; --accent: #9DBFA1;
+    --phone: #000; --screen: #0B0B0C; --bubble-them: #26282C; --bubble-me: #34C759; --bubble-me-ink: #062B12;
+    --inbox: #F4F5F7; --inbox-ink: #1B1F24; --inbox-2: #5B6470; --card: #FFFFFF; --line: #E1E4EA; --draft: #FFF7DF; --draft-line: #E9C46A;
+    --tag: #E8F1FF; --tag-ink: #1D4ED8; --ok: #16794C;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; }
+  header { display: flex; align-items: baseline; gap: 18px; padding: 22px 32px 0; }
+  header h1 { font-size: 18px; font-weight: 700; margin: 0; }
+  header .sub { color: var(--ink-3); font-size: 13px; }
+  header button { margin-left: auto; background: transparent; color: var(--ink-3); border: 1px solid #2A302C; border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .stage { display: grid; grid-template-columns: 390px 1fr; gap: 40px; padding: 24px 32px 40px; max-width: 1240px; margin: 0 auto; }
+
+  /* the lead's phone */
+  .phone { width: 390px; height: 800px; background: var(--phone); border-radius: 44px; padding: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px #2b2b2e; position: relative; }
+  .screen { background: var(--screen); border-radius: 32px; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .notch { height: 34px; display: flex; justify-content: center; align-items: center; }
+  .notch i { width: 120px; height: 28px; background: #000; border-radius: 20px; }
+  .topbar { text-align: center; padding: 4px 16px 10px; border-bottom: 1px solid #1c1c1f; }
+  .topbar .avatar { width: 44px; height: 44px; border-radius: 50%; background: #3a3a40; margin: 0 auto 4px; display: grid; place-items: center; font-weight: 700; color: #ddd; }
+  .topbar .who { font-size: 12px; color: #ddd; }
+  .topbar .num { font-size: 11px; color: #8a8a90; }
+  .thread { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .b { max-width: 78%; padding: 9px 13px; border-radius: 18px; line-height: 1.35; font-size: 15px; white-space: pre-wrap; animation: pop .18s ease-out; }
+  .b.them { background: var(--bubble-them); color: #f2f2f2; align-self: flex-start; border-bottom-left-radius: 6px; }
+  .b.me { background: var(--bubble-me); color: var(--bubble-me-ink); align-self: flex-end; border-bottom-right-radius: 6px; }
+  .stamp { font-size: 11px; color: #7a7a80; text-align: center; margin: 6px 0 2px; }
+  .typing { align-self: flex-start; color: #8a8a90; font-size: 13px; padding: 4px 6px; }
+  .compose { display: flex; gap: 8px; padding: 10px 12px 18px; border-top: 1px solid #1c1c1f; }
+  .compose input { flex: 1; background: #1a1a1d; color: #fff; border: 1px solid #2c2c30; border-radius: 20px; padding: 10px 14px; font: inherit; font-size: 15px; outline: none; }
+  .compose button { background: var(--bubble-me); color: #062B12; border: 0; border-radius: 50%; width: 40px; height: 40px; font-weight: 700; cursor: pointer; }
+  .compose button:disabled { opacity: .4; cursor: default; }
+  @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* her inbox */
+  .inbox { background: var(--inbox); color: var(--inbox-ink); border-radius: 18px; min-height: 800px; display: grid; grid-template-columns: 250px 1fr; overflow: hidden; }
+  .contacts { border-right: 1px solid var(--line); background: #fff; }
+  .contacts h2, .conv h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--inbox-2); margin: 0; padding: 18px 18px 10px; }
+  .contact { padding: 12px 18px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .contact.active { background: var(--inbox); }
+  .contact .n { font-weight: 700; }
+  .contact .p { font-size: 12px; color: var(--inbox-2); }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tag { font-size: 11px; background: var(--tag); color: var(--tag-ink); border-radius: 4px; padding: 2px 7px; font-weight: 600; }
+  .tag.booked { background: #DFF5E8; color: var(--ok); }
+  .tag.draft { background: var(--draft); color: #8a5a00; }
+  .conv { display: flex; flex-direction: column; }
+  .items { padding: 6px 22px 22px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 14px; animation: pop .18s ease-out; }
+  .card .k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--inbox-2); margin-bottom: 6px; }
+  .card.in { border-left: 4px solid #8A94A6; }
+  .card.note ul { margin: 0; padding-left: 18px; }
+  .card.note li { margin: 2px 0; }
+  .card.note li.miss { color: var(--inbox-2); }
+  .card.draft { background: var(--draft); border-color: var(--draft-line); }
+  .card.draft .body { white-space: pre-wrap; line-height: 1.45; }
+  .card .actions { display: flex; gap: 8px; margin-top: 10px; }
+  .card .actions button { font: inherit; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 7px 14px; cursor: pointer; border: 1px solid transparent; }
+  .approve { background: var(--ok); color: #fff; }
+  .editb { background: #fff; border-color: var(--line) !important; color: var(--inbox-ink); }
+  .card.sent { border-left: 4px solid var(--ok); }
+  .card.appt { border-left: 4px solid #1D4ED8; }
+  .card.spam { border-left: 4px solid #B42318; color: var(--inbox-2); }
+  .card .why { color: var(--inbox-2); font-size: 13px; margin-top: 4px; }
+  .empty { color: var(--inbox-2); padding: 40px 22px; font-size: 14px; }
+  .cal { border-top: 1px solid var(--line); padding: 12px 22px 18px; background: #fff; }
+  .cal .k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--inbox-2); margin-bottom: 8px; }
+  .cal .row { display: grid; grid-template-columns: 76px 1fr; font-size: 13px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+  .cal .row.new { color: var(--ok); font-weight: 700; }
+  .cal .row .t { color: var(--inbox-2); font-variant-numeric: tabular-nums; }
+  .cal .row.new .t { color: var(--ok); }
+  @media (max-width: 900px) { .stage { grid-template-columns: 1fr; } .phone { margin: 0 auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Skyline Front Desk</h1>
+  <span class="sub">left: the lead's phone. right: Sofia's inbox. Nothing on the right goes out until she taps Approve.</span>
+  <label style="margin-left:auto;color:var(--ink-3);font-size:13px">lead <input id="who" value="Marcus Ellison" style="background:#161A18;color:var(--ink);border:1px solid #2A302C;border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;width:160px"></label>
+  <button id="reset" style="margin-left:0">start over</button>
+</header>
+
+<div class="stage">
+  <div class="phone"><div class="screen">
+    <div class="notch"><i></i></div>
+    <div class="topbar"><div class="avatar">S</div><div class="who">Sofia, Skyline Properties</div><div class="num">(253) 555-0100</div></div>
+    <div class="thread" id="thread"><div class="stamp">Text Message</div></div>
+    <div class="compose">
+      <input id="msg" placeholder="Text Sofia" autocomplete="off">
+      <button id="send" title="send">↑</button>
+    </div>
+  </div></div>
+
+  <div class="inbox">
+    <div class="contacts">
+      <h2>Conversations</h2>
+      <div id="contacts"></div>
+    </div>
+    <div class="conv">
+      <h2 id="convtitle">Conversation</h2>
+      <div class="items" id="items"><div class="empty">Nothing yet. Have the lead text the number on the left.</div></div>
+      <div class="cal">
+        <div class="k">Thursday, Sofia's calendar</div>
+        <div id="cal"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // The lead on the left is one contact; --as switches which one. Kept simple on purpose: one
+  // lead at a time on screen, the way she would actually look at a conversation.
+  const state = { leads: {}, current: 'Marcus Ellison' };
+  const fixture = [
+    ['11:00 AM', 'Showing, 4821 NE Bridgeport Way, Lakewood'],
+    ['12:15 PM', 'Call, Ruiz, VA loan questions'],
+    ['2:00 PM', 'Showing, 918 Idlewood Ave, DuPont'],
+  ];
+  const $ = (id) => document.getElementById(id);
+
+  function lead(name) {
+    if (!state.leads[name]) state.leads[name] = { name, phone: '+1 (253) 555-' + String([...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0'), thread: [], items: [], tags: [], appt: null };
+    return state.leads[name];
+  }
+
+  function fmtTime(iso) { return new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' }); }
+  function fmtDay(iso) { return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric' }); }
+
+  function render() {
+    const L = lead(state.current);
+    // phone
+    const th = $('thread'); th.innerHTML = '<div class="stamp">Text Message</div>';
+    for (const m of L.thread) { const d = document.createElement('div'); d.className = 'b ' + m.who; d.textContent = m.text; th.appendChild(d); }
+    if (L.typing) { const t = document.createElement('div'); t.className = 'typing'; t.textContent = 'reading…'; th.appendChild(t); }
+    th.scrollTop = th.scrollHeight;
+    // contacts
+    const cs = $('contacts'); cs.innerHTML = '';
+    for (const n of Object.keys(state.leads)) {
+      const c = state.leads[n];
+      const d = document.createElement('div'); d.className = 'contact' + (n === state.current ? ' active' : '');
+      d.innerHTML = `<div class="n">${n}</div><div class="p">${c.phone}</div><div class="tags">${c.tags.map((t) => `<span class="tag ${t === 'agent-booked' ? 'booked' : t === 'agent-draft' ? 'draft' : ''}">${t}</span>`).join('')}</div>`;
+      d.onclick = () => { state.current = n; render(); };
+      cs.appendChild(d);
+    }
+    // conversation
+    $('convtitle').textContent = L.name + ' · ' + L.phone;
+    const it = $('items'); it.innerHTML = '';
+    if (!L.items.length) it.innerHTML = '<div class="empty">Nothing yet. Have the lead text the number on the left.</div>';
+    for (const x of L.items) it.appendChild(x);
+    it.scrollTop = it.scrollHeight;
+    // calendar
+    const cal = $('cal'); cal.innerHTML = '';
+    const rows = fixture.map(([t, w]) => ({ t, w, sortKey: t, isNew: false }));
+    for (const n of Object.keys(state.leads)) { const a = state.leads[n].appt; if (a) rows.push({ t: fmtTime(a.startTime), w: a.title + ' (booked by agent, ' + fmtDay(a.startTime) + ')', isNew: true }); }
+    rows.sort((a, b) => new Date('1/1/2000 ' + a.t) - new Date('1/1/2000 ' + b.t));
+    for (const r of rows) { const d = document.createElement('div'); d.className = 'row' + (r.isNew ? ' new' : ''); d.innerHTML = `<span class="t">${r.t}</span><span>${r.w}</span>`; cal.appendChild(d); }
+  }
+
+  function card(cls, html) { const d = document.createElement('div'); d.className = 'card ' + cls; d.innerHTML = html; return d; }
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+  async function send() {
+    const text = $('msg').value.trim(); if (!text) return;
+    $('msg').value = ''; $('send').disabled = true;
+    const L = lead(state.current);
+    L.thread.push({ who: 'them', text });
+    L.items.push(card('in', `<div class="k">Inbound SMS · ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>${esc(text)}`));
+    L.typing = true; render();
+    let ev;
+    try {
+      const r = await fetch('/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: L.name, text }) });
+      ev = await r.json();
+    } catch (e) { ev = { verdict: 'error', reason: String(e) }; }
+    L.typing = false;
+
+    if (ev.appointment) {
+      L.appt = ev.appointment;
+      L.tags = [...new Set([...L.tags.filter((t) => t !== 'agent-draft'), 'agent-booked'])];
+      L.items.push(card('appt', `<div class="k">Appointment created</div>${esc(ev.appointment.title)}<div class="why">${fmtDay(ev.appointment.startTime)}, ${fmtTime(ev.appointment.startTime)}. Reminder text goes 30 minutes before.</div>`));
+      if (ev.confirmation) { L.thread.push({ who: 'me', text: ev.confirmation }); L.items.push(card('sent', `<div class="k">Sent to lead</div>${esc(ev.confirmation)}`)); }
+    } else if (ev.verdict && ev.verdict !== 'reply' && ev.verdict !== 'QUALIFIED') {
+      L.items.push(card('spam', `<div class="k">Filed as ${esc(ev.verdict)}</div>${esc(ev.reason)}<div class="why">No draft, no tag, not on your pipeline.</div>`));
+    } else {
+      if (ev.note || ev.known.length || ev.missing.length) {
+        L.items.push(card('note', `<div class="k">Note added by agent</div>${ev.reason ? esc(ev.reason) : ''}<ul>${ev.known.map((k) => `<li>${esc(k)}</li>`).join('')}${ev.missing.map((k) => `<li class="miss">still needed: ${esc(k)}</li>`).join('')}</ul>${ev.skipped ? `<div class="why">Offered times skipped ${esc(ev.skipped)}.</div>` : ''}`));
+      }
+      for (const t of ev.tags) if (!L.tags.includes(t)) L.tags.push(t);
+      if (ev.draft) {
+        const c = card('draft', `<div class="k">Draft, waiting for your OK</div><div class="body">${esc(ev.draft)}</div><div class="actions"><button class="approve">Approve and send</button><button class="editb">Edit</button></div>`);
+        c.querySelector('.approve').onclick = () => {
+          L.thread.push({ who: 'me', text: ev.draft });
+          L.tags = L.tags.filter((t) => t !== 'agent-draft'); if (!L.tags.includes('agent-sent')) L.tags.push('agent-sent');
+          c.className = 'card sent'; c.innerHTML = `<div class="k">Sent to lead · approved by Sofia</div><div class="body">${esc(ev.draft)}</div>`;
+          render();
+        };
+        c.querySelector('.editb').onclick = () => {
+          const b = c.querySelector('.body'); b.contentEditable = 'true'; b.focus();
+          c.querySelector('.approve').onclick = () => { ev.draft = b.innerText.trim(); c.querySelector('.editb').style.display = 'none'; c.querySelector('.approve').textContent = 'Approve and send'; L.thread.push({ who: 'me', text: ev.draft }); L.tags = L.tags.filter((t) => t !== 'agent-draft'); L.tags.push('agent-sent'); c.className = 'card sent'; c.innerHTML = `<div class="k">Sent to lead · edited and approved by Sofia</div><div class="body">${esc(ev.draft)}</div>`; render(); };
+        };
+        L.items.push(c);
+      } else if (ev.verdict === 'reply') {
+        L.items.push(card('in', `<div class="k">Agent</div>${esc(ev.reason)}`));
+      }
+    }
+    $('send').disabled = false; render(); $('msg').focus();
+  }
+
+  $('send').onclick = send;
+  $('msg').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  $('reset').onclick = async () => { await fetch('/reset', { method: 'POST' }); state.leads = {}; state.current = 'Marcus Ellison'; $('who').value = state.current; render(); };
+  // A second lead, for the listing and spam questions: change the name, the phone switches.
+  $('who').addEventListener('change', () => { const n = $('who').value.trim() || 'Marcus Ellison'; state.current = n; lead(n); render(); $('msg').focus(); });
+  render(); $('msg').focus();
+</script>
+</body>
+</html>
