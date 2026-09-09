@@ -272,7 +272,9 @@ function blockReason(lead, stepNo) {
   // over 1,000 an HRIS already does this. The copy also says things like "at 400 people
   // scheduling alone is a job", which must never land on a 15-person shop. Unknown size passes:
   // the job ad itself is evidence they are big enough to hire for the record.
-  if (lead.staff_estimate && lead.staff_estimate < 50) return `${lead.staff_estimate} staff, too small for the pitch`;
+  // Floor raised 50 to 100 on 2026-09-09: Aidan's read of the sent list was that the small end
+  // was too small. Under a hundred people there is rarely someone whose job is the records.
+  if (lead.staff_estimate && lead.staff_estimate < 100) return `${lead.staff_estimate} staff, too small for the pitch`;
   if (lead.staff_estimate && lead.staff_estimate > 1000) return `${lead.staff_estimate} staff, will have an HRIS`;
   if (WRONG_DESK.test(lead.email)) return `${lead.email.split('@')[0]}@ will not route an HR pitch`;
   if (lead.website && rootDomain(lead.email.split('@')[1]) !== rootDomain(lead.website)) {
