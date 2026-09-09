@@ -42,6 +42,7 @@ process.argv.push('--config', CLIENT);
 const { handleInquiry, CONFIGS } = require('../intake-agent');
 const ghl = require('../lib/ghl');
 const { findFreeSlots, fmt, addMin } = require('./slots');
+const { parsePreference, narrowRules, onDay } = require('./preference');
 
 const cfg = CONFIGS[CLIENT];
 if (!cfg) throw new Error(`no client config named "${CLIENT}"`);
@@ -131,6 +132,38 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
     say(`  ${firstName(contact) || contactId}: confirmed slot 1`);
     await confirm(state, contactId, contact, hold);
     return;
+  }
+
+  // "Wednesday morning works better." The offer said "tell me what works", so read the answer and
+  // offer again inside it. Still a draft for approval; only C books. Found missing in rehearsal
+  // 2026-09-08, when this reply was filed as an existing conversation and went nowhere.
+  if (hold && new Date(hold.expires) > new Date()) {
+    const pref = parsePreference(text, new Date(), TZ);
+    if (pref) {
+      const { rules, day } = narrowRules(RULES, pref);
+      // Their own held slots are free again; otherwise the first offer blocks the second.
+      delete state.holds[contactId];
+      const { offered } = findFreeSlots(await busyEvents(state), { ...rules, offer: 6 });
+      const keep = offered.filter((d) => onDay(d, day, TZ)).slice(0, RULES.offer || 2);
+      const who = firstName(contact) || contactId;
+      let draft;
+      if (keep.length) {
+        draft = `Hi ${firstName(contact) || 'there'}, ${pref.label} works. I can do ${keep.map((d) => fmt(d, TZ)).join(' or ')}. Reply C to take the first.`;
+        state.holds[contactId] = { slots: keep.map((d) => d.toISOString()), kind: hold.kind, expires: addMin(new Date(), HOLD_MIN).toISOString() };
+        say(`  ${who}: asked for ${pref.label}; re-offered ${keep.length} slot(s)`);
+      } else {
+        // Nothing free in what they asked for. Say so and offer the nearest, rather than silence.
+        const { offered: near } = findFreeSlots(await busyEvents(state), RULES);
+        draft = `Hi ${firstName(contact) || 'there'}, nothing open ${pref.label}, sorry. Closest I have is ${near.map((d) => fmt(d, TZ)).join(' or ')}. Reply C to take the first, or tell me another time.`;
+        state.holds[contactId] = { slots: near.map((d) => d.toISOString()), kind: hold.kind, expires: addMin(new Date(), HOLD_MIN).toISOString() };
+        say(`  ${who}: asked for ${pref.label}; nothing free, offered nearest`);
+      }
+      await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
+      await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
+      state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
+      say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+      return;
+    }
   }
 
   const res = await handleInquiry({ fromName: contact.name || '', fromEmail: contact.email || `${contact.phone || contactId}@sms`, subject: '(text)', body: text });

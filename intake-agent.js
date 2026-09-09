@@ -158,6 +158,15 @@ const CONFIGS = {
     ownerName: 'Sofia',
     whatWeDo: 'residential real estate brokerage in the South Puget Sound, working with military families relocating to and from Joint Base Lewis-McChord, including VA-financed purchases and PCS-timed sales.',
     serviceArea: 'the South Puget Sound area of Washington, within reach of JBLM',
+    // Found in rehearsal 2026-09-08: asked about a listing, the draft said "918 Idlewood is still
+    // available. I can show it to you this weekend." The agent cannot know either. These are the
+    // things only Sofia can confirm, and the draft says so instead of guessing.
+    neverSay: [
+      'whether a specific listing is still available, under contract, or sold',
+      'that a showing or viewing will happen at a particular time or day (times are offered separately, as a call)',
+      'a price, rate, payment, or what a home will appraise or sell for',
+      'anything about a specific property that is not in the message',
+    ],
     voice: 'warm, direct and brief; writes like a busy broker on her phone between showings. Always I, never we, she works alone. Opens with "Hi" and their first name, then a comma. Plain sentences. Every question ends with a question mark, no real estate jargon, no exclamation marks.',
     qualify: 'A good inquiry is someone buying or selling a home in the South Puget Sound area, most often a service member or spouse with PCS orders to or from JBLM. Vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone outside Washington are NOT qualified.',
     // The point of a build over an off-the-shelf tool. A general assistant asks "what is your
@@ -420,6 +429,9 @@ STEP 3 - Only if intent is "inquiry" AND qualified: write a reply draft.
 ${(CFG.askFor && CFG.askFor.length) ? `- Ask for AT MOST TWO of the missing facts, the two that matter most for this particular message. A reply that asks for six things reads like a form and gets ignored. The rest can be asked later.` : ''}
 ${CFG.bookingLink ? `- If booking is true, invite them to grab a time and include this exact link on its own line: ${CFG.bookingLink}` : ''}
 - Do NOT quote a firm price, invent details, or overpromise. No sign-off (added separately).
+${(CFG.neverSay && CFG.neverSay.length) ? `- Things ${CFG.ownerName} can only know by checking, so the draft must NEVER state or promise them:
+${CFG.neverSay.map((q) => `    - ${q}`).join('\n')}
+  If the message asks about one of these, say you will check and come back to them, in one plain sentence.` : ''}
 
 Respond with JSON only:
 {
