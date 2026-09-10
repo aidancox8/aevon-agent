@@ -229,7 +229,8 @@ const CONFIGS = {
         hours: { start: '09:00', end: '18:00' },
         days: [1, 2, 3, 4, 5, 6],
         slotMin: 15, noticeMin: 120, horizonDays: 10, offer: 2, offerGapMin: 150,
-        bufferAfterCallMin: 5, bufferBeforeShowingMin: 20, bufferAfterShowingMin: 15,
+        // Her rule, from the call: fifteen minutes between anything.
+        bufferAfterCallMin: 15, bufferBeforeCallMin: 15, bufferBeforeShowingMin: 15, bufferAfterShowingMin: 15,
       },
       // A plausible week for a busy broker, used only when no calendar is connected.
       // A week of her calendar, Pacific time, so an offer on any day lands among real-looking

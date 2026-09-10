@@ -58,7 +58,7 @@ function overlaps(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && aEnd > b
 function zones(ev, rules) {
   const start = new Date(ev.start), end = new Date(ev.end);
   const type = ev.type === 'hold' ? 'showing' : ev.type;
-  const pre = type === 'showing' ? (rules.bufferBeforeShowingMin || 0) : 0;
+  const pre = type === 'showing' ? (rules.bufferBeforeShowingMin || 0) : type === 'call' ? (rules.bufferBeforeCallMin || 0) : 0;
   const post = type === 'showing' ? (rules.bufferAfterShowingMin || 0)
     : type === 'call' ? (rules.bufferAfterCallMin || 0) : 0;
   return {
