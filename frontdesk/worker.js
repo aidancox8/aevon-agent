@@ -131,12 +131,12 @@ async function confirm(state, contactId, contact, hold, which = 0) {
     state.appointments = state.appointments.filter((a) => a !== prior);
   }
   await write('create appointment', () => ghl.createAppointment({ calendarId: fd.calendarId, contactId, startTime: slot.toISOString(), title }),
-    { contactId, startTime: slot.toISOString(), title });
+    { contactId, startTime: slot.toISOString(), title, leadName: firstName(contact) || '', remindAt: addMin(slot, -REMIND_MIN).toISOString() });
   const msg = `${prior ? 'Moved. ' : ''}You are booked for ${fmt(slot, TZ)}. I will call you then. Reply here if anything changes.`;
   await write('send confirmation', () => ghl.sendMessage({ contactId, message: msg }), { contactId, message: msg });
   remember(state, contactId, 'me', msg);
   await write('tag booked', () => ghl.addTags(contactId, ['agent-booked']), { contactId, tags: ['agent-booked'] });
-  state.appointments.push({ contactId, at: slot.toISOString(), title, remindAt: addMin(slot, -REMIND_MIN).toISOString(), reminded: false });
+  state.appointments.push({ contactId, leadName: firstName(contact) || '', at: slot.toISOString(), title, remindAt: addMin(slot, -REMIND_MIN).toISOString(), reminded: false });
   delete state.holds[contactId];
 }
 
@@ -144,7 +144,8 @@ async function confirm(state, contactId, contact, hold, which = 0) {
 async function sendReminders(state, now) {
   for (const a of state.appointments) {
     if (a.reminded || new Date(a.remindAt) > now || new Date(a.at) < now) continue;
-    const msg = `Reminder: your ${a.title.toLowerCase().startsWith('showing') ? 'showing' : 'call'} with ${cfg.ownerName} is at ${fmt(new Date(a.at), TZ)}, in about ${REMIND_MIN} minutes.`;
+    // In her voice, to the person by name: "Hi Marcus, I will call you at 12:45, in about 15 minutes."
+    const msg = `Hi ${a.leadName || 'there'}, I will ${a.title.toLowerCase().startsWith('showing') ? 'see you' : 'call you'} at ${new Date(a.at).toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })}, in about ${REMIND_MIN} minutes.`;
     await write('send reminder', () => ghl.sendMessage({ contactId: a.contactId, message: msg }), { contactId: a.contactId, message: msg });
     a.reminded = true;
   }

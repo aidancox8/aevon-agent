@@ -477,7 +477,7 @@
       L.appt = ev.appointment; L.offered = []; state.viewDay = dayKey(ev.appointment.startTime);
       L.tags = [...new Set([...L.tags.filter((t) => t !== 'agent-draft'), 'agent-booked'])];
       const dp = dayParts(ev.appointment.startTime);
-      L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--green)"></i>Appointment booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. Reminder text to the lead 30 minutes before.</div></div>`));
+      L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--green)"></i>Appointment booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. ${(ev.appointment.leadName ? ev.appointment.leadName : 'The lead')} gets a text 15 minutes before: "Hi ${ev.appointment.leadName || 'there'}, I will call you at ${fmtTime(ev.appointment.startTime)}, in about 15 minutes."</div></div>`));
       if (ev.confirmation) { L.thread.push({ who: 'me', text: ev.confirmation }); L.items.push(card('sent', `<div class="k"><i></i>SMS sent · confirmation<span class="t">${clock()}</span></div>${esc(ev.confirmation)}`)); }
     } else if (ev.verdict === 'timeout' || ev.verdict === 'error') {
       L.items.push(card('spam', `<div class="k"><i></i>Agent did not answer</div>${esc(ev.reason || 'The model timed out.')}<div class="why">Nothing was filed. Send the text again.</div>`));

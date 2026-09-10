@@ -222,7 +222,7 @@ const CONFIGS = {
      */
     frontDesk: {
       calendarId: null,
-      reminderMinutesBefore: 30,
+      reminderMinutesBefore: 15,
       holdMinutes: 120,
       rules: {
         timezone: 'America/Los_Angeles',
