@@ -279,7 +279,6 @@
 
     // 4. Lead answers; the offer, alone.
     await show('s-phone');
-    $('thread').innerHTML = '<div class="stamp">Text Message · SMS</div>';
     await caption('cap-phone', 'Your reply lands. They answer.');
     await bubble('me', 'Hi Marcus, I can help you find a three bedroom place near the base for October. Are you planning to use a VA loan, and do you have a price range in mind?');
     await type('VA loan, first time buying. we rent now so nothing to sell');
@@ -303,7 +302,6 @@
 
     // 5. They pick; it books.
     await show('s-phone');
-    $('thread').innerHTML = '<div class="stamp">Text Message · SMS</div>';
     await caption('cap-phone', 'They pick a time.');
     await bubble('me', 'VA financing is a good fit for a first-time buyer moving to JBLM.\n\nI can call you Thu Sep 10, 1:00 PM or Thu Sep 10, 3:45 PM. Which works better, or is there a time that suits you more?');
     await sleep(600);
