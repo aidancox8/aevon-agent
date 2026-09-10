@@ -35,7 +35,8 @@ function parse(out) {
     if ((m = l.match(/^\s+still needed: (.*)$/))) { ev.missing = m[1].split(' | ').map((s) => s.trim()); continue; }
     if ((m = l.match(/^\s+held \d+ slot\(s\); skipped (.*)$/))) { ev.skipped = m[1].trim(); continue; }
     if ((m = l.match(/^\s+offered slots: (.*)$/))) { ev.offered = m[1].split(',').map((x) => x.trim()).filter(Boolean); continue; }
-    if ((m = l.match(/^\s+would: cancel earlier appointment (\{.*\})$/))) { try { ev.cancelled = JSON.parse(m[1]).startTime; } catch (e) { /* ignore */ } continue; }
+    if ((m = l.match(/^\s+would: cancel (?:earlier )?appointment (\{.*\})$/))) { try { ev.cancelled = JSON.parse(m[1]).startTime; } catch (e) { /* ignore */ } continue; }
+    if ((m = l.match(/^\s+would: send cancellation (\{.*\})$/))) { try { ev.cancellation = JSON.parse(m[1]).message; } catch (e) { /* ignore */ } continue; }
     if ((m = l.match(/^\s+\S[^:]*: (asked for .*|confirmed slot \d)$/))) { ev.verdict = ev.verdict || 'reply'; ev.reason = m[1]; continue; }
     if ((m = l.match(/^\s+would: add note/))) { ev.note = true; continue; }
     if ((m = l.match(/^\s+would: (?:add tags|tag \w+(?: \w+)?) (\{.*\})$/))) { try { ev.tags.push(...JSON.parse(m[1]).tags); } catch (e) { /* ignore */ } continue; }

@@ -161,6 +161,10 @@
   .card.spam { border-color: #FECDCA; color: var(--t2); }
   .card.spam .k { color: var(--red-ink); }
   .card.spam .k i { background: var(--red); }
+  .card.sched { border-style: dashed; border-color: #B2CCFF; background: #F8FAFF; }
+  .card.sched .k { color: var(--blue); }
+  .card.sched .k i { background: var(--blue); }
+  .card.sched .when { display: inline-block; margin-left: auto; font-weight: 500; color: var(--t2); }
   .card.working { border-style: dashed; color: var(--t2); display: flex; gap: 10px; align-items: center; }
   .card.working i { width: 12px; height: 12px; border: 2px solid var(--t3); border-top-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -473,12 +477,22 @@
     ev.known = ev.known || []; ev.missing = ev.missing || []; ev.tags = ev.tags || [];
 
     if (ev.offered && ev.offered.length) { L.offered = ev.offered; state.viewDay = dayKey(ev.offered[0]); }
-    if (ev.appointment) {
+    if (ev.cancellation) {
+      L.appt = null; L.items = L.items.filter((c) => !c.classList.contains('sched'));
+      L.tags = [...new Set([...L.tags.filter((t) => t !== 'agent-booked' && t !== 'agent-draft'), 'agent-cancelled'])];
+      L.items.push(card('spam', `<div class="k"><i></i>Appointment cancelled<span class="t">${clock()}</span></div>Taken off Sofia's calendar. Reminder cancelled.`));
+      L.thread.push({ who: 'me', text: ev.cancellation }); L.items.push(card('sent', `<div class="k"><i></i>SMS sent · cancellation<span class="t">${clock()}</span></div>${esc(ev.cancellation)}`));
+    } else if (ev.appointment) {
       L.appt = ev.appointment; L.offered = []; state.viewDay = dayKey(ev.appointment.startTime);
       L.tags = [...new Set([...L.tags.filter((t) => t !== 'agent-draft'), 'agent-booked'])];
       const dp = dayParts(ev.appointment.startTime);
-      L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--green)"></i>Appointment booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. ${(ev.appointment.leadName ? ev.appointment.leadName : 'The lead')} gets a text 15 minutes before: "Hi ${ev.appointment.leadName || 'there'}, I will call you at ${fmtTime(ev.appointment.startTime)}, in about 15 minutes."</div></div>`));
+      L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--green)"></i>Appointment booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}.</div></div>`));
       if (ev.confirmation) { L.thread.push({ who: 'me', text: ev.confirmation }); L.items.push(card('sent', `<div class="k"><i></i>SMS sent · confirmation<span class="t">${clock()}</span></div>${esc(ev.confirmation)}`)); }
+      // The reminder sits in the thread as a scheduled message, the way GHL shows a queued SMS.
+      L.items = L.items.filter((c) => !c.classList.contains('sched'));
+      const remindAt = ev.appointment.remindAt ? new Date(ev.appointment.remindAt) : new Date(new Date(ev.appointment.startTime).getTime() - 15 * 60000);
+      const remindText = `Hi ${ev.appointment.leadName || 'there'}, I will call you at ${fmtTime(ev.appointment.startTime)}, in about 15 minutes.`;
+      L.items.push(card('sched', `<div class="k"><i></i>Scheduled SMS · reminder<span class="when">sends ${fmtDay(remindAt.toISOString())} ${fmtTime(remindAt.toISOString())}</span></div>${esc(remindText)}`));
     } else if (ev.verdict === 'timeout' || ev.verdict === 'error') {
       L.items.push(card('spam', `<div class="k"><i></i>Agent did not answer</div>${esc(ev.reason || 'The model timed out.')}<div class="why">Nothing was filed. Send the text again.</div>`));
     } else if (ev.verdict && ev.verdict !== 'reply' && ev.verdict !== 'QUALIFIED' && ev.verdict !== 'inquiry, not qualified') {

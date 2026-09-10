@@ -132,7 +132,7 @@ async function confirm(state, contactId, contact, hold, which = 0) {
   }
   await write('create appointment', () => ghl.createAppointment({ calendarId: fd.calendarId, contactId, startTime: slot.toISOString(), title }),
     { contactId, startTime: slot.toISOString(), title, leadName: firstName(contact) || '', remindAt: addMin(slot, -REMIND_MIN).toISOString() });
-  const msg = `${prior ? 'Moved. ' : ''}You are booked for ${fmt(slot, TZ)}. I will call you then. Reply here if anything changes.`;
+  const msg = prior ? `Moved you to ${fmt(slot, TZ)}. I will call you then. Reply here if anything changes.` : `You are booked for ${fmt(slot, TZ)}. I will call you then. Reply here if anything changes.`;
   await write('send confirmation', () => ghl.sendMessage({ contactId, message: msg }), { contactId, message: msg });
   remember(state, contactId, 'me', msg);
   await write('tag booked', () => ghl.addTags(contactId, ['agent-booked']), { contactId, tags: ['agent-booked'] });
@@ -221,8 +221,24 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
     return;
   }
 
-  // 2. A day or time, held or not. After a booking this is a reschedule.
+  // 1b. A cancellation of a live booking. "cancel", "can't make it", "need to cancel", "something
+  // came up, can't do it" with no new time named. The appointment goes, the reminder with it, the
+  // lead gets a text, and the door stays open. Found missing in rehearsal 2026-09-10.
   const pref = parsePreference(text, new Date(), TZ);
+  const cancelWords = /\b(cancel|cancell?ing|can(?:'|no)?t (make|do) (it|that|the call)|won(?:'|no)?t be able|not going to (make|work)|scrap (it|that|the call)|call it off)\b/i;
+  if (booked && cancelWords.test(text) && !(pref && (pref.at || pref.dayOffset !== null))) {
+    say(`  ${who}: cancelling the ${fmt(new Date(booked.at), TZ)} call`);
+    await write('cancel appointment', () => ghl.createAppointment({ calendarId: fd.calendarId, contactId, startTime: booked.at, title: booked.title, cancel: true }), { contactId, startTime: booked.at });
+    state.appointments = state.appointments.filter((a) => a !== booked);
+    delete state.holds[contactId];
+    const msg = `No problem, I have taken the ${fmt(new Date(booked.at), TZ)} call off. Text me here when you want to pick another time.`;
+    await write('send cancellation', () => ghl.sendMessage({ contactId, message: msg }), { contactId, message: msg });
+    remember(state, contactId, 'me', msg);
+    await write('tag cancelled', () => ghl.addTags(contactId, ['agent-cancelled']), { contactId, tags: ['agent-cancelled'] });
+    return;
+  }
+
+  // 2. A day or time, held or not. After a booking this is a reschedule.
   // A named day or date, or a clock time, is time-talk on its own ("Wed sep 16 10 am"); a bare
   // part of day ("mornings are better") needs a hold, a booking, or a scheduling word around it.
   const explicit = !!(pref && (pref.at || pref.dayOffset !== null));
