@@ -120,13 +120,19 @@ function firstName(contact) {
   return (contact.firstName || contact.name || '').trim().split(/\s+/)[0] || '';
 }
 
-/** The lead typed C (or yes) to the first slot we offered. Book it. */
+/** Book a held slot: appointment on her calendar, confirmation text, tag, reminder at T-30. */
 async function confirm(state, contactId, contact, hold, which = 0) {
   const slot = new Date(hold.slots[which] || hold.slots[0]);
   const title = `${hold.kind === 'showing' ? 'Showing' : 'Call'} with ${cfg.ownerName}, ${firstName(contact) || 'lead'}`;
+  // A reschedule replaces the earlier booking rather than adding a second one.
+  const prior = state.appointments.find((a) => a.contactId === contactId && new Date(a.at) > new Date());
+  if (prior) {
+    await write('cancel earlier appointment', () => ghl.createAppointment({ calendarId: fd.calendarId, contactId, startTime: prior.at, title: prior.title, cancel: true }), { contactId, startTime: prior.at });
+    state.appointments = state.appointments.filter((a) => a !== prior);
+  }
   await write('create appointment', () => ghl.createAppointment({ calendarId: fd.calendarId, contactId, startTime: slot.toISOString(), title }),
     { contactId, startTime: slot.toISOString(), title });
-  const msg = `You are booked with ${cfg.ownerName} for ${fmt(slot, TZ)}. Reply here if anything changes.`;
+  const msg = `${prior ? 'Moved. ' : ''}You are booked for ${fmt(slot, TZ)}. I will call you then. Reply here if anything changes.`;
   await write('send confirmation', () => ghl.sendMessage({ contactId, message: msg }), { contactId, message: msg });
   remember(state, contactId, 'me', msg);
   await write('tag booked', () => ghl.addTags(contactId, ['agent-booked']), { contactId, tags: ['agent-booked'] });
@@ -153,70 +159,83 @@ async function sendApproved(state, contactId) {
   delete state.drafts[contactId];
 }
 
+/** Post a draft for approval: internal comment plus the agent-draft tag. Every draft goes through here. */
+async function postDraft(state, contactId, draft) {
+  await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
+  await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
+  state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
+  remember(state, contactId, 'me', draft);
+  say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+}
+
+/** Offer two slots inside a preference (or the next two if none), and hold them. */
+async function offerFor(state, contactId, contact, pref, kind, carry) {
+  const who = firstName(contact) || contactId;
+  const { rules, day } = pref ? narrowRules(RULES, pref) : { rules: RULES, day: null };
+  delete state.holds[contactId];   // their own held slots are free again
+  const { offered } = findFreeSlots(await busyEvents(state), { ...rules, offer: 6 });
+  const keep = offered.filter((d) => onDay(d, day, TZ)).slice(0, RULES.offer || 2);
+  let draft;
+  if (keep.length) {
+    draft = `${pref ? `${pref.label} works. ` : ''}I can call you ${keep.map((d) => fmt(d, TZ)).join(' or ')}. Which works better?`;
+    state.holds[contactId] = { slots: keep.map((d) => d.toISOString()), kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: carry.known || [], missing: carry.missing || [] };
+    say(`  ${who}: ${pref ? `asked for ${pref.label}; ` : ''}offered ${keep.length} slot(s)`);
+  } else {
+    const { offered: near } = findFreeSlots(await busyEvents(state), RULES);
+    draft = `Nothing open ${pref ? pref.label : 'then'}, sorry. I can call you ${near.map((d) => fmt(d, TZ)).join(' or ')} instead. Would either of those work?`;
+    state.holds[contactId] = { slots: near.map((d) => d.toISOString()), kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: carry.known || [], missing: carry.missing || [] };
+    say(`  ${who}: asked for ${pref ? pref.label : 'a time'}; nothing free, offered nearest`);
+  }
+  await postDraft(state, contactId, draft);
+}
+
+/**
+ * ONE MESSAGE, ONE JOB. Time-talk is handled by the booking code and never by the drafting
+ * model; the model only ever writes the qualifying replies. Order:
+ *   1. A pick of a held slot books it.
+ *   2. Any message naming a day or time (also with no hold: "can we do Sep 15?" after a booking
+ *      is a reschedule) gets a fresh offer inside that window.
+ *   3. Mid-booking and unreadable: ask the model which of pick / other time / decline / unclear,
+ *      record any facts it answered, and act on that.
+ *   4. Otherwise it is conversation: classify, qualify, learn, draft. The offer of a call comes
+ *      only once the lead has answered enough to be worth her time, and it goes out alone.
+ */
 async function handleInbound(state, { contactId, contact, text, messageId }) {
   remember(state, contactId, 'them', text);
   const mem = memory(state, contactId);
   const hold = state.holds[contactId];
   const holding = !!(hold && new Date(hold.expires) > new Date());
-  // C, yes, "the second one", "1:15", "Sep 10 115 works": all picks of an offered slot.
+  const who = firstName(contact) || contactId;
+  const booked = state.appointments.find((a) => a.contactId === contactId && new Date(a.at) > new Date());
+
+  // 1. A pick.
   const picked = holding ? pickSlot(text, hold.slots, TZ) : null;
   if (picked !== null) {
-    say(`  ${firstName(contact) || contactId}: confirmed slot ${picked + 1}`);
+    say(`  ${who}: confirmed slot ${picked + 1}`);
     await confirm(state, contactId, contact, hold, picked);
     return;
   }
 
-  // "Wednesday morning works better." The offer said "tell me what works", so read the answer and
-  // offer again inside it. Still a draft for approval; only C books. Found missing in rehearsal
-  // 2026-09-08, when this reply was filed as an existing conversation and went nowhere.
-  if (holding) {
-    const pref = parsePreference(text, new Date(), TZ);
-    if (pref) {
-      const { rules, day } = narrowRules(RULES, pref);
-      // Their own held slots are free again; otherwise the first offer blocks the second.
-      delete state.holds[contactId];
-      const { offered } = findFreeSlots(await busyEvents(state), { ...rules, offer: 6 });
-      const keep = offered.filter((d) => onDay(d, day, TZ)).slice(0, RULES.offer || 2);
-      const who = firstName(contact) || contactId;
-      let draft;
-      if (keep.length) {
-        draft = `Hi ${firstName(contact) || 'there'}, ${pref.label} works. I can call you ${keep.map((d) => fmt(d, TZ)).join(' or ')}. Which works better?`;
-        state.holds[contactId] = { slots: keep.map((d) => d.toISOString()), kind: hold.kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: hold.known || [], missing: hold.missing || [] };
-        say(`  ${who}: asked for ${pref.label}; re-offered ${keep.length} slot(s)`);
-      } else {
-        // Nothing free in what they asked for. Say so and offer the nearest, rather than silence.
-        const { offered: near } = findFreeSlots(await busyEvents(state), RULES);
-        draft = `Hi ${firstName(contact) || 'there'}, nothing open ${pref.label}, sorry. I can call you ${near.map((d) => fmt(d, TZ)).join(' or ')} instead. Would either of those work?`;
-        state.holds[contactId] = { slots: near.map((d) => d.toISOString()), kind: hold.kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: hold.known || [], missing: hold.missing || [] };
-        say(`  ${who}: asked for ${pref.label}; nothing free, offered nearest`);
-      }
-      await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
-      await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
-      state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
-    remember(state, contactId, 'me', draft);
-      say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
-      return;
-    }
+  // 2. A day or time, held or not. After a booking this is a reschedule.
+  const pref = parsePreference(text, new Date(), TZ);
+  if (pref && (holding || booked || /\b(resched|move|change|instead|rather|better|works|prefer|can we|could we|how about|what about)\b/i.test(text))) {
+    if (booked) say(`  ${who}: wants to move the ${fmt(new Date(booked.at), TZ)} call`);
+    await offerFor(state, contactId, contact, pref, holding ? hold.kind : 'call', holding ? hold : mem);
+    return;
   }
 
-  // Holding, and the rules could not read the reply. Ask the model the right question, with the
-  // offered slots in front of it: which one, a different time, a no, or unclear. A pick books;
-  // a different time is re-offered through the rules; a no releases the hold and drafts a
-  // graceful close; unclear asks which. Filing it as an existing thread said "no draft, not on
-  // the pipeline" about a lead mid-booking (rehearsal 2026-09-09).
+  // 3. Mid-booking, and the rules could not read it.
   if (holding) {
-    const who = firstName(contact) || contactId;
     const read = await readBookingReply({ text, slots: hold.slots, timezone: TZ, missing: hold.missing || [], known: hold.known || [] });
     say(`  ${who}: mid-booking, model read it as ${read.kind}${read.note ? ` (${read.note})` : ''}`);
-    // Answers to the open questions go on the contact now, whatever else the reply was.
     if (read.answered.length) {
       const labels = read.answered.map((a) => a.split(':')[0].trim().toLowerCase());
-      hold.known = [...(hold.known || []), ...read.answered];
-      learn(state, contactId, read.answered, (hold.missing || []).filter((m) => !labels.some((l) => m.toLowerCase().includes(l) || l.includes(m.toLowerCase().split(' ')[0]))));
-      hold.missing = (hold.missing || []).filter((m) => !labels.some((l) => m.toLowerCase().includes(l) || l.includes(m.toLowerCase().split(' ')[0])));
+      const stillMissing = (hold.missing || []).filter((m) => !labels.some((l) => m.toLowerCase().includes(l) || l.includes(m.toLowerCase().split(' ')[0])));
+      hold.known = [...(hold.known || []), ...read.answered]; hold.missing = stillMissing;
+      learn(state, contactId, read.answered, stillMissing);
       say(`     learned: ${read.answered.join(' | ')}`);
-      const noteText = [`Agent read this message at ${fmt(new Date(), TZ)}.`, ...read.answered.map((k) => `known: ${k}`), ...hold.missing.map((m) => `still needed: ${m}`)].join(String.fromCharCode(10));
-      await write('add note', () => ghl.addNote(contactId, noteText), { contactId, learned: read.answered, stillNeeded: hold.missing });
+      const noteText = [`Agent read this message at ${fmt(new Date(), TZ)}.`, ...read.answered.map((k) => `known: ${k}`), ...stillMissing.map((m) => `still needed: ${m}`)].join(String.fromCharCode(10));
+      await write('add note', () => ghl.addNote(contactId, noteText), { contactId, learned: read.answered, stillNeeded: stillMissing });
     }
     if (read.kind === 'pick' && read.slot !== null) {
       say(`  ${who}: confirmed slot ${read.slot + 1}`);
@@ -224,36 +243,23 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
       return;
     }
     if (read.kind === 'other_time' && read.when) {
-      const pref = parsePreference(read.when, new Date(), TZ);
-      if (pref) return handleInbound(state, { contactId, contact, text: read.when, messageId });
+      const p2 = parsePreference(read.when, new Date(), TZ);
+      if (p2) { await offerFor(state, contactId, contact, p2, hold.kind, hold); return; }
     }
     if (read.kind === 'decline') {
       delete state.holds[contactId];
-      const draft = `Hi ${firstName(contact) || 'there'}, no problem. When the timing is better, text me here and I will find you a time.`;
-      await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
-      await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
-      state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
-    remember(state, contactId, 'me', draft);
-      say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+      await postDraft(state, contactId, 'No problem. When the timing is better, text me here and I will find you a time.');
       return;
     }
-    // Keep the hold alive so the next reply ("1", "the 12:45") is still read as a pick. Without
-    // this the follow-up dropped to the classifier and was filed as "other" (rehearsal 2026-09-09).
-    hold.expires = addMin(new Date(), HOLD_MIN).toISOString();
-    const ack = read.answered.length ? 'got it, thanks. Which' : 'which';
-    const draft = `Hi ${firstName(contact) || 'there'}, ${ack} works better for a call, ${hold.slots.map((s) => fmt(new Date(s), TZ)).join(' or ')}? Or tell me a time that suits you.`;
-    say(`  ${who}: asking which`);
-    await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
-    await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
-    state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
-    remember(state, contactId, 'me', draft);
-    say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+    hold.expires = addMin(new Date(), HOLD_MIN).toISOString();   // keep the hold alive for the next reply
+    await postDraft(state, contactId, `${read.answered.length ? 'Got it, thanks. Which' : 'Which'} works better for a call, ${hold.slots.map((s) => fmt(new Date(s), TZ)).join(' or ')}? Or tell me a time that suits you.`);
     return;
   }
 
+  // 4. Conversation.
   const res = await handleInquiry({ fromName: contact.name || '', fromEmail: contact.email || `${contact.phone || contactId}@sms`, subject: '(text)', body: text, history: mem.history.slice(0, -1), known: mem.known });
   const tag = res.intent === 'inquiry' ? (res.qualified ? 'QUALIFIED' : 'inquiry, not qualified') : res.intent;
-  say(`  ${firstName(contact) || contactId}: [${tag}] ${res.reason || ''}`);
+  say(`  ${who}: [${tag}] ${res.reason || ''}`);
   if (res.known && res.known.length) say(`     known: ${res.known.join(' | ')}`);
   if (res.missing && res.missing.length) say(`     still needed: ${res.missing.join(' | ')}`);
   if (res.intent !== 'inquiry') return;
@@ -266,42 +272,44 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
     ...(res.missing || []).map((m) => `still needed: ${m}`),
     res.need ? `wants: ${res.need}` : null,
   ].filter(Boolean);
-  await write('add note', () => ghl.addNote(contactId, noteLines.join('\n')), { contactId, lines: noteLines.length });
+  await write('add note', () => ghl.addNote(contactId, noteLines.join(String.fromCharCode(10))), { contactId, lines: noteLines.length });
   const tags = ['agent-read', res.qualified ? 'qualified' : 'needs-qualifying'];
   if (/\bva\b/i.test((res.known || []).join(' '))) tags.push('va');
   await write('add tags', () => ghl.addTags(contactId, tags), { contactId, tags });
 
-  if (!res.qualified || !res.draft) return;
+  // A real person who is not (yet) qualified still gets a short draft: "hi" deserves "hi, what are
+  // you looking for?". Only spam, out of scope and other are left unanswered.
+  if (!res.draft) return;
 
-  // A qualified lead is always offered times. The model's `booking` flag was the gate and it
-  // flipped on identical text between runs (2026-09-09), which meant a lead sometimes got no
-  // offer and their next reply had no hold to match. Sofia's whole ask is booking; offer it.
-  // Skip only when this contact already has a live hold or a booked call.
-  let draft = res.draft.trim();
-  const alreadyBooked = state.appointments.some((a) => a.contactId === contactId && new Date(a.at) > new Date());
-  if (fd.calendarId !== undefined && !holding && !alreadyBooked) {
+  // WORTH HER TIME? The offer of a call comes only once the lead has answered enough: never on
+  // their first text (one text is a request, two is a conversation), then when three of her facts
+  // are in or they have replied a third time. Configurable per client as frontDesk.offerAfterKnown.
+  // When it goes, it goes alone: the model's questions are dropped so the text has one job and the
+  // reply can only mean a time. Aidan, 2026-09-09: "call can come after you've verified they're
+  // worthy of your time."
+  const theirTurns = mem.history.filter((h) => h.who === 'them').length;
+  const worthACall = theirTurns >= 2 && (mem.known.length >= (fd.offerAfterKnown || 3) || theirTurns >= 3);
+  if (fd.calendarId !== undefined && !booked && worthACall) {
+    const firstSentence = (res.draft.trim().match(/^[^.!?]*[.!?]/) || [res.draft.trim()])[0].trim();
+    const ack = /\?$/.test(firstSentence) ? 'Thanks, that is everything I need for now.' : firstSentence.replace(/^Hi [^,]+,\s*/i, '').replace(/^[a-z]/, (c) => c.toUpperCase());
     const { offered, skipped } = findFreeSlots(await busyEvents(state), RULES);
     if (offered.length) {
-      draft += `\n\nI can call you ${offered.map((d) => fmt(d, TZ)).join(' or ')}. Which works better, or is there a time that suits you more?`;
-      state.holds[contactId] = { slots: offered.map((d) => d.toISOString()), kind: 'call', expires: addMin(new Date(), HOLD_MIN).toISOString(), known: res.known || [], missing: res.missing || [] };
       if (skipped.length) say(`     held ${offered.length} slot(s); skipped ${skipped[0].reason}`);
+      state.holds[contactId] = { slots: offered.map((d) => d.toISOString()), kind: 'call', expires: addMin(new Date(), HOLD_MIN).toISOString(), known: mem.known, missing: mem.missing };
+      await postDraft(state, contactId, `${ack}\n\nI can call you ${offered.map((d) => fmt(d, TZ)).join(' or ')}. Which works better, or is there a time that suits you more?`);
+      return;
     }
   }
 
+  const draft = res.draft.trim();
   if (cfg.autoSend === true && process.env.GHL_ARMED === 'true' && !DRY) {
     await ghl.sendMessage({ contactId, message: draft });
     await ghl.addTags(contactId, ['agent-sent']);
+    remember(state, contactId, 'me', draft);
     say('     sent (autoSend on)');
     return;
   }
-
-  // Approval first. The draft lives as an internal comment the client sees in the conversation,
-  // and the contact carries agent-draft until they add agent-send or handle it themselves.
-  await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
-  await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
-  state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
-    remember(state, contactId, 'me', draft);
-  say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+  await postDraft(state, contactId, draft);
 }
 
 (async () => {

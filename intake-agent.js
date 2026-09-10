@@ -174,6 +174,7 @@ const CONFIGS = {
       'that a showing or viewing will happen at a particular time or day (times are offered separately, as a call)',
       'a price, rate, payment, or what a home will appraise or sell for',
       'anything about a specific property that is not in the message',
+      'that a call, showing or appointment has been booked, moved or confirmed (booking is done by the calendar code, never by the draft; the draft never says "I have you down", "I have booked", "see you at")',
     ],
     voice: 'warm, direct and brief; writes like a busy broker on her phone between showings. Always I, never we, she works alone. Opens with "Hi" and their first name, then a comma. Plain sentences. Every question ends with a question mark, no real estate jargon, no exclamation marks. Never "thank you for your service", never congratulations, never a line about how many people she has helped or how often she does this; she said on the 3rd that she does not want hype. Answer what they asked, then one or two questions.',
     qualify: 'A good inquiry is any real person looking for a place to live in the South Puget Sound area: buying, selling, or renting, a house, condo, apartment or townhome, at any budget. Most often a service member or spouse with PCS orders to or from JBLM. "Apartments around 400k" is a condo buyer. A renter is still qualified: she wants every real person texted back and handed to the right place. NOT qualified: vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone clearly outside Washington.',
@@ -449,13 +450,14 @@ ${CFG.askFor.map((q) => `    - ${q}`).join('\n')}
   ones in "missing". Never guess a value that is not in the conversation, and never ask about
   something already answered.` : ''}
 
-STEP 3 - Only if intent is "inquiry" AND qualified: write a reply draft.
+STEP 3 - If intent is "inquiry": write a reply draft. If NOT qualified but it is a real person (a bare "hi", a vague "looking around", a renter), the draft is one or two friendly sentences asking what they are looking for; never leave a real person unanswered.
 - Address them by first name if you can infer it.
 - In the owner's voice (${CFG.voice}). 3-6 sentences, plain English, no buzzwords, no em dashes.
 - Acknowledge their specific need, give one genuinely useful line (reassurance or a clarifying question), and move toward the next step.
 ${(CFG.askFor && CFG.askFor.length) ? `- Ask for AT MOST TWO of the missing facts, the two that matter most for this particular message. A reply that asks for six things reads like a form and gets ignored. The rest can be asked later.` : ''}
 ${CFG.bookingLink ? `- If booking is true, invite them to grab a time and include this exact link on its own line: ${CFG.bookingLink}` : ''}
 - Do NOT quote a firm price, invent details, or overpromise. No sign-off (added separately).
+- Do NOT offer, propose, confirm or refer to call times or appointments in any way. Times are offered by separate code after this reply. If the lead mentions a time, do not respond to that part; the calendar code handles it.
 ${(CFG.neverSay && CFG.neverSay.length) ? `- Things ${CFG.ownerName} can only know by checking, so the draft must NEVER state or promise them:
 ${CFG.neverSay.map((q) => `    - ${q}`).join('\n')}
   If the message asks about one of these, say you will check and come back to them, in one plain sentence.` : ''}
@@ -477,7 +479,12 @@ Respond with JSON only:
     const m = raw.match(/\{[\s\S]*\}/);
     if (!m) return { intent: 'other', qualified: false, reason: 'unparseable', draft: '' };
     const res = JSON.parse(m[0]);
-    if (res.draft) res.draft = stripNeverWrite(res.draft, CFG.neverWrite);
+    if (res.draft) {
+      res.draft = stripNeverWrite(res.draft, CFG.neverWrite);
+      // Stripping can take the greeting with it. The voice says every reply opens "Hi <name>,".
+      const first = String(msg.fromName || '').trim().split(/\s+/)[0];
+      if (res.draft && !/^hi\b/i.test(res.draft)) res.draft = `Hi ${first || 'there'}, ${res.draft.charAt(0).toLowerCase() + res.draft.slice(1)}`;
+    }
     return res;
   } catch (err) {
     return { intent: 'other', qualified: false, reason: `classifier error: ${err.message}`, draft: '' };
