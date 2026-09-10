@@ -357,9 +357,9 @@
     await sleep(2600);
 
     // 6. A listing question, as one clear conversation on the phone, then the flag in her inbox.
-    await show('s-phone');
     $('thread').innerHTML = '<div class="stamp">Text Message · SMS</div>';
     $('who').textContent = 'Priya Lindqvist'; $('av').textContent = 'PL';
+    await show('s-phone');
     await caption('cap-phone', 'A new lead asks about a listing from your ad.');
     await sleep(500);
     await type('is the DuPont house on Idlewood from your ad still available? could we see it this weekend');
@@ -388,8 +388,8 @@
     await sleep(1800);
 
     // 8. Reschedule.
-    await show('s-phone');
     $('thread').innerHTML = '<div class="stamp">Text Message · SMS</div>';
+    await show('s-phone');
     await bubble('me', 'You are booked for Thu Sep 10, 1:00 PM. I will call you then. Reply here if anything changes.');
     await caption('cap-phone', 'Plans change. It reads what people actually type.');
     await type('sorry something came up, can we do friday morning instead'); await bubble('them', 'sorry something came up, can we do friday morning instead');
@@ -400,7 +400,8 @@
     await sleep(500);
     await bubble('me', 'Moved you to Fri Sep 11, 10:45 AM. I will call you then. Reply here if anything changes.');
     await sleep(1400);
-    $('thread').innerHTML = '<div class="stamp">Text Message · SMS</div>';
+    $('thread').style.transition='opacity 300ms'; $('thread').style.opacity=0; await sleep(320);
+    $('thread').innerHTML = '<div class="stamp">Text Message · SMS</div>'; $('thread').style.opacity=1; await sleep(320);
     await caption('cap-phone', 'Cancellations too. Nothing is left hanging on your calendar.');
     await bubble('me', 'Moved you to Fri Sep 11, 10:45 AM. I will call you then. Reply here if anything changes.');
     await sleep(400);
