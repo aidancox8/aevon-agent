@@ -23,7 +23,25 @@ function parsePreference(text, now = new Date(), timezone = 'America/Los_Angeles
   let dayOffset = null, hours = null, at = null;
   const label = [];
 
-  if (/\btomorrow\b/.test(t)) { dayOffset = 1; label.push('tomorrow'); }
+  // "Sep 12", "sept 12th", "9/12", "the 12th": a calendar date, resolved to the next such day.
+  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const md = t.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/) || t.match(/\b(\d{1,2})\/(\d{1,2})\b/) || t.match(/\bthe\s+(\d{1,2})(?:st|nd|rd|th)\b/);
+  let dateHit = null;
+  if (md) {
+    let mo, d;
+    if (md[0].includes('/')) { mo = parseInt(md[1], 10) - 1; d = parseInt(md[2], 10); }
+    else if (/^the/.test(md[0])) { mo = today.mo - 1; d = parseInt(md[1], 10); if (d < today.d) mo += 1; }
+    else { mo = MONTHS.indexOf(md[1].slice(0, 3)); d = parseInt(md[2], 10); }
+    if (mo >= 0 && d >= 1 && d <= 31) {
+      let y = today.y;
+      if (mo < today.mo - 1 || (mo === today.mo - 1 && d < today.d)) y += 1;   // already passed this year
+      const target = Date.UTC(y, mo, d, 12);
+      const base = Date.UTC(today.y, today.mo - 1, today.d, 12);
+      dateHit = Math.round((target - base) / 86400000);
+    }
+  }
+  if (dateHit !== null && dateHit >= 0 && dateHit <= 60) { dayOffset = dateHit; label.push(new Date(Date.UTC(today.y, today.mo - 1, today.d + dateHit, 12)).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' })); }
+  else if (/\btomorrow\b/.test(t)) { dayOffset = 1; label.push('tomorrow'); }
   else if (/\btoday\b/.test(t)) { dayOffset = 0; label.push('today'); }
   else {
     for (let i = 0; i < 7; i++) {

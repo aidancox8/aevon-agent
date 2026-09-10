@@ -182,8 +182,10 @@ async function offerFor(state, contactId, contact, pref, kind, carry) {
     say(`  ${who}: ${pref ? `asked for ${pref.label}; ` : ''}offered ${keep.length} slot(s)`);
     say(`     offered slots: ${keep.map((d) => d.toISOString()).join(', ')}`);
   } else {
-    const { offered: near } = findFreeSlots(await busyEvents(state), RULES);
-    draft = `Nothing open ${pref ? pref.label : 'then'}, sorry. I can call you ${near.map((d) => fmt(d, TZ)).join(' or ')} instead. Would either of those work?`;
+    // Same day first, then anything. "I am with a client then" is how she would put it.
+    const sameDay = day ? findFreeSlots(await busyEvents(state), { ...rules, hours: RULES.hours, offer: 6 }).offered.filter((d) => onDay(d, day, TZ)).slice(0, RULES.offer || 2) : [];
+    const near = sameDay.length ? sameDay : findFreeSlots(await busyEvents(state), RULES).offered;
+    draft = `I am with a client ${pref ? pref.label.replace(/^(\w{3}, \w{3} \d{1,2}) (\d)/, '$1 at $2') : 'then'}, sorry. ${sameDay.length ? 'Same day I could do' : 'I could do'} ${near.map((d) => fmt(d, TZ)).join(' or ')}. Would either of those work?`;
     state.holds[contactId] = { slots: near.map((d) => d.toISOString()), kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: carry.known || [], missing: carry.missing || [] };
     say(`  ${who}: asked for ${pref ? pref.label : 'a time'}; nothing free, offered nearest`);
     say(`     offered slots: ${near.map((d) => d.toISOString()).join(', ')}`);
@@ -220,7 +222,10 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
 
   // 2. A day or time, held or not. After a booking this is a reschedule.
   const pref = parsePreference(text, new Date(), TZ);
-  if (pref && (holding || booked || /\b(resched|move|change|instead|rather|better|works|prefer|can we|could we|how about|what about)\b/i.test(text))) {
+  // A named day or date, or a clock time, is time-talk on its own ("Wed sep 16 10 am"); a bare
+  // part of day ("mornings are better") needs a hold, a booking, or a scheduling word around it.
+  const explicit = !!(pref && (pref.at || pref.dayOffset !== null));
+  if (pref && (holding || booked || explicit || /\b(resched|move|change|instead|rather|better|works|prefer|can we|could we|how about|what about)\b/i.test(text))) {
     if (booked) say(`  ${who}: wants to move the ${fmt(new Date(booked.at), TZ)} call`);
     // An exact day and clock time that is free ("Thursday 12:45 pls") is a pick, not a
     // preference: book it. A day alone, or a taken time, gets the two-slot offer.
