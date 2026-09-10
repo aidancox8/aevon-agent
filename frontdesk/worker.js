@@ -45,6 +45,7 @@ const { handleInquiry, CONFIGS } = require('../intake-agent');
 const ghl = require('../lib/ghl');
 const { findFreeSlots, fmt, addMin } = require('./slots');
 const { parsePreference, narrowRules, onDay } = require('./preference');
+const { pickSlot } = require('./pick');
 
 const cfg = CONFIGS[CLIENT];
 if (!cfg) throw new Error(`no client config named "${CLIENT}"`);
@@ -97,8 +98,8 @@ function firstName(contact) {
 }
 
 /** The lead typed C (or yes) to the first slot we offered. Book it. */
-async function confirm(state, contactId, contact, hold) {
-  const slot = new Date(hold.slots[0]);
+async function confirm(state, contactId, contact, hold, which = 0) {
+  const slot = new Date(hold.slots[which] || hold.slots[0]);
   const title = `${hold.kind === 'showing' ? 'Showing' : 'Call'} with ${cfg.ownerName}, ${firstName(contact) || 'lead'}`;
   await write('create appointment', () => ghl.createAppointment({ calendarId: fd.calendarId, contactId, startTime: slot.toISOString(), title }),
     { contactId, startTime: slot.toISOString(), title });
@@ -130,16 +131,19 @@ async function sendApproved(state, contactId) {
 
 async function handleInbound(state, { contactId, contact, text, messageId }) {
   const hold = state.holds[contactId];
-  if (hold && new Date(hold.expires) > new Date() && /^\s*(c|yes|y|confirm)\s*[.!]?\s*$/i.test(text)) {
-    say(`  ${firstName(contact) || contactId}: confirmed slot 1`);
-    await confirm(state, contactId, contact, hold);
+  const holding = !!(hold && new Date(hold.expires) > new Date());
+  // C, yes, "the second one", "1:15", "Sep 10 115 works": all picks of an offered slot.
+  const picked = holding ? pickSlot(text, hold.slots, TZ) : null;
+  if (picked !== null) {
+    say(`  ${firstName(contact) || contactId}: confirmed slot ${picked + 1}`);
+    await confirm(state, contactId, contact, hold, picked);
     return;
   }
 
   // "Wednesday morning works better." The offer said "tell me what works", so read the answer and
   // offer again inside it. Still a draft for approval; only C books. Found missing in rehearsal
   // 2026-09-08, when this reply was filed as an existing conversation and went nowhere.
-  if (hold && new Date(hold.expires) > new Date()) {
+  if (holding) {
     const pref = parsePreference(text, new Date(), TZ);
     if (pref) {
       const { rules, day } = narrowRules(RULES, pref);
@@ -150,13 +154,13 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
       const who = firstName(contact) || contactId;
       let draft;
       if (keep.length) {
-        draft = `Hi ${firstName(contact) || 'there'}, ${pref.label} works. I can do ${keep.map((d) => fmt(d, TZ)).join(' or ')}. Reply C to take the first.`;
+        draft = `Hi ${firstName(contact) || 'there'}, ${pref.label} works. I can call you ${keep.map((d) => fmt(d, TZ)).join(' or ')}. Reply 1 or 2.`;
         state.holds[contactId] = { slots: keep.map((d) => d.toISOString()), kind: hold.kind, expires: addMin(new Date(), HOLD_MIN).toISOString() };
         say(`  ${who}: asked for ${pref.label}; re-offered ${keep.length} slot(s)`);
       } else {
         // Nothing free in what they asked for. Say so and offer the nearest, rather than silence.
         const { offered: near } = findFreeSlots(await busyEvents(state), RULES);
-        draft = `Hi ${firstName(contact) || 'there'}, nothing open ${pref.label}, sorry. Closest I have is ${near.map((d) => fmt(d, TZ)).join(' or ')}. Reply C to take the first, or tell me another time.`;
+        draft = `Hi ${firstName(contact) || 'there'}, nothing open ${pref.label}, sorry. I can call you ${near.map((d) => fmt(d, TZ)).join(' or ')} instead. Reply 1 or 2, or tell me another time.`;
         state.holds[contactId] = { slots: near.map((d) => d.toISOString()), kind: hold.kind, expires: addMin(new Date(), HOLD_MIN).toISOString() };
         say(`  ${who}: asked for ${pref.label}; nothing free, offered nearest`);
       }
@@ -166,6 +170,19 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
       say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
       return;
     }
+  }
+
+  // Holding, and the reply is neither a pick nor a time we can read ("9 30", "let me check with
+  // my wife"). Filing it as an existing thread said "no draft, not on the pipeline" about a lead
+  // mid-booking (rehearsal 2026-09-09). Ask which, and keep the hold.
+  if (holding) {
+    const draft = `Hi ${firstName(contact) || 'there'}, just so I book the right one: ${hold.slots.map((s, i) => `${i + 1}) ${fmt(new Date(s), TZ)}`).join(' or ')}? Reply 1 or 2, or tell me another time.`;
+    say(`  ${firstName(contact) || contactId}: replied mid-booking, could not read a time; asking which`);
+    await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
+    await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
+    state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
+    say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+    return;
   }
 
   const res = await handleInquiry({ fromName: contact.name || '', fromEmail: contact.email || `${contact.phone || contactId}@sms`, subject: '(text)', body: text });
@@ -195,7 +212,7 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
   if (res.booking && fd.calendarId !== undefined) {
     const { offered, skipped } = findFreeSlots(await busyEvents(state), RULES);
     if (offered.length) {
-      draft += `\n\nI can do ${offered.map((d) => fmt(d, TZ)).join(' or ')}. Reply C to take the first, or tell me what works.`;
+      draft += `\n\nI can call you ${offered.map((d) => fmt(d, TZ)).join(' or ')}. Reply 1 or 2, or tell me what works.`;
       state.holds[contactId] = { slots: offered.map((d) => d.toISOString()), kind: 'call', expires: addMin(new Date(), HOLD_MIN).toISOString() };
       if (skipped.length) say(`     held ${offered.length} slot(s); skipped ${skipped[0].reason}`);
     }

@@ -47,6 +47,8 @@
   .compose .plus { width: 34px; height: 34px; border-radius: 50%; background: #1c1c1e; color: #9a9aa0; display: grid; place-items: center; font-size: 22px; font-weight: 300; }
   .compose input { flex: 1; background: #000; color: #fff; border: 1px solid #333338; border-radius: 20px; padding: 8px 14px; font: inherit; font-size: 16px; outline: none; }
   .compose input:focus { border-color: #55555b; }
+  input[type=search] { -webkit-appearance: none; appearance: none; }
+  input[type=search]::-webkit-search-decoration, input[type=search]::-webkit-search-cancel-button { display: none; }
   .compose button { background: var(--bubble-me); color: #fff; border: 0; border-radius: 50%; width: 32px; height: 32px; font-weight: 800; cursor: pointer; font-size: 16px; }
   .compose button:disabled { opacity: .35; cursor: default; }
   .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 130px; height: 5px; border-radius: 3px; background: #fff; opacity: .9; }
@@ -131,7 +133,7 @@
 <header>
   <h1>Skyline <span>Front Desk</span></h1>
   <span class="sub">Left, the lead's phone. Right, Sofia's inbox. Nothing reaches the lead until she taps Approve.</span>
-  <label>lead <input id="who" value="Marcus Ellison"></label>
+  <label>lead <input id="who" value="Marcus Ellison" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" type="search"></label>
   <button id="reset">start over</button>
 </header>
 
@@ -142,7 +144,7 @@
     <div class="thread" id="thread"><div class="stamp">Text Message · SMS</div></div>
     <div class="compose">
       <div class="plus">+</div>
-      <input id="msg" placeholder="Text Message" autocomplete="off">
+      <input id="msg" placeholder="Text Message" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" name="sms-body" type="search">
       <button id="send" title="send">↑</button>
     </div>
     <div class="home"></div>
