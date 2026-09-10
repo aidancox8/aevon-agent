@@ -41,7 +41,7 @@ const KEEP = args.includes('--keep');
 
 // intake-agent picks its config from argv at load, so name the client before requiring it.
 process.argv.push('--config', CLIENT);
-const { handleInquiry, CONFIGS } = require('../intake-agent');
+const { handleInquiry, readBookingReply, CONFIGS } = require('../intake-agent');
 const ghl = require('../lib/ghl');
 const { findFreeSlots, fmt, addMin } = require('./slots');
 const { parsePreference, narrowRules, onDay } = require('./preference');
@@ -172,12 +172,35 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
     }
   }
 
-  // Holding, and the reply is neither a pick nor a time we can read ("9 30", "let me check with
-  // my wife"). Filing it as an existing thread said "no draft, not on the pipeline" about a lead
-  // mid-booking (rehearsal 2026-09-09). Ask which, and keep the hold.
+  // Holding, and the rules could not read the reply. Ask the model the right question, with the
+  // offered slots in front of it: which one, a different time, a no, or unclear. A pick books;
+  // a different time is re-offered through the rules; a no releases the hold and drafts a
+  // graceful close; unclear asks which. Filing it as an existing thread said "no draft, not on
+  // the pipeline" about a lead mid-booking (rehearsal 2026-09-09).
   if (holding) {
+    const who = firstName(contact) || contactId;
+    const read = await readBookingReply({ text, slots: hold.slots, timezone: TZ });
+    say(`  ${who}: mid-booking, model read it as ${read.kind}${read.note ? ` (${read.note})` : ''}`);
+    if (read.kind === 'pick' && read.slot !== null) {
+      say(`  ${who}: confirmed slot ${read.slot + 1}`);
+      await confirm(state, contactId, contact, hold, read.slot);
+      return;
+    }
+    if (read.kind === 'other_time' && read.when) {
+      const pref = parsePreference(read.when, new Date(), TZ);
+      if (pref) return handleInbound(state, { contactId, contact, text: read.when, messageId });
+    }
+    if (read.kind === 'decline') {
+      delete state.holds[contactId];
+      const draft = `Hi ${firstName(contact) || 'there'}, no problem. When the timing is better, text me here and I will find you a time.`;
+      await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
+      await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
+      state.drafts[contactId] = { text: draft, at: new Date().toISOString() };
+      say('     draft:\n' + draft.split('\n').map((l) => '       ' + l).join('\n'));
+      return;
+    }
     const draft = `Hi ${firstName(contact) || 'there'}, just so I book the right one: ${hold.slots.map((s, i) => `${i + 1}) ${fmt(new Date(s), TZ)}`).join(' or ')}? Reply 1 or 2, or tell me another time.`;
-    say(`  ${firstName(contact) || contactId}: replied mid-booking, could not read a time; asking which`);
+    say(`  ${who}: asking which`);
     await write('post draft as internal comment', () => ghl.sendMessage({ contactId, message: `DRAFT for your OK (add tag agent-send to send):\n\n${draft}`, type: 'InternalComment' }), { contactId });
     await write('tag agent-draft', () => ghl.addTags(contactId, ['agent-draft']), { contactId, tags: ['agent-draft'] });
     state.drafts[contactId] = { text: draft, at: new Date().toISOString() };

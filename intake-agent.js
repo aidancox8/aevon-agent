@@ -665,6 +665,37 @@ if (require.main === module) {
   run().catch(err => { console.error('Fatal error:', err.message); process.exit(1); });
 }
 
+/**
+ * The model's read of a reply to a slot offer, used only after the rules could not read it.
+ *
+ * "Sep 10 115 works" (rehearsal 2026-09-09) was not a time the rules knew, so it went to the
+ * classifier, which was asked "is this a new inquiry?" and truthfully said no, and the lead's
+ * acceptance went nowhere. Wrong question. This asks the right one, with the offered slots in
+ * front of the model, and its answer is one of: a slot index, a different time they named, a
+ * decline, or unclear. It never books on its own: the caller books only on a slot index, and
+ * everything else becomes a draft for the owner.
+ */
+async function readBookingReply({ text, slots, timezone }) {
+  const list = slots.map((iso, i) => `${i + 1}) ${new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))}`).join('\n');
+  const prompt = `A lead was offered these call times by text:
+${list}
+The lead replied: "${text}"
+
+Decide what they mean. Reply with JSON only:
+{"kind": "pick" | "other_time" | "decline" | "unclear", "slot": <1-based number or null>, "when": "<their words for a different time, or empty>", "note": "<one short line>"}
+Rules: "pick" only if they clearly chose one of the listed times (by number, by time such as 115 or 1:15 for 1:15 PM, by "first/second/later/earlier", or plain agreement like yes/ok/sounds good). "other_time" if they name a different day or time. "decline" if they say no or not now. Otherwise "unclear". Never guess.`;
+  try {
+    const raw = await generate(prompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return { kind: 'unclear', slot: null, when: '', note: 'unparseable' };
+    const r = JSON.parse(m[0]);
+    const slot = Number.isInteger(r.slot) && r.slot >= 1 && r.slot <= slots.length ? r.slot - 1 : null;
+    return { kind: r.kind === 'pick' && slot === null ? 'unclear' : r.kind, slot, when: String(r.when || ''), note: String(r.note || '') };
+  } catch (e) {
+    return { kind: 'unclear', slot: null, when: '', note: `model error: ${e.message}` };
+  }
+}
+
 module.exports = {
   autonomy,
   draftIsSafeToSend,
@@ -675,6 +706,7 @@ module.exports = {
   // Exported for demo/skyline-demo.js, which reuses the same classifier and config
   // rather than re-implementing the prompt. Nothing here changes CLI behaviour.
   handleInquiry,
+  readBookingReply,
   CONFIGS,
   nameOf,
   addressOf,
