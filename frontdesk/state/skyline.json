@@ -1,0 +1,67 @@
+{
+ "processed": [],
+ "drafts": {
+  "sim_12535551377": {
+   "text": "Hi Marcus, Wednesday morning works. I can call you Wed Sep 16, 9:00 AM or Wed Sep 16, 11:30 AM. Which works better?",
+   "at": "2026-09-10T06:22:29.277Z"
+  }
+ },
+ "holds": {},
+ "appointments": [
+  {
+   "contactId": "sim_12535551377",
+   "at": "2026-09-16T16:00:00.000Z",
+   "title": "Call with Sofia, Marcus",
+   "remindAt": "2026-09-16T15:30:00.000Z",
+   "reminded": false
+  }
+ ],
+ "contacts": {
+  "sim_12535551377": {
+   "history": [
+    {
+     "who": "them",
+     "text": "just got orders to JBLM, need a 3br off base, wife and 2 kids, report date Oct 15",
+     "at": "2026-09-10T06:22:24.985Z"
+    },
+    {
+     "who": "me",
+     "text": "Hi Marcus, I can help you find a house near JBLM for your move. Are you planning to use a VA loan, and do you have a price range in mind? I will keep an eye out for 3br homes that fit your criteria.\n\nI can call you Thu Sep 10, 9:00 AM or Thu Sep 10, 12:45 PM. Which works better, or is there a time that suits you more?",
+     "at": "2026-09-10T06:22:26.728Z"
+    },
+    {
+     "who": "them",
+     "text": "Wednesday morning works better for me",
+     "at": "2026-09-10T06:22:29.272Z"
+    },
+    {
+     "who": "me",
+     "text": "Hi Marcus, Wednesday morning works. I can call you Wed Sep 16, 9:00 AM or Wed Sep 16, 11:30 AM. Which works better?",
+     "at": "2026-09-10T06:22:29.277Z"
+    },
+    {
+     "who": "them",
+     "text": "C",
+     "at": "2026-09-10T06:22:31.594Z"
+    },
+    {
+     "who": "me",
+     "text": "You are booked with Sofia for Wed Sep 16, 9:00 AM. Reply here if anything changes.",
+     "at": "2026-09-10T06:22:31.595Z"
+    }
+   ],
+   "known": [
+    "report date: Oct 15",
+    "orders: in hand",
+    "need: 3br house",
+    "location: off base"
+   ],
+   "missing": [
+    "VA or conventional financing",
+    "price range",
+    "maximum commute distance",
+    "home to sell at previous duty station"
+   ]
+  }
+ }
+}

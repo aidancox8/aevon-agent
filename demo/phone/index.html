@@ -4,135 +4,232 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Skyline Front Desk</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
+  /* GoHighLevel's Conversations view, as it looks in a real sub-account (two screenshots from a
+     live one, 2026-09-09): near-black nav, #155EEF primary, #F3F4F6 paper, 13px Inter, 6px radii. */
   :root {
-    --bg: #0C0E0D; --ink: #ECEEEA; --ink-2: #B7BDB5; --ink-3: #858C84; --accent: #9DBFA1; --line-dark: #262B28;
-    --phone: #0A0A0B; --screen: #000; --bubble-them: #26262A; --bubble-me: #34C759; --bubble-me-ink: #FFFFFF; --ios-muted: #8E8E93;
-    --paper: #F6F7F8; --card: #FFFFFF; --p-ink: #171B20; --p-2: #5A6470; --p-3: #8A93A0; --line: #E3E6EA;
-    --draft: #FFF6DC; --draft-line: #E9C46A; --draft-ink: #7A5200;
-    --ok: #1B7A4E; --ok-soft: #E3F4EA; --blue: #2457D6; --blue-soft: #E8EEFF; --red: #B3261E; --red-soft: #FBEAE9;
+    --bg: #0C0E0D; --ink: #ECEEEA; --ink-3: #858C84; --accent: #9DBFA1; --line-dark: #262B28;
+    --phone: #0A0A0B; --bubble-them: #26262A; --bubble-me: #34C759; --ios-muted: #8E8E93;
+    --nav: #0F172A; --nav-2: #1E293B; --nav-ink: #CBD5E1; --nav-dim: #94A3B8;
+    --blue: #155EEF; --blue-soft: #EFF4FF; --blue-line: #B2CCFF;
+    --paper: #F3F4F6; --card: #FFFFFF; --t1: #101828; --t2: #475467; --t3: #98A2B3; --line: #EAECF0;
+    --green: #12B76A; --green-soft: #ECFDF3; --green-ink: #027A48; --amber: #F79009; --amber-soft: #FFFAEB; --amber-ink: #B54708; --red: #F04438; --red-soft: #FEF3F2; --red-ink: #B42318;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
-  header { display: flex; align-items: center; gap: 16px; padding: 18px 28px 0; }
-  header h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; -webkit-font-smoothing: antialiased; }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px 0; }
+  header h1 { font-size: 15px; font-weight: 700; margin: 0; }
   header h1 span { color: var(--accent); }
-  header .sub { color: var(--ink-3); font-size: 13.5px; }
-  header label { margin-left: auto; color: var(--ink-3); font-size: 13px; display: flex; align-items: center; gap: 8px; }
-  header input { background: #161A18; color: var(--ink); border: 1px solid var(--line-dark); border-radius: 6px; padding: 6px 9px; font: inherit; font-size: 13.5px; width: 170px; }
-  header button { background: transparent; color: var(--ink-2); border: 1px solid var(--line-dark); border-radius: 6px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; }
-  header button:hover { border-color: var(--ink-3); }
-  .stage { display: grid; grid-template-columns: 384px 1fr; gap: 36px; padding: 20px 28px 28px; max-width: 1400px; margin: 0 auto; align-items: start; }
+  header .sub { color: var(--ink-3); font-size: 12.5px; }
+  header label { margin-left: auto; color: var(--ink-3); font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+  header input { background: #161A18; color: var(--ink); border: 1px solid var(--line-dark); border-radius: 6px; padding: 5px 9px; font: inherit; width: 170px; }
+  header button { background: transparent; color: var(--ink); border: 1px solid var(--line-dark); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  input[type=search] { -webkit-appearance: none; appearance: none; }
+  input[type=search]::-webkit-search-decoration, input[type=search]::-webkit-search-cancel-button { display: none; }
+  .stage { display: grid; grid-template-columns: 330px 1fr; gap: 20px; padding: 14px 20px 22px; max-width: 1800px; margin: 0 auto; align-items: start; }
 
   /* ---- the lead's phone ---- */
-  .phone { width: 384px; height: 812px; background: var(--phone); border-radius: 48px; padding: 12px; box-shadow: 0 40px 90px rgba(0,0,0,.65), 0 0 0 1.5px #303236, inset 0 0 0 2px #1a1b1e; }
-  .screen { background: var(--screen); border-radius: 38px; height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-  .status { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 14px 26px 0; font-size: 14px; font-weight: 700; color: #fff; }
-  .status .isl { width: 118px; height: 32px; background: #000; border-radius: 20px; justify-self: center; box-shadow: 0 0 0 1px #111; }
-  .status .r { text-align: right; font-size: 12px; letter-spacing: .02em; }
+  .phone { width: 330px; height: 790px; background: var(--phone); border-radius: 46px; padding: 11px; box-shadow: 0 40px 90px rgba(0,0,0,.65), 0 0 0 1.5px #303236, inset 0 0 0 2px #1a1b1e; }
+  .screen { background: #000; border-radius: 36px; height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .status { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 13px 24px 0; font-size: 14px; font-weight: 700; color: #fff; }
+  .status .isl { width: 112px; height: 30px; background: #000; border-radius: 20px; justify-self: center; box-shadow: 0 0 0 1px #111; }
+  .status .r { text-align: right; font-size: 12px; }
   .topbar { text-align: center; padding: 8px 16px 10px; border-bottom: 1px solid #1c1c1f; }
-  .topbar .avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(180deg,#A6ACB5,#7A8290); margin: 0 auto 4px; display: grid; place-items: center; font-weight: 700; color: #fff; font-size: 19px; }
+  .topbar .avatar { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(180deg,#A6ACB5,#7A8290); margin: 0 auto 4px; display: grid; place-items: center; font-weight: 700; color: #fff; font-size: 18px; }
   .topbar .who { font-size: 12.5px; color: #f2f2f2; }
   .topbar .num { font-size: 11px; color: var(--ios-muted); }
   .thread { flex: 1; overflow-y: auto; padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 4px; }
   .thread::-webkit-scrollbar { width: 0; }
   .stamp { font-size: 11px; color: var(--ios-muted); text-align: center; margin: 8px 0 6px; font-weight: 600; }
-  .b { max-width: 80%; padding: 8px 13px; border-radius: 18px; line-height: 1.35; font-size: 16px; white-space: pre-wrap; animation: pop .18s ease-out; position: relative; }
+  .b { max-width: 82%; padding: 8px 13px; border-radius: 18px; line-height: 1.35; font-size: 15.5px; white-space: pre-wrap; animation: pop .18s ease-out; }
   .b.them { background: var(--bubble-them); color: #fff; align-self: flex-start; border-bottom-left-radius: 5px; }
-  .b.me { background: var(--bubble-me); color: var(--bubble-me-ink); align-self: flex-end; border-bottom-right-radius: 5px; }
+  .b.me { background: var(--bubble-me); color: #fff; align-self: flex-end; border-bottom-right-radius: 5px; }
   .b.me + .delivered { align-self: flex-end; font-size: 11px; color: var(--ios-muted); margin: -1px 8px 4px 0; font-weight: 600; }
   .compose { display: flex; gap: 8px; padding: 8px 12px 26px; align-items: center; }
-  .compose .plus { width: 34px; height: 34px; border-radius: 50%; background: #1c1c1e; color: #9a9aa0; display: grid; place-items: center; font-size: 22px; font-weight: 300; }
-  .compose input { flex: 1; background: #000; color: #fff; border: 1px solid #333338; border-radius: 20px; padding: 8px 14px; font: inherit; font-size: 16px; outline: none; }
+  .compose .plus { width: 32px; height: 32px; border-radius: 50%; background: #1c1c1e; color: #9a9aa0; display: grid; place-items: center; font-size: 20px; }
+  .compose input { flex: 1; background: #000; color: #fff; border: 1px solid #333338; border-radius: 20px; padding: 8px 14px; font: inherit; font-size: 15.5px; outline: none; }
   .compose input:focus { border-color: #55555b; }
-  input[type=search] { -webkit-appearance: none; appearance: none; }
-  input[type=search]::-webkit-search-decoration, input[type=search]::-webkit-search-cancel-button { display: none; }
-  .compose button { background: var(--bubble-me); color: #fff; border: 0; border-radius: 50%; width: 32px; height: 32px; font-weight: 800; cursor: pointer; font-size: 16px; }
+  .compose button { background: var(--bubble-me); color: #fff; border: 0; border-radius: 50%; width: 30px; height: 30px; font-weight: 800; cursor: pointer; font-size: 15px; }
   .compose button:disabled { opacity: .35; cursor: default; }
-  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 130px; height: 5px; border-radius: 3px; background: #fff; opacity: .9; }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 124px; height: 5px; border-radius: 3px; background: #fff; opacity: .9; }
   @keyframes pop { from { transform: translateY(4px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-  /* ---- her inbox ---- */
-  .inbox { background: var(--paper); color: var(--p-ink); border-radius: 16px; height: 812px; display: grid; grid-template-columns: 232px 1fr 272px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
-  .pane { display: flex; flex-direction: column; min-height: 0; }
-  .pane h2 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; color: var(--p-3); margin: 0; padding: 18px 18px 10px; }
-  .contacts { background: #fff; border-right: 1px solid var(--line); }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 18px 18px 6px; font-weight: 800; font-size: 14px; }
-  .brand i { width: 26px; height: 26px; border-radius: 7px; background: var(--p-ink); color: #fff; display: grid; place-items: center; font-style: normal; font-size: 12px; }
-  .brand small { color: var(--p-3); font-weight: 600; margin-left: auto; font-size: 11px; }
-  .contact { padding: 12px 18px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; }
-  .contact.active { background: var(--paper); }
-  .contact .av { width: 36px; height: 36px; border-radius: 50%; background: var(--blue-soft); color: var(--blue); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
-  .contact .n { font-weight: 700; font-size: 14.5px; display: flex; align-items: center; gap: 6px; }
-  .contact .n .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
-  .contact .p { font-size: 12.5px; color: var(--p-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .conv { border-right: 1px solid var(--line); }
-  .conv h2 { display: flex; align-items: baseline; gap: 10px; }
-  .conv h2 b { color: var(--p-ink); font-size: 15px; text-transform: none; letter-spacing: 0; }
-  .items { padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1; min-height: 0; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 15px; line-height: 1.45; animation: pop .18s ease-out; }
-  .card .k { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--p-3); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+  /* ---- GoHighLevel ---- */
+  .ghl { background: var(--paper); color: var(--t1); border-radius: 10px; height: 790px; display: grid; grid-template-columns: 168px 1fr; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+  .nav { background: var(--nav); color: var(--nav-ink); display: flex; flex-direction: column; font-size: 12.5px; }
+  .nav .logo { padding: 14px 16px 6px; font-weight: 700; color: #fff; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .nav .logo i { width: 22px; height: 22px; border-radius: 6px; background: var(--blue); display: inline-block; }
+  .nav .acct { margin: 6px 10px 8px; background: var(--nav-2); border-radius: 6px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; }
+  .nav .acct i { width: 24px; height: 24px; border-radius: 50%; background: #334155; display: grid; place-items: center; font-style: normal; font-size: 10px; font-weight: 700; color: #fff; }
+  .nav .acct b { display: block; font-size: 12px; color: #fff; line-height: 1.15; }
+  .nav .acct small { font-size: 10.5px; color: var(--nav-dim); }
+  .nav .acct .ud { margin-left: auto; color: var(--nav-dim); font-size: 10px; }
+  .nav .srch { margin: 0 10px 10px; background: var(--nav-2); border-radius: 6px; padding: 6px 9px; color: var(--nav-dim); font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .nav .srch em { font-style: normal; background: #334155; border-radius: 3px; padding: 1px 5px; font-size: 10px; color: #E2E8F0; }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 7px 16px; color: var(--nav-ink); text-decoration: none; }
+  .nav a i { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid currentColor; opacity: .55; display: inline-block; }
+  .nav a.on { background: var(--nav-2); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 var(--blue); }
+  .nav a.on i { opacity: 1; }
+  .nav .sep { height: 1px; background: #1E293B; margin: 8px 16px; }
+  .nav .sub { display: flex; flex-direction: column; padding: 2px 0 6px 40px; gap: 2px; }
+  .nav .sub span { font-size: 11.5px; color: var(--nav-dim); padding: 3px 0; }
+  .nav .sub span.on { color: #fff; }
+  .nav .bottom { margin-top: auto; }
+  .main { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  .topline { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; align-items: center; gap: 14px; }
+  .topline h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .topline .pill { background: var(--blue-soft); color: var(--blue); border-radius: 12px; padding: 3px 10px; font-size: 11.5px; font-weight: 600; }
+  .topline .r { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .topline .r i { width: 24px; height: 24px; border-radius: 50%; display: inline-block; }
+  .topline .r .u { background: var(--blue); color: #fff; font-style: normal; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+  .cols { display: grid; grid-template-columns: 280px minmax(0, 1fr) 280px; min-height: 0; }
+  .pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #fff; border-right: 1px solid var(--line); overflow: hidden; }
+  .pane:last-child { border-right: 0; }
+  .side { padding: 12px; gap: 10px; }
+  .btn { border-radius: 6px; padding: 8px 10px; font-weight: 600; font-size: 12.5px; text-align: center; }
+  .btn.pri { background: var(--blue); color: #fff; }
+  .btn.sec { background: #fff; color: var(--t1); border: 1px solid #D0D5DD; }
+  .side .sh { font-size: 12px; font-weight: 600; color: var(--t1); display: flex; justify-content: space-between; margin-top: 6px; }
+  .side .sh span { color: var(--t3); font-weight: 400; }
+  .side a { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; color: var(--t2); text-decoration: none; font-size: 12.5px; }
+  .side a i { width: 12px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .6; display: inline-block; }
+  .side a.on { border: 1px solid var(--blue); color: var(--blue); }
+  .list .hd { padding: 12px 14px 4px; display: flex; align-items: center; justify-content: space-between; }
+  .list .hd b { font-size: 14.5px; font-weight: 600; }
+  .list .hd span i { width: 14px; height: 14px; border: 1.5px solid var(--t3); border-radius: 3px; display: inline-block; margin-left: 8px; }
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 8px; border-bottom: 1px solid var(--line); text-align: center; }
+  .tabs span { font-size: 11.5px; color: var(--t2); padding: 8px 0 9px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .tabs span i { width: 15px; height: 15px; border: 1.5px solid currentColor; border-radius: 3px; display: inline-block; opacity: .7; position: relative; }
+  .tabs span i em { position: absolute; top: -8px; right: -10px; font-style: normal; background: var(--blue); color: #fff; font-size: 9.5px; border-radius: 4px; padding: 0 4px; font-weight: 700; line-height: 14px; }
+  .tabs span.on { color: var(--blue); font-weight: 600; }
+  .tabs span.on::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: -1px; height: 2px; background: var(--blue); }
+  .selall { padding: 8px 14px; font-size: 12px; color: var(--t2); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+  .cb { width: 14px; height: 14px; border: 1.5px solid #D0D5DD; border-radius: 3px; display: inline-block; flex: none; }
+  .contacts { overflow-y: auto; flex: 1; }
+  .contact { padding: 11px 14px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; grid-template-columns: 14px 32px 1fr; gap: 10px; align-items: start; }
+  .contact.active { background: var(--blue-soft); border: 1px solid var(--blue-line); border-radius: 8px; margin: 4px 6px; padding: 10px 8px; }
+  .contact .av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 11px; }
+  .contact .n { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .contact .n .when { margin-left: auto; font-weight: 400; color: var(--t3); font-size: 11px; }
+  .contact .n .dot { min-width: 18px; height: 18px; border-radius: 4px; background: var(--blue); color: #fff; font-size: 10px; display: grid; place-items: center; font-weight: 700; padding: 0 4px; }
+  .contact .p { font-size: 12px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .contact .p.mine { color: var(--t3); }
+  .conv { background: var(--paper); }
+  .conv .hd { background: #fff; border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  .conv .hd .av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 10.5px; }
+  .conv .hd b { font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .conv .hd span { color: var(--t2); font-size: 12px; white-space: nowrap; }
+  .conv .hd .icons { margin-left: auto; display: flex; gap: 10px; }
+  .conv .hd .icons i { width: 16px; height: 16px; border: 1.5px solid var(--t2); border-radius: 4px; display: inline-block; opacity: .7; }
+  .banner { margin: 10px 16px 0; background: #EEF4FF; border: 1px solid #C7D7FE; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; font-size: 11.5px; line-height: 1.35; }
+  .banner .ic { width: 30px; height: 30px; border-radius: 8px; background: #fff; border: 1px solid #C7D7FE; display: grid; place-items: center; color: var(--blue); font-weight: 800; flex: none; }
+  .banner b { display: block; font-size: 12px; color: var(--t1); }
+  .banner .txt { color: var(--t2); }
+  .banner .on { margin-left: auto; background: var(--blue); color: #fff; border-radius: 6px; padding: 7px 12px; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  .banner .x { color: var(--t3); font-size: 16px; padding-left: 4px; }
+  .items { padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; min-height: 0; }
+  .daystamp { align-self: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 3px 12px; font-size: 12px; color: var(--t2); display: flex; gap: 6px; align-items: center; }
+  .daystamp i { width: 11px; height: 11px; border: 1.5px solid var(--t2); border-radius: 2px; display: inline-block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.5; animation: pop .18s ease-out; }
+  .card .k { font-size: 11px; font-weight: 600; color: var(--t3); margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
   .card .k i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-  .card.in { border-left: 4px solid #A7B0BC; }
-  .card.note { border-left: 4px solid var(--blue); }
+  .card .k .av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 9px; font-weight: 700; color: #fff; }
+  .card .k .t { margin-left: auto; font-weight: 400; }
+  .card.in { }
+  .card.note { border-color: #C7D7FE; background: #F5F8FF; }
+  .card.note .k { color: var(--blue); }
   .card.note .k i { background: var(--blue); }
   .card.note ul { margin: 6px 0 0; padding-left: 18px; }
   .card.note li { margin: 2px 0; }
-  .card.note li.miss { color: var(--p-2); }
+  .card.note li.miss { color: var(--t2); }
   .card.note .why { margin-top: 8px; }
-  .card.draft { background: var(--draft); border-color: var(--draft-line); border-left: 4px solid var(--draft-line); }
-  .card.draft .k { color: var(--draft-ink); }
-  .card.draft .k i { background: var(--draft-line); }
+  .card.draft { background: var(--amber-soft); border-color: #FEDF89; }
+  .card.draft .k { color: var(--amber-ink); }
+  .card.draft .k i { background: var(--amber); }
   .card .body { white-space: pre-wrap; }
-  .card .actions { display: flex; gap: 8px; margin-top: 12px; }
-  .card .actions button { font: inherit; font-size: 14px; font-weight: 800; border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid transparent; }
-  .approve { background: var(--ok); color: #fff; }
+  .card .actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .card .actions button { font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 6px; padding: 7px 12px; cursor: pointer; border: 1px solid transparent; }
+  .card .actions .hint { color: var(--t3); font-size: 11.5px; margin-left: 4px; }
+  .approve { background: var(--blue); color: #fff; }
   .approve:hover { filter: brightness(1.08); }
-  .editb { background: #fff; border-color: var(--line) !important; color: var(--p-ink); }
-  .card.sent { border-left: 4px solid var(--ok); }
-  .card.sent .k { color: var(--ok); }
-  .card.sent .k i { background: var(--ok); }
-  .card.spam { border-left: 4px solid var(--red); color: var(--p-2); }
-  .card.spam .k { color: var(--red); }
+  .editb { background: #fff; border-color: #D0D5DD !important; color: var(--t1); }
+  .card.sent { border-color: #ABEFC6; }
+  .card.sent .k { color: var(--green-ink); }
+  .card.sent .k i { background: var(--green); }
+  .card.spam { border-color: #FECDCA; color: var(--t2); }
+  .card.spam .k { color: var(--red-ink); }
   .card.spam .k i { background: var(--red); }
-  .card.working { border-style: dashed; color: var(--p-2); display: flex; gap: 10px; align-items: center; }
-  .card.working i { width: 12px; height: 12px; border: 2px solid var(--p-3); border-top-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+  .card.working { border-style: dashed; color: var(--t2); display: flex; gap: 10px; align-items: center; }
+  .card.working i { width: 12px; height: 12px; border: 2px solid var(--t3); border-top-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .card.appt { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; border-left: 4px solid var(--ok); background: var(--ok-soft); border-color: #BFE3CD; }
-  .card.appt .date { background: #fff; border: 1px solid #BFE3CD; border-radius: 8px; text-align: center; padding: 6px 0; }
-  .card.appt .date b { display: block; font-size: 11px; color: var(--ok); letter-spacing: .08em; }
-  .card.appt .date span { display: block; font-size: 24px; font-weight: 800; line-height: 1.1; }
-  .card.appt .t { font-weight: 800; }
-  .card.appt .why { color: var(--p-2); font-size: 13.5px; }
-  .card .why { color: var(--p-2); font-size: 13.5px; margin-top: 4px; }
-  .empty { color: var(--p-3); padding: 40px 20px; font-size: 15px; }
-  .rail { background: #fff; padding: 0 0 10px; overflow-y: auto; }
-  .rail section { padding: 0 18px 16px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
-  .rail .big { font-weight: 800; font-size: 16px; }
-  .rail .muted { color: var(--p-2); font-size: 13px; }
-  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-  .tag { font-size: 11.5px; background: var(--blue-soft); color: var(--blue); border-radius: 5px; padding: 3px 8px; font-weight: 700; }
-  .tag.booked, .tag.sent { background: var(--ok-soft); color: var(--ok); }
-  .tag.draft { background: var(--draft); color: var(--draft-ink); }
-  .cal .row { display: grid; grid-template-columns: 62px 1fr; gap: 8px; font-size: 13px; padding: 7px 0; border-bottom: 1px dashed var(--line); line-height: 1.3; }
-  .cal .row .t { color: var(--p-2); font-variant-numeric: tabular-nums; font-weight: 700; }
-  .cal .row.new { color: var(--ok); font-weight: 800; }
-  .cal .row.new .t { color: var(--ok); }
-  .cal .row.new span:last-child::before { content: '● '; font-size: 9px; vertical-align: 2px; }
-  .facts { font-size: 13px; }
-  .facts div { display: grid; grid-template-columns: 74px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
-  .facts b { color: var(--p-2); font-weight: 700; }
-  .facts .miss { color: var(--p-3); }
-  @media (max-width: 1100px) { .inbox { grid-template-columns: 200px 1fr; } .rail { display: none; } }
-  @media (max-width: 900px) { .stage { grid-template-columns: 1fr; } .phone { margin: 0 auto; } }
+  .card.appt { display: grid; grid-template-columns: 54px 1fr; gap: 12px; align-items: center; background: var(--green-soft); border-color: #ABEFC6; }
+  .card.appt .date { background: #fff; border: 1px solid #ABEFC6; border-radius: 8px; text-align: center; padding: 4px 0; }
+  .card.appt .date b { display: block; font-size: 10px; color: var(--green-ink); letter-spacing: .08em; }
+  .card.appt .date span { display: block; font-size: 21px; font-weight: 700; line-height: 1.1; }
+  .card.appt .k { color: var(--green-ink); }
+  .card.appt .t { font-weight: 600; }
+  .card .why { color: var(--t2); font-size: 12.5px; margin-top: 4px; }
+  .empty { color: var(--t3); padding: 40px 20px; font-size: 13px; text-align: center; }
+  .compose2 { background: #fff; margin: 0 16px 12px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .compose2 .ctabs { display: flex; border-bottom: 1px solid var(--line); font-size: 12px; align-items: center; }
+  .compose2 .ctabs span { padding: 8px 12px; color: var(--t2); display: flex; align-items: center; gap: 6px; }
+  .compose2 .ctabs span i { width: 12px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; display: inline-block; }
+  .compose2 .ctabs span.on { color: var(--blue); font-weight: 600; background: var(--blue-soft); border-radius: 6px; margin: 4px; }
+  .compose2 .ctabs .r { margin-left: auto; color: var(--t3); padding: 0 10px; font-size: 14px; }
+  .compose2 .sub { padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--t1); }
+  .compose2 .box { padding: 12px 12px 30px; color: var(--t3); font-size: 13px; }
+  .compose2 .foot { display: flex; align-items: center; padding: 6px 10px; border-top: 1px solid var(--line); gap: 10px; }
+  .compose2 .foot i { width: 14px; height: 14px; border: 1.5px solid var(--t2); border-radius: 3px; display: inline-block; opacity: .6; }
+  .compose2 .foot .go { margin-left: auto; width: 46px; height: 26px; border-radius: 6px; background: #B2CCFF; }
+  .compose2 .chars { text-align: right; font-size: 10.5px; color: var(--t3); padding: 2px 10px 6px; }
+  .rail { overflow-y: auto; }
+  .rail .hd { padding: 12px 16px 10px; font-weight: 600; font-size: 13.5px; display: flex; justify-content: space-between; }
+  .rail .hd span { color: var(--t3); font-weight: 400; }
+  .rail section { padding: 10px 16px 12px; border-top: 1px solid var(--line); }
+  .rail .who { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .rail .who .av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 11px; }
+  .rail .who b { font-size: 13.5px; font-weight: 600; }
+  .rail .who .ext { margin-left: auto; color: var(--t3); }
+  .rail .kv { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 12px; }
+  .rail .kv label { color: var(--t1); font-weight: 600; display: block; font-size: 12px; margin-bottom: 4px; }
+  .rail .kv .sel { border: 1px solid #D0D5DD; border-radius: 14px; padding: 3px 9px; color: var(--t1); display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .rail .kv .sel i { width: 12px; height: 12px; border: 1.5px solid var(--t2); border-radius: 50%; display: inline-block; }
+  .rail .lbl { color: var(--t1); font-weight: 600; font-size: 12px; margin-top: 12px; display: flex; align-items: center; gap: 6px; }
+  .rail .lbl em { font-style: normal; color: var(--blue); font-weight: 700; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; max-width: 100%; }
+  .tag { font-size: 11.5px; background: #F2F4F7; color: var(--t1); border: 1px solid #D0D5DD; border-radius: 4px; padding: 2px 7px; display: inline-flex; gap: 5px; align-items: center; }
+  .tag::after { content: '×'; color: var(--t3); }
+  .tag.booked, .tag.sent { background: var(--green-soft); color: var(--green-ink); border-color: #ABEFC6; }
+  .tag.draft { background: var(--amber-soft); color: var(--amber-ink); border-color: #FEDF89; }
+  .tag.q { background: var(--blue-soft); color: var(--blue); border-color: var(--blue-line); }
+  .rail .ftabs { display: flex; border: 1px solid #D0D5DD; border-radius: 6px; overflow: hidden; margin: 12px 0 10px; font-size: 12px; max-width: 100%; }
+  .rail .ftabs span { flex: 1; text-align: center; padding: 6px 0; color: var(--t2); border-right: 1px solid #D0D5DD; font-size: 11.5px; }
+  .rail .ftabs span:last-child { border-right: 0; }
+  .rail .ftabs span.on { background: #F2F4F7; color: var(--t1); font-weight: 600; }
+  .rail .fsearch { border: 1px solid #D0D5DD; border-radius: 6px; padding: 6px 10px; color: var(--t3); font-size: 12px; margin-bottom: 8px; }
+  .rail h3 { font-size: 13px; font-weight: 600; margin: 4px 0 8px; display: flex; justify-content: space-between; background: #F9FAFB; padding: 8px 10px; border-radius: 6px; }
+  .rail h3 span { color: var(--t3); font-weight: 400; font-size: 11.5px; }
+  .facts { font-size: 12.5px; }
+  .facts div { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .facts div b { display: block; color: var(--t2); font-weight: 500; font-size: 11.5px; margin-bottom: 2px; }
+  .facts div span { color: var(--t1); overflow-wrap: anywhere; }
+  .facts .miss span { color: var(--t3); }
+  .cal .row { display: grid; grid-template-columns: 60px 1fr; gap: 8px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); line-height: 1.3; }
+  .cal .row .t { color: var(--t2); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .cal .row.new { color: var(--green-ink); font-weight: 600; }
+  .cal .row.new .t { color: var(--green-ink); }
+  @media (max-width: 1400px) { .cols { grid-template-columns: 250px minmax(0, 1fr) 250px; } }
+  @media (max-width: 1150px) { .ghl { grid-template-columns: 1fr; } .nav { display: none; } }
+  @media (max-width: 900px) { .cols { grid-template-columns: 220px 1fr; } .rail { display: none; } }
+  @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } .phone { margin: 0 auto; } }
 </style>
 </head>
 <body>
 <header>
   <h1>Skyline <span>Front Desk</span></h1>
-  <span class="sub">Left, the lead's phone. Right, Sofia's inbox. Nothing reaches the lead until she taps Approve.</span>
+  <span class="sub">Left, the lead's phone. Right, Sofia's GoHighLevel. Nothing reaches the lead until she approves it.</span>
   <label>lead <input id="who" value="Marcus Ellison" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" type="search"></label>
   <button id="reset">start over</button>
 </header>
@@ -150,23 +247,65 @@
     <div class="home"></div>
   </div></div>
 
-  <div class="inbox">
-    <div class="pane contacts">
-      <div class="brand"><i>S</i>Skyline <small>GoHighLevel</small></div>
-      <h2>Conversations</h2>
-      <div id="contacts"></div>
+  <div class="ghl">
+    <div class="nav">
+      <div class="logo"><i></i>Skyline</div>
+      <div class="acct"><i>SE</i><div><b>Sofia Epps</b><small>Puyallup, WA</small></div><span class="ud">⌃⌄</span></div>
+      <div class="srch">Search <em>ctrl K</em></div>
+      <a><i></i>Ask AI</a>
+      <a><i></i>Launchpad</a>
+      <a><i></i>Dashboard</a>
+      <a class="on"><i></i>Conversations</a>
+      <div class="sub"><span class="on">Team inbox</span><span>Assigned to me</span><span>Internal chat</span></div>
+      <a><i></i>Calendars</a>
+      <a><i></i>Contacts</a>
+      <a><i></i>Opportunities</a>
+      <a><i></i>Payments</a>
+      <div class="sep"></div>
+      <a><i></i>AI Agents</a>
+      <a><i></i>Marketing</a>
+      <a><i></i>Automation</a>
+      <a><i></i>Sites</a>
+      <a><i></i>Reputation</a>
+      <a><i></i>Reporting</a>
+      <div class="bottom"><a><i></i>Settings</a></div>
     </div>
-    <div class="pane conv">
-      <h2 id="convtitle">Conversation</h2>
-      <div class="items" id="items"><div class="empty">Nothing yet. Have the lead text the number on the left.</div></div>
-    </div>
-    <div class="pane rail">
-      <h2>Contact</h2>
-      <section id="contactcard"></section>
-      <h2>What the agent knows</h2>
-      <section><div class="facts" id="facts"><div class="muted">Nothing read yet.</div></div></section>
-      <h2 id="calhead">Sofia's calendar</h2>
-      <section class="cal"><div id="cal"></div></section>
+    <div class="main">
+      <div class="topline"><h2>Conversations</h2><span class="btn pri" style="padding:6px 12px">＋ New conversation</span><span class="pill">Aevon Front Desk · on</span><div class="r"><i style="background:#12B76A"></i><i style="background:#6172F3"></i><i style="background:#F79009"></i><i class="u">SE</i></div></div>
+      <div class="cols">
+        <div class="pane list">
+          <div class="hd"><b>Team inbox</b><span><i></i><i></i></span></div>
+          <div class="tabs"><span class="on"><i><em id="unread">0</em></i>Unread</span><span><i></i>All</span><span><i></i>Recent</span><span><i></i>Starred</span></div>
+          <div class="selall"><span class="cb"></span>Select all</div>
+          <div class="contacts" id="contacts"></div>
+        </div>
+        <div class="pane conv">
+          <div class="hd" id="convtitle"><span>Conversation</span></div>
+          <div class="banner"><div class="ic">✦</div><div><b>Aevon drafts your replies</b><span class="txt">Every inbound text is read, filed on the contact, and drafted as an internal comment. You approve before anything is sent.</span></div><div class="on">Settings</div><div class="x">✕</div></div>
+          <div class="items" id="items"><div class="empty">Nothing yet. Have the lead text the number on the left.</div></div>
+          <div class="compose2">
+            <div class="ctabs"><span class="on"><i></i>SMS ▾</span><span><i></i>Internal Comment</span><span class="r">－ ⤢</span></div>
+            <div class="sub">SMS</div>
+            <div class="box">Type a message</div>
+            <div class="foot"><i></i><i></i><i></i><i></i><i></i><i></i><div class="go"></div></div>
+            <div class="chars">Chars: 0 | Segs: 0</div>
+          </div>
+        </div>
+        <div class="pane rail">
+          <div class="hd">Contact Details <span>✕</span></div>
+          <section id="contactcard" style="border-top:0"></section>
+          <section>
+            <div class="ftabs"><span class="on">All fields</span><span>DND</span><span>Actions</span></div>
+            <div class="fsearch">🔍 Search fields and folders</div>
+            <h3>Agent notes <span>read from the texts</span></h3>
+            <div class="facts" id="facts"><div class="muted" style="color:var(--t3)">Nothing read yet.</div></div>
+          </section>
+          <section class="cal">
+            <h3 id="calhead">Calendar</h3>
+            <div id="cal"></div>
+          </section>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -179,11 +318,27 @@
     ['12:15 PM', 'Call, Ruiz, VA loan questions'],
     ['2:00 PM', 'Showing, 918 Idlewood Ave, DuPont'],
   ];
+  // Earlier conversations in her inbox, so the demo lead lands in a working CRM rather than an
+  // empty one. Static: the agent never touches these. Names invented.
+  const PRIOR = [
+    { name: 'Danielle Ruiz', when: 'Tue', last: 'me', text: 'Sounds good, talk at 12:15 tomorrow.', tags: ['qualified', 'va', 'agent-booked'], known: ['report date: Jan 2027', 'financing: VA, first use', 'orders: pending'], hue: '#FDE68A', ink: '#92400E',
+      history: [['them', 'Hi, my husband is being stationed at Lewis-McChord in January and we are starting to look. Everyone says use the VA loan but I do not understand it.'], ['me', 'Hi Danielle, the VA loan is simpler than it sounds and I can walk you through it on a call. Do you know roughly when the orders will be in hand?'], ['them', 'Not yet, they said January. Can we talk tomorrow?'], ['me', 'I can call you Wed Sep 9, 12:15 PM or Wed Sep 9, 3:30 PM. Which works better?'], ['them', '12:15 is good'], ['me', 'You are booked with Sofia for Wed Sep 9, 12:15 PM. Reply here if anything changes.'], ['them', 'Sounds good, talk at 12:15 tomorrow.']] },
+    { name: 'Marcus Okonkwo', when: 'Mon', last: 'me', text: 'Comps for the DuPont place are on their way.', tags: ['qualified', 'seller'], known: ['deadline: Oct 15', 'situation: must sell first'], hue: '#C7D7FE', ink: '#3538CD',
+      history: [['them', 'We got orders out of JBLM, report Oct 15. Need to sell our place in DuPont first.'], ['me', 'Hi Marcus, October is doable if we list in the next two weeks. What is the address, and is it the house on Idlewood?'], ['them', 'Yes 918 Idlewood'], ['me', 'Comps for the DuPont place are on their way.']] },
+    { name: 'Priya Lindqvist', when: 'Sun', last: 'them', text: 'Thanks, will look at those tonight', tags: ['qualified'], known: ['location: Steilacoom', 'price range: under 525k', 'financing: conventional'], hue: '#D1FAE5', ink: '#047857',
+      history: [['them', 'Hi Sofia, looking in Steilacoom under 525k, conventional loan, no rush.'], ['me', 'Hi Priya, three came up this week in that range. I will send them over tonight.'], ['them', 'Thanks, will look at those tonight']] },
+    { name: 'Tom Alvarez', when: 'Sep 2', last: 'me', text: 'No problem. When the timing is better, text me here and I will find you a time.', tags: ['needs-qualifying'], known: ['timing: not now'], hue: '#F2F4F7', ink: '#475467',
+      history: [['them', 'Saw your ad, might be looking next year'], ['me', 'Hi Tom, happy to help when you are ready. Is there a month you are aiming for?'], ['them', 'not sure yet honestly'], ['me', 'No problem. When the timing is better, text me here and I will find you a time.']] },
+  ];
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const HUES = [['#DCFAE6', '#067647'], ['#FEF0C7', '#B54708'], ['#E0EAFF', '#3538CD'], ['#FCE7F6', '#C11574'], ['#E6F4FF', '#175CD3']];
 
   function lead(name) {
-    if (!state.leads[name]) state.leads[name] = { name, phone: '+1 (253) 555-' + String([...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0'), thread: [], items: [], tags: [], known: [], missing: [], appt: null, working: false };
+    if (!state.leads[name]) {
+      const n = Object.keys(state.leads).length;
+      state.leads[name] = { name, phone: '+1 (253) 555-' + String([...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0'), thread: [], items: [], tags: [], known: [], missing: [], appt: null, working: false, last: null, hue: HUES[n % HUES.length] };
+    }
     return state.leads[name];
   }
   const initials = (n) => n.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -191,45 +346,69 @@
   const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' });
   const fmtDay = (iso) => new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric' });
   const dayParts = (iso) => { const d = new Date(iso); return { wd: d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).toUpperCase(), day: d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', day: 'numeric' }) }; };
+  const tagClass = (t) => t === 'agent-booked' ? 'booked' : t === 'agent-sent' ? 'sent' : t === 'agent-draft' ? 'draft' : t === 'qualified' || t === 'va' ? 'q' : '';
+  const avStyle = (L) => `background:${L.hue[0]};color:${L.hue[1]}`;
+
+  function priorAsLead(p) {
+    return { name: p.name, phone: '+1 (253) 555-' + String([...p.name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0'), tags: p.tags, known: p.known, missing: [], hue: [p.hue, p.ink], prior: p };
+  }
+
+  function renderPriorConv(p) {
+    const it = $('items'); it.innerHTML = '';
+    const ds = document.createElement('div'); ds.className = 'daystamp'; ds.innerHTML = `<i></i>${p.when}`; it.appendChild(ds);
+    for (const [who, text] of p.history) {
+      it.appendChild(card(who === 'me' ? 'sent' : 'in', `<div class="k">${who === 'me' ? '<i></i>SMS sent · Sofia' : `<span class="av" style="background:${p.ink}">${initials(p.name)}</span>Inbound SMS`}</div>${esc(text)}`));
+    }
+    it.scrollTop = it.scrollHeight;
+  }
 
   function render() {
     const L = lead(state.current);
-    // phone
     const th = $('thread'); th.innerHTML = '<div class="stamp">Text Message · SMS</div>';
     L.thread.forEach((m, i) => {
       const d = document.createElement('div'); d.className = 'b ' + m.who; d.textContent = m.text; th.appendChild(d);
       if (m.who === 'me' && (i === L.thread.length - 1 || L.thread[i + 1].who !== 'me')) { const s = document.createElement('div'); s.className = 'delivered'; s.textContent = 'Delivered'; th.appendChild(s); }
     });
     th.scrollTop = th.scrollHeight;
-    // contacts
+
     const cs = $('contacts'); cs.innerHTML = '';
-    for (const n of Object.keys(state.leads)) {
-      const c = state.leads[n];
-      const d = document.createElement('div'); d.className = 'contact' + (n === state.current ? ' active' : '');
-      const last = c.thread.length ? c.thread[c.thread.length - 1].text : 'No messages yet';
-      d.innerHTML = `<div class="av">${initials(n)}</div><div><div class="n">${esc(n)}${c.tags.includes('agent-draft') ? '<span class="dot" title="draft waiting"></span>' : ''}</div><div class="p">${esc(last)}</div></div>`;
-      d.onclick = () => { state.current = n; $('who').value = n; render(); };
+    const live = Object.keys(state.leads).map((n) => state.leads[n]);
+    for (const c of live) {
+      const d = document.createElement('div'); d.className = 'contact' + (c.name === state.current && !state.viewingPrior ? ' active' : '');
+      const last = c.thread.length ? c.thread[c.thread.length - 1] : null;
+      d.innerHTML = `<span class="cb"></span><div class="av" style="${avStyle(c)}">${initials(c.name)}</div><div><div class="n">${esc(c.name)}<span class="when">${c.last || ''}</span>${c.tags.includes('agent-draft') ? '<span class="dot">1</span>' : ''}</div><div class="p ${last && last.who === 'me' ? 'mine' : ''}">${last ? esc(last.text) : 'No messages yet'}</div></div>`;
+      d.onclick = () => { state.current = c.name; state.viewingPrior = null; $('who').value = c.name; render(); };
       cs.appendChild(d);
     }
-    // conversation
-    $('convtitle').innerHTML = `<b>${esc(L.name)}</b> ${esc(L.phone)}`;
-    const it = $('items'); it.innerHTML = '';
-    if (!L.items.length && !L.working) it.innerHTML = '<div class="empty">Nothing yet. Have the lead text the number on the left.</div>';
-    for (const x of L.items) it.appendChild(x);
-    if (L.working) { const w = document.createElement('div'); w.className = 'card working'; w.innerHTML = '<i></i> Agent is reading the text…'; it.appendChild(w); }
-    it.scrollTop = it.scrollHeight;
-    // rail: contact
-    $('contactcard').innerHTML = `<div class="big">${esc(L.name)}</div><div class="muted">${esc(L.phone)} · SMS · new lead on the Skyline number</div><div class="tags">${L.tags.length ? L.tags.map((t) => `<span class="tag ${t === 'agent-booked' ? 'booked' : t === 'agent-sent' ? 'sent' : t === 'agent-draft' ? 'draft' : ''}">${esc(t)}</span>`).join('') : '<span class="muted">no tags yet</span>'}</div>`;
-    // rail: facts
+    for (const p of PRIOR) {
+      const d = document.createElement('div'); d.className = 'contact' + (state.viewingPrior === p.name ? ' active' : '');
+      d.innerHTML = `<span class="cb"></span><div class="av" style="background:${p.hue};color:${p.ink}">${initials(p.name)}</div><div><div class="n">${esc(p.name)}<span class="when">${p.when}</span></div><div class="p ${p.last === 'me' ? 'mine' : ''}">${esc(p.text)}</div></div>`;
+      d.onclick = () => { state.viewingPrior = p.name; render(); };
+      cs.appendChild(d);
+    }
+    $('unread').textContent = live.filter((c) => c.tags.includes('agent-draft')).length;
+
+    const V = state.viewingPrior ? priorAsLead(PRIOR.find((p) => p.name === state.viewingPrior)) : L;
+    $('convtitle').innerHTML = `<div class="av" style="${avStyle(V)}">${initials(V.name)}</div><b>${esc(V.name)}</b><span>${esc(V.phone)}</span><div class="icons"><i></i><i></i><i></i><i></i><i></i></div>`;
+    if (state.viewingPrior) renderPriorConv(V.prior);
+    else {
+      const it = $('items'); it.innerHTML = '';
+      if (!L.items.length && !L.working) it.innerHTML = '<div class="empty">Nothing yet. Have the lead text the number on the left.</div>';
+      else { const ds = document.createElement('div'); ds.className = 'daystamp'; ds.innerHTML = `<i></i>${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`; it.appendChild(ds); }
+      for (const x of L.items) it.appendChild(x);
+      if (L.working) { const w = document.createElement('div'); w.className = 'card working'; w.innerHTML = '<i></i> Agent is reading the text…'; it.appendChild(w); }
+      it.scrollTop = it.scrollHeight;
+    }
+
+    $('contactcard').innerHTML = `<div class="who"><div class="av" style="${avStyle(V)}">${initials(V.name)}</div><div><b>${esc(V.name)}</b><div style="color:var(--t2);font-size:12px">${esc(V.phone)} · SMS</div></div><span class="ext">⧉</span></div><div class="kv"><div><label>Owner</label><span class="sel"><i></i>Sofia Epps</span></div><div><label>Followers</label><span class="sel">⌄</span></div></div><div class="lbl">Tags (${V.tags.length}) <em>⊕</em></div><div class="tags">${V.tags.length ? V.tags.map((t) => `<span class="tag ${tagClass(t)}">${esc(t)}</span>`).join('') : '<span style="color:var(--t3)">none yet</span>'}</div>`;
     const f = $('facts');
-    if (!L.known.length && !L.missing.length) f.innerHTML = '<div class="muted">Nothing read yet.</div>';
-    else f.innerHTML = L.known.map((k) => { const [a, ...b] = k.split(':'); return `<div><b>${esc(a.trim())}</b><span>${esc(b.join(':').trim() || '')}</span></div>`; }).join('') + L.missing.map((m) => `<div class="miss"><b>needed</b><span>${esc(m)}</span></div>`).join('');
-    // rail: calendar
-    // The fixture is Thursday Sep 10. A booking on another day shows its own date on the row.
+    if (!V.known.length && !V.missing.length) f.innerHTML = '<div style="color:var(--t3)">Nothing read yet.</div>';
+    else f.innerHTML = V.known.map((k) => { const [a, ...b] = k.split(':'); return `<div><b>${esc(a.trim())}</b><span>${esc(b.join(':').trim() || '')}</span></div>`; }).join('') + V.missing.map((m) => `<div class="miss"><b>still needed</b><span>${esc(m)}</span></div>`).join('');
+
     const cal = $('cal'); cal.innerHTML = '';
-    $('calhead').textContent = FIXTURE_DAY + " · Sofia's calendar";
+    $('calhead').innerHTML = `Calendar <span>${FIXTURE_DAY}</span>`;
     const rows = fixture.map(([t, w]) => ({ t, w, isNew: false, day: FIXTURE_DAY }));
-    for (const n of Object.keys(state.leads)) { const a = state.leads[n].appt; if (a) rows.push({ t: fmtTime(a.startTime), w: a.title, isNew: true, day: fmtDay(a.startTime) }); }
+    for (const c of live) { const a = c.appt; if (a) rows.push({ t: fmtTime(a.startTime), w: a.title, isNew: true, day: fmtDay(a.startTime) }); }
     rows.sort((a, b) => (a.day === b.day ? 0 : a.day === FIXTURE_DAY ? 1 : -1) || new Date('1/1/2000 ' + a.t) - new Date('1/1/2000 ' + b.t));
     for (const r of rows) { const d = document.createElement('div'); d.className = 'row' + (r.isNew ? ' new' : ''); d.innerHTML = `<span class="t">${r.day !== FIXTURE_DAY ? r.day + '<br>' : ''}${r.t}</span><span>${esc(r.w)}</span>`; cal.appendChild(d); }
   }
@@ -239,16 +418,17 @@
   function approveCard(L, c, ev, edited) {
     L.thread.push({ who: 'me', text: ev.draft });
     L.tags = L.tags.filter((t) => t !== 'agent-draft'); if (!L.tags.includes('agent-sent')) L.tags.push('agent-sent');
-    c.className = 'card sent'; c.innerHTML = `<div class="k"><i></i>Sent to lead · ${edited ? 'edited and ' : ''}approved by Sofia · ${clock()}</div><div class="body">${esc(ev.draft)}</div>`;
+    c.className = 'card sent'; c.innerHTML = `<div class="k"><i></i>SMS sent · ${edited ? 'edited and ' : ''}approved by Sofia<span class="t">${clock()}</span></div><div class="body">${esc(ev.draft)}</div>`;
     render();
   }
 
   async function send() {
     const text = $('msg').value.trim(); if (!text) return;
     $('msg').value = ''; $('send').disabled = true;
+    state.viewingPrior = null;
     const L = lead(state.current);
-    L.thread.push({ who: 'them', text });
-    L.items.push(card('in', `<div class="k">Inbound SMS · ${clock()}</div>${esc(text)}`));
+    L.thread.push({ who: 'them', text }); L.last = clock();
+    L.items.push(card('in', `<div class="k"><span class="av" style="background:${L.hue[1]}">${initials(L.name)}</span>Inbound SMS<span class="t">${clock()}</span></div>${esc(text)}`));
     L.working = true; render();
     let ev;
     try {
@@ -256,29 +436,31 @@
       ev = await r.json();
     } catch (e) { ev = { verdict: 'error', reason: String(e), known: [], missing: [], tags: [] }; }
     L.working = false;
+    ev.known = ev.known || []; ev.missing = ev.missing || []; ev.tags = ev.tags || [];
 
     if (ev.appointment) {
       L.appt = ev.appointment;
       L.tags = [...new Set([...L.tags.filter((t) => t !== 'agent-draft'), 'agent-booked'])];
       const dp = dayParts(ev.appointment.startTime);
-      L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--ok)"></i>Booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. Reminder text to the lead 30 minutes before.</div></div>`));
-      if (ev.confirmation) { L.thread.push({ who: 'me', text: ev.confirmation }); L.items.push(card('sent', `<div class="k"><i></i>Sent to lead · confirmation · ${clock()}</div>${esc(ev.confirmation)}`)); }
+      L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--green)"></i>Appointment booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. Reminder text to the lead 30 minutes before.</div></div>`));
+      if (ev.confirmation) { L.thread.push({ who: 'me', text: ev.confirmation }); L.items.push(card('sent', `<div class="k"><i></i>SMS sent · confirmation<span class="t">${clock()}</span></div>${esc(ev.confirmation)}`)); }
     } else if (ev.verdict === 'timeout' || ev.verdict === 'error') {
       L.items.push(card('spam', `<div class="k"><i></i>Agent did not answer</div>${esc(ev.reason || 'The model timed out.')}<div class="why">Nothing was filed. Send the text again.</div>`));
-    } else if (ev.verdict && ev.verdict !== 'reply' && ev.verdict !== 'QUALIFIED') {
+    } else if (ev.verdict && ev.verdict !== 'reply' && ev.verdict !== 'QUALIFIED' && ev.verdict !== 'inquiry, not qualified') {
       L.items.push(card('spam', `<div class="k"><i></i>Filed as ${esc(ev.verdict)}</div>${esc(ev.reason)}<div class="why">No draft, no tag, not on the pipeline.</div>`));
     } else {
       if (ev.known.length) L.known = ev.known;
-      if (ev.missing.length) L.missing = ev.missing;
+      if (ev.missing.length || ev.known.length) L.missing = ev.missing;
       if (ev.note || ev.known.length || ev.missing.length) {
-        L.items.push(card('note', `<div class="k"><i></i>Note added to contact · ${clock()}</div>${ev.reason ? esc(ev.reason) : ''}<ul>${ev.known.map((k) => `<li>${esc(k)}</li>`).join('')}${ev.missing.map((k) => `<li class="miss">still needed: ${esc(k)}</li>`).join('')}</ul>${ev.skipped ? `<div class="why">Times offered skipped ${esc(ev.skipped)}.</div>` : ''}`));
+        L.items.push(card('note', `<div class="k"><i></i>Note added to contact<span class="t">${clock()}</span></div>${ev.reason ? esc(ev.reason) : ''}<ul>${ev.known.map((k) => `<li>${esc(k)}</li>`).join('')}${ev.missing.map((k) => `<li class="miss">still needed: ${esc(k)}</li>`).join('')}</ul>${ev.skipped ? `<div class="why">Times offered skipped ${esc(ev.skipped)}.</div>` : ''}`));
       }
       for (const t of ev.tags) if (!L.tags.includes(t)) L.tags.push(t);
       if (ev.draft) {
-        const c = card('draft', `<div class="k"><i></i>Draft · waiting for your OK</div><div class="body">${esc(ev.draft)}</div><div class="actions"><button class="approve">Approve and send</button><button class="editb">Edit</button></div>`);
+        if (!L.tags.includes('agent-draft')) L.tags.push('agent-draft');
+        const c = card('draft', `<div class="k"><i></i>Internal comment · draft for your OK<span class="t">${clock()}</span></div><div class="body">${esc(ev.draft)}</div><div class="actions"><button class="approve">Approve and send</button><button class="editb">Edit</button><span class="hint">in GHL: add the tag agent-send</span></div>`);
         c.querySelector('.approve').onclick = () => approveCard(L, c, ev, false);
         c.querySelector('.editb').onclick = () => {
-          const b = c.querySelector('.body'); b.contentEditable = 'true'; b.style.outline = '2px solid var(--draft-line)'; b.style.borderRadius = '6px'; b.style.padding = '4px'; b.focus();
+          const b = c.querySelector('.body'); b.contentEditable = 'true'; b.style.outline = '2px solid #FEDF89'; b.style.borderRadius = '6px'; b.style.padding = '4px'; b.focus();
           c.querySelector('.approve').onclick = () => { ev.draft = b.innerText.trim(); approveCard(L, c, ev, true); };
         };
         L.items.push(c);
@@ -291,8 +473,8 @@
 
   $('send').onclick = send;
   $('msg').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
-  $('reset').onclick = async () => { await fetch('/reset', { method: 'POST' }); state.leads = {}; state.current = 'Marcus Ellison'; $('who').value = state.current; render(); };
-  $('who').addEventListener('change', () => { const n = $('who').value.trim() || 'Marcus Ellison'; state.current = n; lead(n); render(); $('msg').focus(); });
+  $('reset').onclick = async () => { await fetch('/reset', { method: 'POST' }); state.leads = {}; state.current = 'Marcus Ellison'; state.viewingPrior = null; $('who').value = state.current; render(); };
+  $('who').addEventListener('change', () => { const n = $('who').value.trim() || 'Marcus Ellison'; state.current = n; state.viewingPrior = null; lead(n); render(); $('msg').focus(); });
   render(); $('msg').focus();
 </script>
 </body>

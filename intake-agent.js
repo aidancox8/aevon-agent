@@ -176,7 +176,7 @@ const CONFIGS = {
       'anything about a specific property that is not in the message',
     ],
     voice: 'warm, direct and brief; writes like a busy broker on her phone between showings. Always I, never we, she works alone. Opens with "Hi" and their first name, then a comma. Plain sentences. Every question ends with a question mark, no real estate jargon, no exclamation marks. Never "thank you for your service", never congratulations, never a line about how many people she has helped or how often she does this; she said on the 3rd that she does not want hype. Answer what they asked, then one or two questions.',
-    qualify: 'A good inquiry is someone buying or selling a home in the South Puget Sound area, most often a service member or spouse with PCS orders to or from JBLM. Vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone outside Washington are NOT qualified.',
+    qualify: 'A good inquiry is any real person looking for a place to live in the South Puget Sound area: buying, selling, or renting, a house, condo, apartment or townhome, at any budget. Most often a service member or spouse with PCS orders to or from JBLM. "Apartments around 400k" is a condo buyer. A renter is still qualified: she wants every real person texted back and handed to the right place. NOT qualified: vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone clearly outside Washington.',
     // The point of a build over an off-the-shelf tool. A general assistant asks "what is your
     // budget and timeline"; it does not know that a report date is the deadline everything
     // else hangs off, or that a missing COE is what stalls a VA closing.
@@ -425,10 +425,15 @@ Body (most recent message only, ignore quoted history):
 """
 ${(msg.body || '').slice(0, 1800)}
 """
-
+${(msg.history && msg.history.length) ? `
+THIS IS NOT THE FIRST MESSAGE. The conversation so far, oldest first (them = the lead, us = ${CFG.ownerName}):
+${msg.history.slice(-12).map((h) => `  ${h.who === 'me' ? 'us' : 'them'}: ${String(h.text).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n')}
+${(msg.known && msg.known.length) ? `Already known about this lead: ${msg.known.join('; ')}.` : ''}
+Read the new message IN THAT CONTEXT. A short reply like "1", "yes", "the 12:45", "Sep 10 at 9am" or "can you book 9am" is the lead answering our last message, not noise. Judge whether they are a genuine prospect from the WHOLE conversation, not from this one line. A prospect who was qualified earlier stays qualified.
+` : ''}
 STEP 1 - Classify this message as EXACTLY one of:
-- "inquiry": a genuine prospective customer with a need the business can serve
-- "existing": an ongoing conversation / existing customer / a reply in a thread
+- "inquiry": a genuine prospective customer with a need the business can serve, including any reply that continues a conversation with one
+- "existing": an ongoing conversation with an existing CUSTOMER (already under contract), not a prospect mid-conversation
 - "spam": marketing, sales pitch aimed at the business, recruiter, newsletter, automated notice
 - "out_of_scope": a real person but clearly outside the service area or services
 - "other": anything else
@@ -438,9 +443,11 @@ STEP 2 - Only if intent is "inquiry": qualify it.
 - Extract: what they need (one line), and whether a call/appointment is the right next step (booking: true/false).
 ${(CFG.askFor && CFG.askFor.length) ? `- These are the facts ${CFG.ownerName} needs before this lead is workable:
 ${CFG.askFor.map((q) => `    - ${q}`).join('\n')}
-  For each one, decide from the message whether it is already ANSWERED or still MISSING. Put the
-  answered ones in "known" as short "label: value" strings, and list the missing ones in "missing".
-  Never guess a value that is not in the message, and never ask about something already answered.` : ''}
+  For each one, decide from the WHOLE conversation (this message plus the history and the already-known
+  list above) whether it is ANSWERED or still MISSING. Put every answered one in "known" as a short
+  "label: value" string, including ones answered in earlier messages, and list only the truly missing
+  ones in "missing". Never guess a value that is not in the conversation, and never ask about
+  something already answered.` : ''}
 
 STEP 3 - Only if intent is "inquiry" AND qualified: write a reply draft.
 - Address them by first name if you can infer it.
@@ -675,24 +682,33 @@ if (require.main === module) {
  * decline, or unclear. It never books on its own: the caller books only on a slot index, and
  * everything else becomes a draft for the owner.
  */
-async function readBookingReply({ text, slots, timezone }) {
+async function readBookingReply({ text, slots, timezone, missing = [], known = [] }) {
   const list = slots.map((iso, i) => `${i + 1}) ${new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))}`).join('\n');
+  // The lead often answers the questions in the same text as (or instead of) picking a time:
+  // "looking to move in three months, yes I have the orders" (rehearsal 2026-09-09). Read both,
+  // so the answers land on the contact and the draft does not ask what was just said.
+  const factBlock = missing.length ? `
+${CFG.ownerName} still needs these facts from the lead:
+${missing.map((q) => `  - ${q}`).join('\n')}
+Already known: ${known.length ? known.join('; ') : 'nothing yet'}.
+For any of the needed facts the reply answers, put short "label: value" strings in "answered", with the value normalised the way a broker would note it ("orders: in hand", "timeline: 3 months", "financing: VA"), not the lead's sentence. Never invent a value.` : '';
   const prompt = `A lead was offered these call times by text:
 ${list}
 The lead replied: "${text}"
-
-Decide what they mean. Reply with JSON only:
-{"kind": "pick" | "other_time" | "decline" | "unclear", "slot": <1-based number or null>, "when": "<their words for a different time, or empty>", "note": "<one short line>"}
-Rules: "pick" only if they clearly chose one of the listed times (by number, by time such as 115 or 1:15 for 1:15 PM, by "first/second/later/earlier", or plain agreement like yes/ok/sounds good). "other_time" if they name a different day or time. "decline" if they say no or not now. Otherwise "unclear". Never guess.`;
+${factBlock}
+Decide what they mean about the time. Reply with JSON only:
+{"kind": "pick" | "other_time" | "decline" | "unclear", "slot": <1-based number or null>, "when": "<their words for a different time, or empty>", "answered": ["<label: value>", ...], "note": "<one short line>"}
+Rules for kind: "pick" only if they clearly chose one of the listed times (by number, by time such as 115 or 1:15 for 1:15 PM, by "first/second/later/earlier", or plain agreement like yes/ok/sounds good). "other_time" if they name a different day or time. "decline" if they say no or not now. Otherwise "unclear". Never guess.`;
   try {
     const raw = await generate(prompt);
     const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) return { kind: 'unclear', slot: null, when: '', note: 'unparseable' };
+    if (!m) return { kind: 'unclear', slot: null, when: '', answered: [], note: 'unparseable' };
     const r = JSON.parse(m[0]);
     const slot = Number.isInteger(r.slot) && r.slot >= 1 && r.slot <= slots.length ? r.slot - 1 : null;
-    return { kind: r.kind === 'pick' && slot === null ? 'unclear' : r.kind, slot, when: String(r.when || ''), note: String(r.note || '') };
+    const answered = Array.isArray(r.answered) ? r.answered.map(String).filter((s) => /\S:\s*\S/.test(s)) : [];
+    return { kind: r.kind === 'pick' && slot === null ? 'unclear' : r.kind, slot, when: String(r.when || ''), answered, note: String(r.note || '') };
   } catch (e) {
-    return { kind: 'unclear', slot: null, when: '', note: `model error: ${e.message}` };
+    return { kind: 'unclear', slot: null, when: '', answered: [], note: `model error: ${e.message}` };
   }
 }
 
