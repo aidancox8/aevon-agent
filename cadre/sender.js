@@ -210,8 +210,18 @@ const FREEMAIL = /@(gmail|hotmail|outlook|yahoo|icloud|live|aol|proton|gmx)\./i;
  * right person", and an HR pitch landing in a sales queue is a wasted send and a slightly worse
  * sender reputation.
  */
-const WRONG_DESK = /^(sales|sales-[a-z]+|service|servicedesk|support|techsupport|billing|accounts|accountspayable|accountsreceivable|invoices|orders|parts|shipping|dispatch|marketing|media|press|webmaster|noreply|no-reply|donations|volunteer|urethane|craneservice|fire|security|reception|bookings|quotes|estimating)@/i;
+// Extended 2026-09-10 after reading the 124 sent: investors@, mediarelations@, brokersupport@,
+// export@, feedback@, purchasingservices@, references@, ecosystem@, dataprotection@ and a
+// tasting room all received an HR pitch. The scraper labels anything not in a short generic list
+// as 'personal'; this is the list of desks that are not HR whatever the label says.
+const WRONG_DESK = /^(sales|sales-[a-z]+|service|servicedesk|support|techsupport|billing|accounts|accountspayable|accountsreceivable|invoices|orders|parts|shipping|dispatch|marketing|media|mediarelations|press|webmaster|noreply|no-reply|donations|volunteer|urethane|craneservice|fire|security|reception|bookings|quotes|estimating|investors?|investorrelations|ir|brokersupport|export|exports|feedback|purchasing|purchasingservices|procurement|references|ecosystem|dataprotection|privacy|legal|compliance|customerexperience|customerservice|customercare|consumerproducts|commercialprinting|tastingroom[a-z]*|talktous|questions|contactus|financialassistance|[a-z]*financialassistance|plic|avionics|technical|extrusions|schedule.central|information|memberservices|homeshare|mrh|rd.hr)@/i;
 const PLACEHOLDER = /^(your|email|name|test|example|info@example)/i;
+// A province or state, as a code or a name, anywhere in the city string.
+const CA_US_REGION = new RegExp('(^|[ ,])(' + [
+  'AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT',
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
+  'Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland[a-z ]*','Nova Scotia','Ontario','Prince Edward Island','Quebec','Québec','Saskatchewan','Yukon',
+].join('|') + ')([ ,.]|$)');
 
 /**
  * THE LEGAL FOOTER. This is not decoration.
@@ -276,6 +286,13 @@ function blockReason(lead, stepNo) {
   // was too small. Under a hundred people there is rarely someone whose job is the records.
   if (lead.staff_estimate && lead.staff_estimate < 100) return `${lead.staff_estimate} staff, too small for the pitch`;
   if (lead.staff_estimate && lead.staff_estimate > 1000) return `${lead.staff_estimate} staff, will have an HRIS`;
+  // 'Unknown size passes' was withdrawn 2026-09-10. Of 85 queued with an address, 77 had no size,
+  // and by name they were JPMorganChase, U-Haul, ASSA ABLOY, Steris, C.H. Robinson: the job ad
+  // proves they hire for the record, not that they are the size that buys a flat-fee tool.
+  if (!lead.staff_estimate) return 'size unknown, enrich before sending';
+  // Canada and the US only. The UK rows (JLL London, GXO Barnsley, Mitie) arrived through
+  // SimplyHired's UK listings and nothing in the copy or the price fits them.
+  if (lead.city && !CA_US_REGION.test(lead.city)) return `city '${lead.city}' is not in Canada or the US`;
   if (WRONG_DESK.test(lead.email)) return `${lead.email.split('@')[0]}@ will not route an HR pitch`;
   if (lead.website && rootDomain(lead.email.split('@')[1]) !== rootDomain(lead.website)) {
     return `address domain does not match ${rootDomain(lead.website)}`;
@@ -364,7 +381,7 @@ async function bounceRate() {
   const { data: due, error } = await supabase.from(TABLE)
     .select('id, business_name, email, website, contact_name, contact_role, city, address, signal_quote, signal_url, ' +
             'email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, ' +
-            'sequence_step, last_sent_at, qualification_score, scheduled_send_at, staff_estimate')
+            'sequence_step, last_sent_at, qualification_score, scheduled_send_at, staff_estimate, status')
     // 'sent' is included because a lead stays `sent` between sequence steps. 'replied',
     // 'unsubscribed', 'bounced' and 'dont_contact' are absent on purpose: those are the four
     // ways a lead earns the right never to hear from us again.
@@ -376,6 +393,13 @@ async function bounceRate() {
     .order('scheduled_send_at', { ascending: true })
     .limit(200);
   if (error) throw new Error(error.message);
+
+  // One address, one sequence. Moneta Group was in the table twice (two postings) and
+  // ekittner@ got email 1 twice, four days apart. The second row is held, not merged.
+  const { data: emailed } = await supabase.from(TABLE).select('id, email, business_name')
+    .in('status', ['sent', 'replied', 'bounced', 'unsubscribed', 'dont_contact']).not('email', 'is', null);
+  const ownerOf = new Map();
+  for (const r of emailed || []) ownerOf.set(String(r.email).toLowerCase(), r);
 
   const batch = (due || []).slice(0, LIMIT ? Math.min(LIMIT, room) : room);
   if (!batch.length) {
@@ -414,6 +438,10 @@ async function bounceRate() {
     }
 
     let block = blockReason(lead, stepNo);
+    const owner = ownerOf.get(String(lead.email).toLowerCase());
+    if (!block && lead.status === 'queued' && owner && owner.id !== lead.id) {
+      block = `duplicate address, already emailed as ${owner.business_name}`;
+    }
     // Checked here rather than inside blockReason because it needs a DNS round trip and
     // blockReason is synchronous everywhere else it is used.
     if (!block && !(await domainAcceptsMail(lead.email))) {
@@ -424,7 +452,11 @@ async function bounceRate() {
       blocked++;
       if (LIVE) {
         await log(lead.id, 'held', { reason: block, email: lead.email });
-        await supabase.from(TABLE).update({ notes: `HELD BY SENDER: ${block}` }).eq('id', lead.id);
+        // 'no copy written' clears itself when the personalizer runs; everything else needs a
+        // person or an enrichment, so park it instead of re-judging it every hour (the same seven
+        // leads produced 64 held events between 2026-09-03 and 09-10).
+        const parked = /^no copy written/.test(block) ? {} : { status: 'needs_review', scheduled_send_at: null };
+        await supabase.from(TABLE).update({ notes: `HELD BY SENDER: ${block}`, ...parked }).eq('id', lead.id);
       }
       continue;
     }

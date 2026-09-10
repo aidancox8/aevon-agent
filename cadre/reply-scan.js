@@ -103,6 +103,17 @@ function isAutoReply(payload, subject) {
 }
 
 /**
+ * Ticket-desk acknowledgements carry no auto header at all. Stio's customerexperience@ answered
+ * 'Thank you for contacting Stio! We have received your message. We will reply as soon as
+ * possible' and was filed as interested on 2026-09-10. Judged on the opening of the body only,
+ * so a human who writes 'thanks for reaching out, yes let's talk' further down is not caught.
+ */
+function isAutoAck(text) {
+  const head = String(text || '').replace(/\s+/g, ' ').slice(0, 400);
+  return /\b(we have received your (message|email|enquiry|inquiry|request)|thank you for contacting|thanks for contacting|this is an automated|do not reply to this (email|message)|your (ticket|case|request) (number|id|#)|a member of our team will (be in touch|respond|reply)|we will (reply|respond|get back to you) (as soon as|shortly|within))\b/i.test(head);
+}
+
+/**
  * Did they ask to be left alone? Deliberately broad. The cost of a false positive is one lead
  * dropped; the cost of a false negative is emailing someone who said stop.
  */
@@ -241,6 +252,15 @@ if (require.main !== module) return;
     const parsed = await simpleParser(Buffer.from(raw.data.raw, 'base64'));
     const text = parsed.text || (parsed.html || '').replace(/<[^>]+>/g, ' ') || full.data.snippet || '';
 
+    if (isAutoAck(text)) {
+      autos++;
+      console.log(`  [auto-ack]  ${lead.business_name} <${from}>`);
+      if (!DRY) {
+        await supabase.from(EVENTS).insert({ lead_id: lead.id, event_type: 'held',
+          metadata: { source: 'reply-scan', reason: 'auto-acknowledgement', inbound_message_id: msgId, from, subject } });
+      }
+      continue;
+    }
     const intent = classify(text);
     if (intent === 'opt_out') optOuts++;
     matched++;
