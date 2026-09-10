@@ -220,6 +220,18 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
   const pref = parsePreference(text, new Date(), TZ);
   if (pref && (holding || booked || /\b(resched|move|change|instead|rather|better|works|prefer|can we|could we|how about|what about)\b/i.test(text))) {
     if (booked) say(`  ${who}: wants to move the ${fmt(new Date(booked.at), TZ)} call`);
+    // An exact day and clock time that is free ("Thursday 12:45 pls") is a pick, not a
+    // preference: book it. A day alone, or a taken time, gets the two-slot offer.
+    if (pref.at && pref.dayOffset !== null) {
+      const { rules, day } = narrowRules(RULES, pref);
+      const { offered } = findFreeSlots(await busyEvents(state), { ...rules, offer: 1 });
+      const exact = offered.find((d) => onDay(d, day, TZ));
+      if (exact) {
+        say(`  ${who}: named a free time, booking it`);
+        await confirm(state, contactId, contact, { slots: [exact.toISOString()], kind: holding ? hold.kind : 'call' }, 0);
+        return;
+      }
+    }
     await offerFor(state, contactId, contact, pref, holding ? hold.kind : 'call', holding ? hold : mem);
     return;
   }

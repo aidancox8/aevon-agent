@@ -51,7 +51,7 @@
   .compose .plus { width: 32px; height: 32px; border-radius: 50%; background: #1c1c1e; color: #9a9aa0; display: grid; place-items: center; font-size: 20px; }
   .compose input { flex: 1; background: #000; color: #fff; border: 1px solid #333338; border-radius: 20px; padding: 8px 14px; font: inherit; font-size: 15.5px; outline: none; }
   .compose input:focus { border-color: #55555b; }
-  .compose button { background: var(--bubble-me); color: #fff; border: 0; border-radius: 50%; width: 30px; height: 30px; font-weight: 800; cursor: pointer; font-size: 15px; }
+  .compose button { background: var(--bubble-me); color: #fff; border: 0; border-radius: 50%; width: 30px; height: 30px; min-width: 30px; flex: none; padding: 0; display: grid; place-items: center; font-weight: 700; cursor: pointer; font-size: 16px; line-height: 1; }
   .compose button:disabled { opacity: .35; cursor: default; }
   .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 124px; height: 5px; border-radius: 3px; background: #fff; opacity: .9; }
   @keyframes pop { from { transform: translateY(4px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -330,6 +330,8 @@
     { name: 'Tom Alvarez', when: 'Sep 2', last: 'me', text: 'No problem. When the timing is better, text me here and I will find you a time.', tags: ['needs-qualifying'], known: ['timing: not now'], hue: '#F2F4F7', ink: '#475467',
       history: [['them', 'Saw your ad, might be looking next year'], ['me', 'Hi Tom, happy to help when you are ready. Is there a month you are aiming for?'], ['them', 'not sure yet honestly'], ['me', 'No problem. When the timing is better, text me here and I will find you a time.']] },
   ];
+  // Display only; the worker derives its own number the same way in demo/sofia.js.
+  const fakeDigits = (n) => { let x = 0; for (const c of n.toLowerCase()) x = (x * 31 + c.charCodeAt(0)) >>> 0; return String(x % 10000).padStart(4, '0'); };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const HUES = [['#DCFAE6', '#067647'], ['#FEF0C7', '#B54708'], ['#E0EAFF', '#3538CD'], ['#FCE7F6', '#C11574'], ['#E6F4FF', '#175CD3']];
@@ -337,7 +339,7 @@
   function lead(name) {
     if (!state.leads[name]) {
       const n = Object.keys(state.leads).length;
-      state.leads[name] = { name, phone: '+1 (253) 555-' + String([...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0'), thread: [], items: [], tags: [], known: [], missing: [], appt: null, working: false, last: null, hue: HUES[n % HUES.length] };
+      state.leads[name] = { name, phone: '+1 (253) 555-' + fakeDigits(name), thread: [], items: [], tags: [], known: [], missing: [], appt: null, working: false, last: null, hue: HUES[n % HUES.length] };
     }
     return state.leads[name];
   }
@@ -350,7 +352,7 @@
   const avStyle = (L) => `background:${L.hue[0]};color:${L.hue[1]}`;
 
   function priorAsLead(p) {
-    return { name: p.name, phone: '+1 (253) 555-' + String([...p.name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0'), tags: p.tags, known: p.known, missing: [], hue: [p.hue, p.ink], prior: p };
+    return { name: p.name, phone: '+1 (253) 555-' + fakeDigits(p.name), tags: p.tags, known: p.known, missing: [], hue: [p.hue, p.ink], prior: p };
   }
 
   function renderPriorConv(p) {

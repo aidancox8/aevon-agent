@@ -33,7 +33,9 @@ const text = args.join(' ').trim();
 if (!text) { console.error('usage: node demo/sofia.js [--as "Name"] "<what the lead texts>"'); process.exit(1); }
 
 // One phone per name, so the same lead keeps the same conversation across turns.
-const phone = '+1253555' + String([...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 10000).padStart(4, '0');
+// A real hash, not a letter sum: "Ana" and "Cal" summed to the same four digits and became one
+// contact in rehearsal (2026-09-09), which looked exactly like memory bleeding between leads.
+const phone = '+1253555' + String(parseInt(require('crypto').createHash('md5').update(name.toLowerCase()).digest('hex').slice(0, 6), 16) % 10000).padStart(4, '0');
 
 const r = spawnSync(process.execPath, [
   path.join(__dirname, '..', 'frontdesk', 'worker.js'),

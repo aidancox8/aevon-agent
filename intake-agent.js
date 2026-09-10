@@ -481,9 +481,12 @@ Respond with JSON only:
     const res = JSON.parse(m[0]);
     if (res.draft) {
       res.draft = stripNeverWrite(res.draft, CFG.neverWrite);
-      // Stripping can take the greeting with it. The voice says every reply opens "Hi <name>,".
+      // Greet on the first reply only. A text thread does not restart "Hi Marcus," every turn, and
+      // the model does it anyway, so it is enforced here rather than asked for.
       const first = String(msg.fromName || '').trim().split(/\s+/)[0];
-      if (res.draft && !/^hi\b/i.test(res.draft)) res.draft = `Hi ${first || 'there'}, ${res.draft.charAt(0).toLowerCase() + res.draft.slice(1)}`;
+      const firstReply = !(msg.history || []).some((h) => h.who === 'me');
+      if (firstReply && res.draft && !/^hi\b/i.test(res.draft)) res.draft = `Hi ${first || 'there'}, ${res.draft.charAt(0).toLowerCase() + res.draft.slice(1)}`;
+      if (!firstReply) res.draft = res.draft.replace(/^(hi|hello|hey)\b[^,!.]*[,!.]\s*/i, '').replace(/^[a-z]/, (c) => c.toUpperCase());
     }
     return res;
   } catch (err) {
