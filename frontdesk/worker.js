@@ -34,6 +34,8 @@ const flag = (n) => { const i = args.indexOf(`--${n}`); return i > -1 && args[i 
 const DRY = args.includes('--dry') || !!flag('simulate');
 const CLIENT = flag('client') || 'skyline';
 const SIMULATE = flag('simulate');
+// A person is watching a simulated turn. Race the models instead of waiting on one.
+if (SIMULATE && !process.env.GEMINI_HEDGE) process.env.GEMINI_HEDGE = '1';
 // --keep lets a simulated conversation carry state across two runs, so the C reply can be tested.
 const KEEP = args.includes('--keep');
 
@@ -223,7 +225,9 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
     const phone = flag('from') || '+15555550100';
     await handleInbound(state, { contactId: `sim_${phone.replace(/\D/g, '')}`, contact: { name: flag('name') || '', phone }, text: SIMULATE, messageId: 'sim' });
     saveState(state);
-    return;
+    // A losing model call can hold the event loop open for half a minute after the turn is
+    // done. The turn is saved; nothing else is owed. Measured 2026-09-09: 9 to 36s of nothing.
+    process.exit(0);
   }
 
   // Live: recent inbound conversations. Shape of searchConversations is assumed from the docs
