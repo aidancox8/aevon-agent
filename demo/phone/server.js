@@ -25,7 +25,7 @@ function run(args) {
 
 /** Turn the worker's log into the events the screen draws. */
 function parse(out) {
-  const ev = { verdict: null, reason: '', known: [], missing: [], tags: [], note: false, draft: null, appointment: null, confirmation: null, skipped: null, log: out };
+  const ev = { verdict: null, reason: '', known: [], missing: [], tags: [], note: false, draft: null, appointment: null, confirmation: null, skipped: null, offered: [], log: out };
   const lines = out.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
@@ -34,6 +34,8 @@ function parse(out) {
     if ((m = l.match(/^\s+known: (.*)$/))) { ev.known = m[1].split(' | ').map((s) => s.trim()); continue; }
     if ((m = l.match(/^\s+still needed: (.*)$/))) { ev.missing = m[1].split(' | ').map((s) => s.trim()); continue; }
     if ((m = l.match(/^\s+held \d+ slot\(s\); skipped (.*)$/))) { ev.skipped = m[1].trim(); continue; }
+    if ((m = l.match(/^\s+offered slots: (.*)$/))) { ev.offered = m[1].split(',').map((x) => x.trim()).filter(Boolean); continue; }
+    if ((m = l.match(/^\s+would: cancel earlier appointment (\{.*\})$/))) { try { ev.cancelled = JSON.parse(m[1]).startTime; } catch (e) { /* ignore */ } continue; }
     if ((m = l.match(/^\s+\S[^:]*: (asked for .*|confirmed slot \d)$/))) { ev.verdict = ev.verdict || 'reply'; ev.reason = m[1]; continue; }
     if ((m = l.match(/^\s+would: add note/))) { ev.note = true; continue; }
     if ((m = l.match(/^\s+would: (?:add tags|tag \w+(?: \w+)?) (\{.*\})$/))) { try { ev.tags.push(...JSON.parse(m[1]).tags); } catch (e) { /* ignore */ } continue; }
@@ -57,6 +59,11 @@ http.createServer((req, res) => {
     return res.end(fs.readFileSync(path.join(__dirname, 'index.html')));
   }
   if (req.method === 'POST' && req.url === '/reset') { run(['--reset']); return json(res, 200, { ok: true }); }
+  if (req.method === 'GET' && req.url === '/calendar') {
+    process.argv.push('--config', 'skyline');
+    const { CONFIGS } = require(path.join(__dirname, '..', '..', 'intake-agent'));
+    return json(res, 200, { events: (CONFIGS.skyline.frontDesk || {}).fixtureEvents || [] });
+  }
   if (req.method === 'POST' && req.url === '/text') {
     let body = '';
     req.on('data', (c) => { body += c; });

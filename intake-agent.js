@@ -232,11 +232,22 @@ const CONFIGS = {
         bufferAfterCallMin: 5, bufferBeforeShowingMin: 20, bufferAfterShowingMin: 15,
       },
       // A plausible week for a busy broker, used only when no calendar is connected.
+      // A week of her calendar, Pacific time, so an offer on any day lands among real-looking
+      // events. Thu Sep 10: showing 11-12, call 12:15, showing 2-3:30. Fri: showing 9:30-10:30,
+      // call 1:00. Sat: showing 10-11:30. Mon: call 9:15, showing 1-2. Tue: showing 10-11, call 3.
+      // Wed: showing 11-12:30.
       fixtureEvents: [
-        { start: '2026-09-10T18:00:00Z', end: '2026-09-10T19:00:00Z', type: 'showing' },
-        { start: '2026-09-10T19:15:00Z', end: '2026-09-10T19:30:00Z', type: 'call' },
-        { start: '2026-09-10T21:00:00Z', end: '2026-09-10T22:30:00Z', type: 'showing' },
-        { start: '2026-09-11T16:30:00Z', end: '2026-09-11T17:30:00Z', type: 'showing' },
+        { start: '2026-09-10T18:00:00Z', end: '2026-09-10T19:00:00Z', type: 'showing', title: 'Showing, 4821 NE Bridgeport Way, Lakewood' },
+        { start: '2026-09-10T19:15:00Z', end: '2026-09-10T19:30:00Z', type: 'call', title: 'Call, Ruiz, VA loan questions' },
+        { start: '2026-09-10T21:00:00Z', end: '2026-09-10T22:30:00Z', type: 'showing', title: 'Showing, 918 Idlewood Ave, DuPont' },
+        { start: '2026-09-11T16:30:00Z', end: '2026-09-11T17:30:00Z', type: 'showing', title: 'Showing, 2201 Vista Pl, Steilacoom' },
+        { start: '2026-09-11T20:00:00Z', end: '2026-09-11T20:30:00Z', type: 'call', title: 'Call, Okonkwo, listing prep' },
+        { start: '2026-09-12T17:00:00Z', end: '2026-09-12T18:30:00Z', type: 'showing', title: 'Showing, 7710 Zircon Dr, Lakewood' },
+        { start: '2026-09-14T16:15:00Z', end: '2026-09-14T16:45:00Z', type: 'call', title: 'Call, lender, Lindqvist file' },
+        { start: '2026-09-14T20:00:00Z', end: '2026-09-14T21:00:00Z', type: 'showing', title: 'Showing, 1340 Bridgeport Way, University Place' },
+        { start: '2026-09-15T17:00:00Z', end: '2026-09-15T18:00:00Z', type: 'showing', title: 'Showing, 505 Garrison Ct, DuPont' },
+        { start: '2026-09-15T22:00:00Z', end: '2026-09-15T22:30:00Z', type: 'call', title: 'Call, Alvarez, timing' },
+        { start: '2026-09-16T18:00:00Z', end: '2026-09-16T19:30:00Z', type: 'showing', title: 'Showing, 9002 Steilacoom Blvd, Lakewood' },
       ],
     },
   },

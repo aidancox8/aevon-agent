@@ -216,7 +216,18 @@
   .facts div b { display: block; color: var(--t2); font-weight: 500; font-size: 11.5px; margin-bottom: 2px; }
   .facts div span { color: var(--t1); overflow-wrap: anywhere; }
   .facts .miss span { color: var(--t3); }
+  .days { display: flex; gap: 4px; margin: 0 0 8px; }
+  .days span { flex: 1; text-align: center; border: 1px solid var(--line); border-radius: 6px; padding: 4px 0; font-size: 10.5px; color: var(--t2); cursor: pointer; line-height: 1.2; }
+  .days span b { display: block; font-size: 13px; color: var(--t1); font-weight: 600; }
+  .days span.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .days span.on b { color: #fff; }
+  .days span.has::after { content: ''; display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--blue); margin: 2px auto 0; }
+  .days span.on.has::after { background: #fff; }
   .cal .row { display: grid; grid-template-columns: 60px 1fr; gap: 8px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); line-height: 1.3; }
+  .cal .row.hold { color: var(--amber-ink); background: var(--amber-soft); border-radius: 4px; padding-left: 6px; margin-left: -6px; }
+  .cal .row.hold .t { color: var(--amber-ink); }
+  .cal .row.hold span:last-child::before { content: 'offered · '; font-weight: 600; }
+  .cal .empty-day { color: var(--t3); font-size: 12px; padding: 10px 0; }
   .cal .row .t { color: var(--t2); font-variant-numeric: tabular-nums; font-weight: 600; }
   .cal .row.new { color: var(--green-ink); font-weight: 600; }
   .cal .row.new .t { color: var(--green-ink); }
@@ -302,6 +313,7 @@
           </section>
           <section class="cal">
             <h3 id="calhead">Calendar</h3>
+            <div class="days" id="days"></div>
             <div id="cal"></div>
           </section>
         </div>
@@ -312,12 +324,14 @@
 
 <script>
   const state = { leads: {}, current: 'Marcus Ellison' };
-  const FIXTURE_DAY = 'Thu, Sep 10';
-  const fixture = [
-    ['11:00 AM', 'Showing, 4821 NE Bridgeport Way, Lakewood'],
-    ['12:15 PM', 'Call, Ruiz, VA loan questions'],
-    ['2:00 PM', 'Showing, 918 Idlewood Ave, DuPont'],
-  ];
+  // Her week, from the same fixture the worker books against, so what the calendar shows is
+  // what the agent saw when it chose the times. Loaded once; the day in view follows the conversation.
+  let WEEK = [];
+  const TZ = 'America/Los_Angeles';
+  const dayKey = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: TZ });
+  const todayKey = dayKey(new Date());
+  state.viewDay = todayKey;
+  fetch('/calendar').then((r) => r.json()).then((j) => { WEEK = j.events || []; render(); }).catch(() => {});
   // Earlier conversations in her inbox, so the demo lead lands in a working CRM rather than an
   // empty one. Static: the agent never touches these. Names invented.
   const PRIOR = [
@@ -334,6 +348,7 @@
   const fakeDigits = (n) => { let x = 0; for (const c of n.toLowerCase()) x = (x * 31 + c.charCodeAt(0)) >>> 0; return String(x % 10000).padStart(4, '0'); };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const PRIOR_EVENTS = [];
   const HUES = [['#DCFAE6', '#067647'], ['#FEF0C7', '#B54708'], ['#E0EAFF', '#3538CD'], ['#FCE7F6', '#C11574'], ['#E6F4FF', '#175CD3']];
 
   function lead(name) {
@@ -407,12 +422,29 @@
     if (!V.known.length && !V.missing.length) f.innerHTML = '<div style="color:var(--t3)">Nothing read yet.</div>';
     else f.innerHTML = V.known.map((k) => { const [a, ...b] = k.split(':'); return `<div><b>${esc(a.trim())}</b><span>${esc(b.join(':').trim() || '')}</span></div>`; }).join('') + V.missing.map((m) => `<div class="miss"><b>still needed</b><span>${esc(m)}</span></div>`).join('');
 
+    // Calendar: seven days from today; the day in view follows whatever was just offered or booked.
+    const items = [];
+    for (const e of WEEK) items.push({ at: e.start, key: dayKey(e.start), t: fmtTime(e.start), w: e.title || (e.type === 'call' ? 'Call' : 'Showing'), kind: 'fixed' });
+    for (const c of live) {
+      if (c.appt) items.push({ at: c.appt.startTime, key: dayKey(c.appt.startTime), t: fmtTime(c.appt.startTime), w: c.appt.title, kind: 'new' });
+      for (const iso of (c.offered || [])) items.push({ at: iso, key: dayKey(iso), t: fmtTime(iso), w: `Call with Sofia, ${c.name.split(' ')[0]}`, kind: 'hold' });
+    }
+    const days = []; for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate() + i); days.push(dayKey(d)); }
+    if (!days.includes(state.viewDay)) state.viewDay = days[0];
+    const ds = $('days'); ds.innerHTML = '';
+    for (const k of days) {
+      const d = new Date(k + 'T12:00:00'); const el = document.createElement('span');
+      el.className = (k === state.viewDay ? 'on ' : '') + (items.some((x) => x.key === k) ? 'has' : '');
+      el.innerHTML = `${d.toLocaleDateString('en-US', { weekday: 'short' })}<b>${d.getDate()}</b>`;
+      el.onclick = () => { state.viewDay = k; render(); };
+      ds.appendChild(el);
+    }
+    const viewDate = new Date(state.viewDay + 'T12:00:00');
+    $('calhead').innerHTML = `Calendar <span>${viewDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>`;
     const cal = $('cal'); cal.innerHTML = '';
-    $('calhead').innerHTML = `Calendar <span>${FIXTURE_DAY}</span>`;
-    const rows = fixture.map(([t, w]) => ({ t, w, isNew: false, day: FIXTURE_DAY }));
-    for (const c of live) { const a = c.appt; if (a) rows.push({ t: fmtTime(a.startTime), w: a.title, isNew: true, day: fmtDay(a.startTime) }); }
-    rows.sort((a, b) => (a.day === b.day ? 0 : a.day === FIXTURE_DAY ? 1 : -1) || new Date('1/1/2000 ' + a.t) - new Date('1/1/2000 ' + b.t));
-    for (const r of rows) { const d = document.createElement('div'); d.className = 'row' + (r.isNew ? ' new' : ''); d.innerHTML = `<span class="t">${r.day !== FIXTURE_DAY ? r.day + '<br>' : ''}${r.t}</span><span>${esc(r.w)}</span>`; cal.appendChild(d); }
+    const rows = items.filter((x) => x.key === state.viewDay).sort((a, b) => new Date(a.at) - new Date(b.at));
+    if (!rows.length) cal.innerHTML = '<div class="empty-day">Nothing booked.</div>';
+    for (const r of rows) { const d = document.createElement('div'); d.className = 'row' + (r.kind === 'new' ? ' new' : r.kind === 'hold' ? ' hold' : ''); d.innerHTML = `<span class="t">${r.t}</span><span>${esc(r.w)}</span>`; cal.appendChild(d); }
   }
 
   function card(cls, html) { const d = document.createElement('div'); d.className = 'card ' + cls; d.innerHTML = html; return d; }
@@ -440,8 +472,9 @@
     L.working = false;
     ev.known = ev.known || []; ev.missing = ev.missing || []; ev.tags = ev.tags || [];
 
+    if (ev.offered && ev.offered.length) { L.offered = ev.offered; state.viewDay = dayKey(ev.offered[0]); }
     if (ev.appointment) {
-      L.appt = ev.appointment;
+      L.appt = ev.appointment; L.offered = []; state.viewDay = dayKey(ev.appointment.startTime);
       L.tags = [...new Set([...L.tags.filter((t) => t !== 'agent-draft'), 'agent-booked'])];
       const dp = dayParts(ev.appointment.startTime);
       L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--green)"></i>Appointment booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. Reminder text to the lead 30 minutes before.</div></div>`));

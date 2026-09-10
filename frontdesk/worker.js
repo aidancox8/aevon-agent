@@ -180,11 +180,13 @@ async function offerFor(state, contactId, contact, pref, kind, carry) {
     draft = `${pref ? `${pref.label} works. ` : ''}I can call you ${keep.map((d) => fmt(d, TZ)).join(' or ')}. Which works better?`;
     state.holds[contactId] = { slots: keep.map((d) => d.toISOString()), kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: carry.known || [], missing: carry.missing || [] };
     say(`  ${who}: ${pref ? `asked for ${pref.label}; ` : ''}offered ${keep.length} slot(s)`);
+    say(`     offered slots: ${keep.map((d) => d.toISOString()).join(', ')}`);
   } else {
     const { offered: near } = findFreeSlots(await busyEvents(state), RULES);
     draft = `Nothing open ${pref ? pref.label : 'then'}, sorry. I can call you ${near.map((d) => fmt(d, TZ)).join(' or ')} instead. Would either of those work?`;
     state.holds[contactId] = { slots: near.map((d) => d.toISOString()), kind, expires: addMin(new Date(), HOLD_MIN).toISOString(), known: carry.known || [], missing: carry.missing || [] };
     say(`  ${who}: asked for ${pref ? pref.label : 'a time'}; nothing free, offered nearest`);
+    say(`     offered slots: ${near.map((d) => d.toISOString()).join(', ')}`);
   }
   await postDraft(state, contactId, draft);
 }
@@ -307,6 +309,7 @@ async function handleInbound(state, { contactId, contact, text, messageId }) {
     const { offered, skipped } = findFreeSlots(await busyEvents(state), RULES);
     if (offered.length) {
       if (skipped.length) say(`     held ${offered.length} slot(s); skipped ${skipped[0].reason}`);
+      say(`     offered slots: ${offered.map((d) => d.toISOString()).join(', ')}`);
       state.holds[contactId] = { slots: offered.map((d) => d.toISOString()), kind: 'call', expires: addMin(new Date(), HOLD_MIN).toISOString(), known: mem.known, missing: mem.missing };
       await postDraft(state, contactId, `${ack}\n\nI can call you ${offered.map((d) => fmt(d, TZ)).join(' or ')}. Which works better, or is there a time that suits you more?`);
       return;
