@@ -261,6 +261,8 @@
       const dp = dayParts(ev.appointment.startTime);
       L.items.push(card('appt', `<div class="date"><b>${dp.wd}</b><span>${dp.day}</span></div><div><div class="k"><i style="background:var(--ok)"></i>Booked on Sofia's calendar</div><div class="t">${esc(ev.appointment.title)}</div><div class="why">${fmtDay(ev.appointment.startTime)} at ${fmtTime(ev.appointment.startTime)}. Reminder text to the lead 30 minutes before.</div></div>`));
       if (ev.confirmation) { L.thread.push({ who: 'me', text: ev.confirmation }); L.items.push(card('sent', `<div class="k"><i></i>Sent to lead · confirmation · ${clock()}</div>${esc(ev.confirmation)}`)); }
+    } else if (ev.verdict === 'timeout' || ev.verdict === 'error') {
+      L.items.push(card('spam', `<div class="k"><i></i>Agent did not answer</div>${esc(ev.reason || 'The model timed out.')}<div class="why">Nothing was filed. Send the text again.</div>`));
     } else if (ev.verdict && ev.verdict !== 'reply' && ev.verdict !== 'QUALIFIED') {
       L.items.push(card('spam', `<div class="k"><i></i>Filed as ${esc(ev.verdict)}</div>${esc(ev.reason)}<div class="why">No draft, no tag, not on the pipeline.</div>`));
     } else {

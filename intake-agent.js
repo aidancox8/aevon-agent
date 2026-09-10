@@ -161,13 +161,21 @@ const CONFIGS = {
     // Found in rehearsal 2026-09-08: asked about a listing, the draft said "918 Idlewood is still
     // available. I can show it to you this weekend." The agent cannot know either. These are the
     // things only Sofia can confirm, and the draft says so instead of guessing.
+    // Enforced in code by stripNeverWrite, sentence by sentence.
+    neverWrite: [
+      /thank you for your service/i,
+      /congratulations|congrats/i,
+      /\b(all the time|every day|so many|lots of|a lot of|many) (families|people|folks|buyers|clients)\b/i,
+      /\bI help (families|people|folks|buyers|clients)\b/i,
+      /welcome to the area/i,
+    ],
     neverSay: [
       'whether a specific listing is still available, under contract, or sold',
       'that a showing or viewing will happen at a particular time or day (times are offered separately, as a call)',
       'a price, rate, payment, or what a home will appraise or sell for',
       'anything about a specific property that is not in the message',
     ],
-    voice: 'warm, direct and brief; writes like a busy broker on her phone between showings. Always I, never we, she works alone. Opens with "Hi" and their first name, then a comma. Plain sentences. Every question ends with a question mark, no real estate jargon, no exclamation marks.',
+    voice: 'warm, direct and brief; writes like a busy broker on her phone between showings. Always I, never we, she works alone. Opens with "Hi" and their first name, then a comma. Plain sentences. Every question ends with a question mark, no real estate jargon, no exclamation marks. Never "thank you for your service", never congratulations, never a line about how many people she has helped or how often she does this; she said on the 3rd that she does not want hype. Answer what they asked, then one or two questions.',
     qualify: 'A good inquiry is someone buying or selling a home in the South Puget Sound area, most often a service member or spouse with PCS orders to or from JBLM. Vendors, lead-generation pitches, recruiters, other agents prospecting for referrals, and anyone outside Washington are NOT qualified.',
     // The point of a build over an off-the-shelf tool. A general assistant asks "what is your
     // budget and timeline"; it does not know that a report date is the deadline everything
@@ -292,6 +300,18 @@ function isProtectedSender(addr) {
 function isAutomatedRecipient(addr) {
   return AUTOMATED_SENDER_PATTERNS.some((re) => re.test(String(addr || '')));
 }
+/**
+ * Sentences the client does not want said, removed in code rather than asked of the model. The
+ * voice prompt already bans "thank you for your service"; the rehearsal draft on 2026-09-09
+ * opened with it anyway. A prompt is advice, this is a rule. The sentence goes, the rest stays.
+ */
+function stripNeverWrite(text, patterns) {
+  if (!patterns || !patterns.length) return text;
+  const sentences = String(text).split(/(?<=[.!?])\s+/);
+  const kept = sentences.filter((sent) => !patterns.some((re) => re.test(sent)));
+  return kept.join(' ').replace(/\s{2,}/g, ' ').trim();
+}
+
 function draftIsSafeToSend(text) {
   const t = String(text || '').trim();
   if (t.length < 40) return { ok: false, why: 'reply is too short to be a real answer' };
@@ -449,7 +469,9 @@ Respond with JSON only:
     const raw = await generate(prompt);
     const m = raw.match(/\{[\s\S]*\}/);
     if (!m) return { intent: 'other', qualified: false, reason: 'unparseable', draft: '' };
-    return JSON.parse(m[0]);
+    const res = JSON.parse(m[0]);
+    if (res.draft) res.draft = stripNeverWrite(res.draft, CFG.neverWrite);
+    return res;
   } catch (err) {
     return { intent: 'other', qualified: false, reason: `classifier error: ${err.message}`, draft: '' };
   }
@@ -646,6 +668,7 @@ if (require.main === module) {
 module.exports = {
   autonomy,
   draftIsSafeToSend,
+  stripNeverWrite,
   isProtectedSender,
   isAutomatedRecipient,
   AUTOSEND_CAP_FALLBACK,

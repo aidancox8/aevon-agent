@@ -18,7 +18,8 @@ const PORT = 4173;
 const SOFIA = path.join(__dirname, '..', 'sofia.js');
 
 function run(args) {
-  const r = spawnSync(process.execPath, [SOFIA, ...args], { encoding: 'utf8', timeout: 120000 });
+  const r = spawnSync(process.execPath, [SOFIA, ...args], { encoding: 'utf8', timeout: 90000 });
+  if (r.error && r.error.code === 'ETIMEDOUT') return (r.stdout || '') + '\n  worker: [timeout] the models did not answer in 90 seconds\n';
   return (r.stdout || '') + (r.stderr || '');
 }
 
