@@ -20,7 +20,7 @@ const { createGenerate } = require('./lib/gemini');
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 // Own quota pool via GEMINI_API_KEY_AGENT — full cooldown + OpenRouter fallback chain
-const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
+const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY);
 
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 

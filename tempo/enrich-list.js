@@ -18,7 +18,7 @@ const { createGenerate } = require('../lib/gemini');
 const { findContact } = require('../lib/contact-finder');
 
 const TABLE = 'tempo_leads';
-const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
+const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY);
 
 const EXCLUDE_NAMES = ['changepain', 'change pain', 'artus'];
 const isExcluded = (name, website) => {

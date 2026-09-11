@@ -32,7 +32,7 @@ const LIMIT = (() => {
   return i > -1 ? parseInt(process.argv[i + 1], 10) : 25;
 })();
 
-const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
+const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY);
 
 /** Models emit curly quotes and non-breaking hyphens. Flatten to ASCII before anything else. */
 function normalise(t) {

@@ -23,7 +23,7 @@ const { dncReason } = require('./dnc');
 
 const TABLE = 'tempo_leads';
 const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
-const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY);
+const generate = createGenerate(process.env.GEMINI_API_KEY_AGENT || process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY);
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 
 // Never prospect these — the user's employer + one explicit exclusion.
