@@ -134,6 +134,28 @@ Partner-level requirements are a headcount of certified people that has to stay 
 I build software that holds every certification on one record per person, with the renewal scheduled from the expiry date, so an expiry is visible weeks before it costs the tier.
 
 {{ASK}}`],
+  // Added the same evening: two US nonprofits sized from their Form 990 and given an HR name by Hunter.
+  ['954bb813-debe-464d-a648-ed751463c3fd', 'driver qualification files',
+`Hi Britt,
+
+Saw a posting of yours where the role is to ensure all driver qualification files and records are maintained in compliance with all regulatory agencies, including FMCSA, DOT and the DMV.
+
+A DQ file is a folder per driver where the medical card and the licence expire on their own clocks.
+
+I build software that keeps those on one record per driver, with the renewal scheduled from the expiry date, so the file is compliant on the day someone asks.
+
+{{ASK}}`],
+
+  ['5631cccb-853c-460e-891e-5e16c62b85a8', 'certification records',
+`Hi Aaron,
+
+Saw a posting of yours where the role is to maintain current certification records for assigned unit staff.
+
+Current is the hard word. A record is current the day it is filed and expires quietly on a date nobody is watching.
+
+I build software that holds every certification on one record per person and schedules the renewal from the expiry date, so current is the default rather than a task.
+
+{{ASK}}`],
 ];
 
 (async () => {

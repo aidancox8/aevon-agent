@@ -82,7 +82,8 @@ async function domainSearch(domain) {
   if (error) throw new Error(error.message);
   const seen = new Set();
   const todo = data.filter((l) => {
-    if (/hunter-contacts:/.test(l.notes || '')) return false;
+    if (/hunter-contacts:/.test(l.notes || "")) return false;
+    if (l.staff_estimate && l.staff_estimate > 1000) return false; // the sender will hold it anyway; Wood (33,000) cost a search on 2026-09-10
     if (excludedOrgReason(l.business_name, l.email)) return false;
     const apex = apexOf(l.website); if (!apex || seen.has(apex)) return false; seen.add(apex); return true;
   })
