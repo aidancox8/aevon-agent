@@ -431,7 +431,7 @@ async function search(phrase, target) {
   throw lastErr;
 }
 
-module.exports = { APPLICANT_FACING, INTERNAL_WORK, EXCLUDE_NAME, EXCLUDE_LARGE, extractQuote, inferIndustry };
+module.exports = { PHRASES, APPLICANT_FACING, INTERNAL_WORK, EXCLUDE_NAME, EXCLUDE_LARGE, extractQuote, inferIndustry };
 
 // Only run when invoked directly, so the filters can be unit tested without hitting the network.
 if (require.main === module) (async () => {

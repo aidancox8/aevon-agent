@@ -124,6 +124,10 @@ function validate(lead, i) {
       contact_name: lead.contact_name || null,
       contact_role: lead.contact_role || null,
       email: lead.email || null,
+      // Column exists and schedule.js ranks by it, but nothing wrote it on ingest before
+      // jobbank-finder.js needed it: every finder that had an address at discovery time (site
+      // published, apply-by-email) was inserting it with quality unset.
+      email_quality: lead.email_quality || null,
       phone: lead.phone || null,
       signal_type: lead.signal_type || null,
       signal_quote: lead.signal_quote.trim(),
