@@ -156,6 +156,18 @@ Current is the hard word. A record is current the day it is filed and expires qu
 I build software that holds every certification on one record per person and schedules the renewal from the expiry date, so current is the default rather than a task.
 
 {{ASK}}`],
+  // 2026-09-11: Trellis, address built from the {f}{last} pattern and verified. The quote is the
+  // applicant's side of the matrix, so the observation is about the artifact, not the role.
+  ['9f615d73-317a-48c1-979e-5cc12d00c7df', 'training matrix',
+`Hi Courtenay,
+
+Saw a posting of yours that asks new hires to complete all mandatory trainings per the Trellis Training Matrix.
+
+A matrix with a name is a matrix someone maintains, and at 400 staff across programs that is a job on its own.
+
+I build software where completing the training updates the matrix itself, so it stays current without anyone keeping it.
+
+{{ASK}}`],
 ];
 
 (async () => {
