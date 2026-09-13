@@ -189,8 +189,9 @@ if (require.main !== module) return;
   const seen = new Set((prior || []).map(e => e.metadata && e.metadata.inbound_message_id).filter(Boolean));
 
   const list = await gmail.users.messages.list({
-    userId: 'me', maxResults: 200,
-    q: `newer_than:${LOOKBACK_DAYS}d -from:${GMAIL_USER}`,
+    // includeSpamTrash: a 'no' that Gmail filed as junk must still stop the sequence (Sean Werner, 2026-09-12).
+    userId: 'me', maxResults: 200, includeSpamTrash: true,
+    q: `newer_than:${LOOKBACK_DAYS}d -from:${GMAIL_USER} -in:trash`,
   });
   const ids = (list.data.messages || []).map(m => m.id);
   console.log(`${DRY ? 'DRY RUN: ' : ''}scanning ${ids.length} inbound message(s) from the last ${LOOKBACK_DAYS} days\n`);

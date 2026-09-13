@@ -285,8 +285,9 @@ async function run() {
   );
 
   // List candidate inbound messages.
-  const query = `in:inbox newer_than:${LOOKBACK_DAYS}d -from:${GMAIL_USER}`;
-  const list = await gmail.users.messages.list({ userId: 'me', q: query, maxResults: 100 });
+  // in:anywhere so a "no" that Gmail filed as junk still stops the sequence (Sean Werner, 2026-09-12).
+  const query = `in:anywhere -in:trash -in:sent -in:draft newer_than:${LOOKBACK_DAYS}d -from:${GMAIL_USER}`;
+  const list = await gmail.users.messages.list({ userId: 'me', q: query, maxResults: 100, includeSpamTrash: true });
   const ids = (list.data.messages || []).map(m => m.id);
   console.log(`Found ${ids.length} candidate inbound message(s).\n`);
 
