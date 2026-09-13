@@ -11,12 +11,18 @@
  * That is a feature, not a workaround. The first-customers research is blunt that nobody got
  * customer #1 from a list larger than about 100, and a hand-built list of 40 beats 3,400.
  *
+ * prospeo-finder.js is a second exception, in the other direction: it finds the PERSON first,
+ * from a structured people-search API, not a job ad, so most companies it hands over have no
+ * posting to quote at all. signal_quote can be null for those, but only when
+ * personalization_basis is exactly 'industry-template', which is also what cadre_leads'
+ * own check constraint requires before it will accept a null quote.
+ *
  *   node cadre/ingest.js leads.json --dry
  *   node cadre/ingest.js leads.json
  *
  * Each entry: { business_name, website?, city, industry, source, signal_type, signal_quote,
  *               signal_url, signal_date?, staff_estimate?, contact_name?, contact_role?,
- *               email?, phone?, notes? }
+ *               email?, phone?, notes?, personalization_basis? }
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -37,7 +43,9 @@ const VERTICALS = ['health', 'trades', 'transport', 'childcare', 'security', 'fo
   'utilities', 'agriculture', 'recreation', 'hospitality', 'environmental', 'facilities',
   'warehousing', 'other'];
 
-const SIGNAL_TYPES = ['hiring_credentialing', 'hiring_compliance', 'manual_tracking', 'tool_gap'];
+// 'title' added for prospeo-finder.js: the signal there is a named person's job title matching
+// the search, not a posting, so it belongs to none of the posting-derived types above.
+const SIGNAL_TYPES = ['hiring_credentialing', 'hiring_compliance', 'manual_tracking', 'tool_gap', 'title'];
 
 /**
  * Score the strength of the signal, not the size of the company.
@@ -65,8 +73,14 @@ function score(lead) {
 function validate(lead, i) {
   const errs = [];
   if (!lead.business_name) errs.push('business_name missing');
-  if (!lead.signal_quote || lead.signal_quote.trim().length <= 20) {
-    errs.push('signal_quote missing or too short (the DB rejects under 20 chars)');
+  // A person-search source (prospeo-finder.js) has no posting to quote for most companies:
+  // the person is the signal, not a job ad. The DB's own check constraint already allows a
+  // null quote when personalization_basis is 'industry-template', so mirror it here rather
+  // than reject a lead the database would accept.
+  if (lead.personalization_basis !== 'industry-template') {
+    if (!lead.signal_quote || lead.signal_quote.trim().length <= 20) {
+      errs.push('signal_quote missing or too short (the DB rejects under 20 chars)');
+    }
   }
   if (!lead.signal_url) errs.push('signal_url missing');
   if (lead.signal_type && !SIGNAL_TYPES.includes(lead.signal_type)) {
@@ -130,18 +144,23 @@ function validate(lead, i) {
       email_quality: lead.email_quality || null,
       phone: lead.phone || null,
       signal_type: lead.signal_type || null,
-      signal_quote: lead.signal_quote.trim(),
+      signal_quote: lead.signal_quote ? lead.signal_quote.trim() : null,
       signal_url: lead.signal_url,
       signal_date: lead.signal_date || null,
       qualification_score: score(lead),
-      // The quote IS the personalization. No inference, no guessing at their pain: the first
-      // line of the email can reference something they wrote themselves.
-      personalization_basis: `published signal: ${lead.signal_type || 'unclassified'}`,
+      // The quote IS the personalization, when there is one. No inference, no guessing at
+      // their pain: the first line of the email can reference something they wrote themselves.
+      // A person-search source can carry industry-template all the way through with no quote
+      // at all, and that string has to survive verbatim: it is what the DB check constraint
+      // matches on to allow signal_quote to be null.
+      personalization_basis: lead.personalization_basis === 'industry-template'
+        ? 'industry-template'
+        : `published signal: ${lead.signal_type || 'unclassified'}`,
       notes: lead.notes || null,
     };
 
     console.log(`${DRY ? '[dry] ' : ''}${String(row.qualification_score).padStart(2)}/10  ${row.business_name.slice(0, 38).padEnd(40)}${(row.city || '').padEnd(16)}${(row.signal_type || '')}`);
-    console.log(`        "${row.signal_quote.slice(0, 110)}"`);
+    console.log(row.signal_quote ? `        "${row.signal_quote.slice(0, 110)}"` : `        (no quote, ${row.personalization_basis})`);
 
     if (!DRY) {
       const { error } = await supabase.from(TABLE).insert(row);

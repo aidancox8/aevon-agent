@@ -45,7 +45,7 @@ for (const [name, val] of Object.entries({ PROSPEO_KEY, GETPROSPECT_KEY, SNOV_CL
 
 const STATE_DIR = path.join(__dirname, 'state');
 const STATE_FILE = path.join(STATE_DIR, 'free-tier.json');
-const CAPS = { prospeo: 100, getprospect: 50, snov: 50, lusha: 40, reoon: 600, tomba: 25, zerobounce: 100 };
+const CAPS = { prospeo: 80, getprospect: 50, snov: 50, lusha: 40, reoon: 600, tomba: 25, zerobounce: 100 }; // prospeo: 100 a month on the free plan, 80 here so the finder keeps 20 for searches
 
 function monthNow() { return new Date().toISOString().slice(0, 7); }
 
