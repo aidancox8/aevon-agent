@@ -61,7 +61,10 @@ create table if not exists cadre_leads (
 -- nobody noticed until thousands of emails had gone out.
 alter table cadre_leads drop constraint if exists cadre_leads_requires_signal;
 alter table cadre_leads add constraint cadre_leads_requires_signal
-  check (signal_quote is not null and length(btrim(signal_quote)) > 20 and signal_url is not null);
+  check ((signal_quote is not null and length(btrim(signal_quote)) > 20 and signal_url is not null)
+      -- 2026-09-12: leads found by title and size (Prospeo) carry no posting; their first email is
+      -- the industry template in cadre/copy-template.js, and the sender gates on the basis instead.
+      or personalization_basis = 'industry-template');
 
 create unique index if not exists cadre_leads_business_uniq
   on cadre_leads (lower(btrim(business_name)));

@@ -307,7 +307,10 @@ function blockReason(lead, stepNo) {
     : excludedOrgReason(lead.business_name, lead.email);
   if (org) return org;
 
-  if (!lead.signal_quote || lead.signal_quote.trim().length < 20) return 'no signal quote';
+  // Title-and-size leads (Prospeo) have no posting to quote; their basis is the industry template
+  // and the quote checks below do not apply to them.
+  const templated = lead.personalization_basis === 'industry-template';
+  if (!templated && (!lead.signal_quote || lead.signal_quote.trim().length < 20)) return 'no signal quote';
   if (!lead.email_subject || !lead.email_body) return 'no copy written';
 
   // The campaign's whole premise. If the body does not carry their own words, this is just
@@ -321,7 +324,7 @@ function blockReason(lead, stepNo) {
   // Follow-ups are exempt. They are a reply to a thread that already quoted them, and restating
   // the quote a second time would read as a mail merge, which is the thing this check exists to
   // prevent. Blocking a follow-up on it is the check firing at the wrong target.
-  if (stepNo > 0) return null;
+  if (stepNo > 0 || templated) return null;
 
   const run = longestVerbatimRun(lead.signal_quote, lead.email_body);
   const quoteWords = lead.signal_quote.trim().split(/\s+/).length;
@@ -383,7 +386,7 @@ async function bounceRate() {
   const { data: due, error } = await supabase.from(TABLE)
     .select('id, business_name, email, website, contact_name, contact_role, city, address, signal_quote, signal_url, ' +
             'email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, ' +
-            'sequence_step, last_sent_at, qualification_score, scheduled_send_at, staff_estimate, status')
+            'sequence_step, last_sent_at, qualification_score, scheduled_send_at, staff_estimate, status, personalization_basis')
     // 'sent' is included because a lead stays `sent` between sequence steps. 'replied',
     // 'unsubscribed', 'bounced' and 'dont_contact' are absent on purpose: those are the four
     // ways a lead earns the right never to hear from us again.
