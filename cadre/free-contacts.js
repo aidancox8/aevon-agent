@@ -29,6 +29,9 @@ const { excludedOrgReason } = require('../tempo/dnc');
 
 const DRY = process.argv.includes('--dry');
 const LIMIT = (() => { const i = process.argv.indexOf('--limit'); return i > -1 ? parseInt(process.argv[i + 1], 10) : 40; })();
+// --named-only: skip every lead that would need a Prospeo search (no contact name yet). Prospeo's
+// free plan rate-limits searches hard; the leads that already carry a name cost no search at all.
+const NAMED_ONLY = process.argv.includes('--named-only');
 
 const PROSPEO_KEY = process.env.PROSPEO_KEY;
 const GETPROSPECT_KEY = process.env.GETPROSPECT_KEY;
@@ -296,11 +299,12 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
     const hasPersonalName = l.email_quality === 'personal' && l.contact_name && l.contact_name.trim() !== '';
     if (hasPersonalName) return false;
     if (excludedOrgReason(l.business_name, l.email)) return false;
+    if (NAMED_ONLY && !(l.contact_name && l.contact_name.trim().split(/s+/).length >= 2)) return false;
     const apex = apexOf(l.website);
     if (!apex || seen.has(apex)) return false;
     seen.add(apex);
     return true;
-  }).slice(0, LIMIT);
+  }).sort((a, b) => ((b.contact_name ? 1 : 0) - (a.contact_name ? 1 : 0))).slice(0, LIMIT);
 
   console.log(`${DRY ? 'DRY RUN (still calls the APIs, writes nothing): ' : ''}${todo.length} lead(s) selected.\n`);
 
@@ -382,11 +386,11 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
       }
       if (!email) {
         try { const a = await getProspectFind(name, apex); if (a) await tryVerified(a, 'getprospect'); }
-        catch (e) { if (e instanceof CreditsExhausted) throw e; console.log(`       getprospect error: ${e.message}`); }
+        catch (e) { if (e instanceof CreditsExhausted) { state.getprospect = CAPS.getprospect; console.log('  cap  getprospect: out of credit, skipping it for the rest of the run'); } else console.log(`       getprospect error: ${e.message}`); }
       }
       if (!email) {
         try { const a = await snovFind(pick.first_name, pick.last_name, apex); if (a) await tryVerified(a, 'snov'); }
-        catch (e) { if (e instanceof CreditsExhausted) throw e; console.log(`       snov error: ${e.message}`); }
+        catch (e) { if (e instanceof CreditsExhausted) { state.snov = CAPS.snov; console.log('  cap  snov: out of credit, skipping it for the rest of the run'); } else console.log(`       snov error: ${e.message}`); }
       }
       if (!email) {
         try { const a = await prospeoEnrich({ firstName: pick.first_name, lastName: pick.last_name, apex, personId: pick.id }); if (a) await tryVerified(a, 'prospeo'); }
@@ -394,9 +398,10 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
       }
       if (!email) {
         try { const a = await lushaFind(pick.first_name, pick.last_name, apex); if (a) await tryVerified(a, 'lusha'); }
-        catch (e) { if (e instanceof CreditsExhausted) throw e; console.log(`       lusha error: ${e.message}`); }
+        catch (e) { if (e instanceof CreditsExhausted) { state.lusha = CAPS.lusha; console.log('  cap  lusha: out of credit, skipping it for the rest of the run'); } else console.log(`       lusha error: ${e.message}`); }
       }
 
+      saveState(state);
       const nameNow = `${pick.first_name} ${pick.last_name}`;
       if (email) {
         found++;
@@ -405,10 +410,10 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
           const releaseToQueued = lead.status === 'needs_review' && NEEDS_REVIEW_RELEASE.test(lead.notes || '');
           const u = {
             contact_name: nameNow,
-            contact_role: pick.title || null,
+            contact_role: pick.title || lead.contact_role || null,
             email,
             email_quality: 'personal',
-            notes: `${lead.notes ? lead.notes + '\n' : ''}free-contacts: ${email} via ${source}, Reoon deliverable, title ${pick.title || 'unknown'}`,
+            notes: `${lead.notes ? lead.notes + '\n' : ''}free-contacts: ${email} via ${source}, Reoon deliverable, title ${pick.title || lead.contact_role || 'unknown'}`,
           };
           if (releaseToQueued) u.status = 'queued';
           const { error: e } = await supabase.from('cadre_leads').update(u).eq('id', lead.id);
