@@ -22,6 +22,8 @@ const supabase = require('../lib/supabase');
 const DRY = process.argv.includes('--dry');
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > -1 ? process.argv[i + 1] : dflt; };
 const LIMIT = parseInt(arg('limit', '500'), 10);
+// --rewrite: replace earlier template copy (never hand-written, locked copy) after the wording changes.
+const REWRITE = process.argv.includes('--rewrite');
 
 /** Sector wording, keyed by a regex over the Prospeo industry string kept in notes, then ours. */
 const SECTORS = [
@@ -61,7 +63,7 @@ function body(lead) {
 
 You ${roleVerb(lead.contact_role)} for ${n} people at ${lead.business_name}.${inSector} that is ${s.creds}, each expiring on its own clock, for every one of them.
 
-I build software that holds those on one record per person and schedules the renewal from the expiry date, so an expiry is visible weeks out instead of the morning of.
+I build HR software for companies your size: onboarding by role, one record per person, training and certifications with the renewal scheduled from the expiry date, policies signed and reviews on time. The records keep themselves, so an expiry is visible weeks out instead of the morning of.
 
 {{ASK}}`;
 }
@@ -70,12 +72,13 @@ I build software that holds those on one record per person and schedules the ren
   const { data, error } = await supabase.from('cadre_leads')
     .select('id, business_name, contact_name, contact_role, staff_estimate, industry, notes, email_body, copy_locked')
     .eq('status', 'queued').eq('personalization_basis', 'industry-template')
-    .is('email_body', null).not('contact_name', 'is', null).not('staff_estimate', 'is', null)
+    .not('contact_name', 'is', null).not('staff_estimate', 'is', null)
     .order('qualification_score', { ascending: false, nullsFirst: false }).limit(LIMIT);
   if (error) throw new Error(error.message);
   let wrote = 0, skipped = 0;
   for (const lead of data) {
     if (lead.copy_locked) { skipped++; continue; }
+    if (lead.email_body && !REWRITE) { skipped++; continue; }
     const text = body(lead);
     const words = text.replace(/\{\{ASK\}\}/, '').trim().split(/\s+/).length;
     if (words > 90) { console.log(`  --   ${lead.business_name}  ${words} words, over the limit`); skipped++; continue; }
