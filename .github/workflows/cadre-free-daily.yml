@@ -1,0 +1,67 @@
+name: Cadre - Free daily supply
+
+# The free tiers refill on their own clocks (Reoon 20 checks a day, Tomba 5 domain searches a
+# day, the rest monthly), and a step that only runs when a human remembers is a step that stops
+# running. This runs every weekday morning and spends whatever refilled: Prospeo names for any
+# lead that needs one, Tomba and the free finders for addresses, Reoon and ZeroBounce to verify,
+# then the template writes the first email and the scheduler books the day.
+#
+# Every script here fails closed on its own cap and treats a 402/429 as "skip that service", so a
+# run that finds nothing costs nothing. State counters live on the laptop, not here, so this job
+# relies on the services' own limits rather than the local free-tier.json.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 4:30am PT weekdays, before the enrich job and the sender.
+    - cron: '30 11 * * 1-5'
+
+jobs:
+  supply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      PROSPEO_KEY: ${{ secrets.PROSPEO_KEY }}
+      GETPROSPECT_KEY: ${{ secrets.GETPROSPECT_KEY }}
+      SNOV_CLIENT_ID: ${{ secrets.SNOV_CLIENT_ID }}
+      SNOV_CLIENT_SECRET: ${{ secrets.SNOV_CLIENT_SECRET }}
+      LUSHA_KEY: ${{ secrets.LUSHA_KEY }}
+      TOMBA_KEY: ${{ secrets.TOMBA_KEY }}
+      TOMBA_SECRET: ${{ secrets.TOMBA_SECRET }}
+      REOON_KEY: ${{ secrets.REOON_KEY }}
+      ZEROBOUNCE_KEY: ${{ secrets.ZEROBOUNCE_KEY }}
+      CADRE_DAILY_CAP: ${{ secrets.DAILY_CAP }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Addresses for named leads (Tomba, GetProspect, Snov, Prospeo enrich; Reoon + ZeroBounce verify)
+        run: node cadre/free-contacts.js --named-only --limit 40
+
+      - name: Formats guessed and verified for the rest
+        run: node cadre/pattern-guess.js --limit 10
+
+      - name: First email for title-found leads
+        run: node cadre/copy-template.js
+
+      - name: Follow-ups where missing
+        run: node cadre/followups-5.js
+
+      - name: Book send days
+        run: node cadre/schedule.js --per-day 50
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"from\":\"Aevon <aidan@aevon.ca>\",\"to\":[\"aidan@aevon.ca\"],\"subject\":\"[Aevon ALERT] Cadre free daily supply failed\",\"text\":\"Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
