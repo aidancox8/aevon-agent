@@ -65,10 +65,11 @@ const FRONT_DOOR = /^(info|contact|hello|office|admin|reception|sales|support|en
     let org = null;
     try {
       const r = await fetch(`https://api.apollo.io/api/v1/organizations/enrich?domain=${encodeURIComponent(apex)}`, { headers: { 'x-api-key': KEY, 'Cache-Control': 'no-cache' } });
-      if (r.status === 429) { console.log('  !!   rate limited, waiting 60s'); await sleep(60000); continue; }
+      if (r.status === 429) { console.log('  !!   rate limited, waiting 15 min'); await sleep(15 * 60000); continue; }
       org = r.status === 200 ? (await r.json()).organization : null;
     } catch (e) { console.log(`  !!   ${l.business_name}  ${e.message}`); continue; }
-    await sleep(400);
+    // Apollo free plan: 200 calls an hour, 600 a day. Nineteen seconds keeps under the hour cap.
+    await sleep(19000);
     const n = org && org.estimated_num_employees;
     const tag = String(l.business_name).slice(0, 34).padEnd(36);
     if (!n) { none++; if (!DRY) await supabase.from('leads').update({ notes: `${l.notes ? l.notes + ' | ' : ''}cadre-import: no size` }).eq('id', l.id); continue; }
