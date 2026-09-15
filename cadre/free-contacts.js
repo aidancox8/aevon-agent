@@ -49,7 +49,7 @@ for (const [name, val] of Object.entries({ PROSPEO_KEY, GETPROSPECT_KEY, SNOV_CL
 
 const STATE_DIR = path.join(__dirname, 'state');
 const STATE_FILE = path.join(STATE_DIR, 'free-tier.json');
-const CAPS = { prospeo: 80, getprospect: 50, snov: 300, lusha: 40, reoon: 600, tomba: 25, zerobounce: 100 }; // snov: the account shows 281 credits on 2026-09-15, not the 50 the pricing page says // prospeo: 100 a month on the free plan, 80 here so the finder keeps 20 for searches
+const CAPS = { prospeo: 95, getprospect: 50, snov: 300, lusha: 40, reoon: 600, tomba: 25, zerobounce: 100 }; // snov: the account shows 281 credits on 2026-09-15, not the 50 the pricing page says // prospeo: 100 a month on the free plan, 80 here so the finder keeps 20 for searches
 
 function monthNow() { return new Date().toISOString().slice(0, 7); }
 
@@ -371,8 +371,12 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
         // out the run stops: "no verifier" must never be recorded as "no address".
         let v = null;
         try { v = await verify(addr); } catch (e) { if (e instanceof NoVerifier) throw new CreditsExhausted('every verifier is out of credit'); console.log(`       verify error: ${e.message}`); }
-        const ok = !!(v && v.ok && !v.catchAll);
-        if (ok) { email = addr; source = `${src}, ${v.via}`; }
+        // A catch-all domain accepts any address, so our verifiers cannot say yes or no there.
+        // Prospeo verifies those with BounceBan before it reveals them, so its answer stands on a
+        // catch-all domain; anything else on a catch-all domain is not taken.
+        const catchAllButProspeo = !!(v && v.catchAll && src === 'prospeo');
+        const ok = !!(v && v.ok && !v.catchAll) || catchAllButProspeo;
+        if (ok) { email = addr; source = catchAllButProspeo ? `${src} (catch-all domain, Prospeo verified)` : `${src}, ${v.via}`; }
         return ok;
       };
 
