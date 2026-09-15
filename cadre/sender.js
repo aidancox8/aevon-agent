@@ -249,10 +249,6 @@ const MAILING_ADDRESS = (process.env.CADRE_MAILING_ADDRESS || '').trim();
 const FOOTER = signature({
   optOut: 'Not relevant? Reply with a no and I will not email again.',
   address: MAILING_ADDRESS,
-  tagline: 'Staff records, training and credentials in one system.',
-  // The live demo, the actual product with an
-  // invented company loaded. Naked URL, text equals destination.
-  demo: 'https://cadre-demo.web.app/dashboard',
 });
 
 /** Longest run of consecutive words from the quote that appears in the body. */
