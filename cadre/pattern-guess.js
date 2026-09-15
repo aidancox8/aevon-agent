@@ -23,6 +23,8 @@ const supabase = require('../lib/supabase');
 const DRY = process.argv.includes('--dry');
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > -1 ? process.argv[i + 1] : dflt; };
 const LIMIT = parseInt(arg('limit', '150'), 10);
+// --retry: second pass over leads where the first four formats missed, trying the rarer ones.
+const RETRY = process.argv.includes('--retry');
 const REOON_KEY = process.env.REOON_KEY;
 const ZB_KEY = process.env.ZEROBOUNCE_KEY;
 const STATE_FILE = path.join(__dirname, 'state', 'free-tier.json');
@@ -60,7 +62,8 @@ function maskedByName() {
 function candidates(first, last, domain) {
   const f = clean(first), l = clean(last.split(/\s+/).pop());
   if (!f || !l) return [];
-  return [`${f[0]}${l}`, `${f}.${l}`, `${f}`, `${f}${l}`, `${f[0]}.${l}`, `${f}_${l}`].map((x) => `${x}@${domain}`);
+  const all = [`${f[0]}${l}`, `${f}.${l}`, `${f}`, `${f}${l}`, `${f[0]}.${l}`, `${f}_${l}`, `${f}${l[0]}`, `${l}${f[0]}`, `${l}.${f}`, `${f}-${l}`];
+  return (RETRY ? all.slice(4) : all.slice(0, 4)).map((x) => `${x}@${domain}`);
 }
 
 async function reoon(email) {
@@ -83,7 +86,11 @@ async function zerobounce(email) {
     .not('contact_name', 'is', null).gte('staff_estimate', 100).lte('staff_estimate', 1000)
     .order('qualification_score', { ascending: false, nullsFirst: false }).limit(1000);
   if (error) throw new Error(error.message);
-  const todo = data.filter((l) => !/pattern-guess:/.test(l.notes || '') && (l.contact_name || '').trim().split(/\s+/).length >= 2).slice(0, LIMIT);
+  const todo = data.filter((l) => {
+    const n = l.notes || '';
+    const eligible = RETRY ? (/pattern-guess: none of/.test(n) && !/pattern-guess: retry/.test(n)) : !/pattern-guess:/.test(n);
+    return eligible && (l.contact_name || '').trim().split(/\s+/).length >= 2;
+  }).slice(0, LIMIT);
   console.log(`${DRY ? 'DRY RUN: ' : ''}${todo.length} named lead(s) without an address. Reoon checks left this month: ${left('reoon')}.\n`);
 
   let found = 0, catchAll = 0, miss = 0;
@@ -97,7 +104,7 @@ async function zerobounce(email) {
     let cands = candidates(first, last, domain);
     if (hint) cands = cands.filter((c) => c[0] === hint.letter).concat(cands.filter((c) => c[0] !== hint.letter));
     let hit = null, isCatchAll = false;
-    for (const c of cands.slice(0, 4)) {
+    for (const c of cands.slice(0, RETRY ? 6 : 4)) {
       let v; try { v = await reoon(c); } catch (e) { console.log(`       reoon error ${e.message}`); break; }
       if (v.catchAll) { isCatchAll = true; break; }
       if (v.ok && await zerobounce(c)) { hit = c; break; }
@@ -109,7 +116,7 @@ async function zerobounce(email) {
     }
     if (!hit) {
       miss++; console.log(`  --   ${tag}no format verified for ${lead.contact_name} at ${domain}`);
-      if (!DRY) await supabase.from('cadre_leads').update({ notes: `${lead.notes ? lead.notes + '\n' : ''}pattern-guess: none of ${cands.slice(0, 4).length} formats verified at ${domain}` }).eq('id', lead.id);
+      if (!DRY) await supabase.from('cadre_leads').update({ notes: `${lead.notes ? lead.notes + '\n' : ''}pattern-guess: ${RETRY ? 'retry, ' : ''}none of ${cands.length} formats verified at ${domain}` }).eq('id', lead.id);
       continue;
     }
     found++;
