@@ -33,6 +33,8 @@ jobs:
       TOMBA_SECRET: ${{ secrets.TOMBA_SECRET }}
       REOON_KEY: ${{ secrets.REOON_KEY }}
       ZEROBOUNCE_KEY: ${{ secrets.ZEROBOUNCE_KEY }}
+      VERIFALIA_USER: ${{ secrets.VERIFALIA_USER }}
+      VERIFALIA_PASS: ${{ secrets.VERIFALIA_PASS }}
       CADRE_DAILY_CAP: ${{ secrets.DAILY_CAP }}
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +43,9 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+
+      - name: What each free account has left
+        run: node cadre/quota.js
 
       - name: Addresses for named leads (Tomba, GetProspect, Snov, Prospeo enrich; Reoon + ZeroBounce verify)
         run: node cadre/free-contacts.js --named-only --limit 40

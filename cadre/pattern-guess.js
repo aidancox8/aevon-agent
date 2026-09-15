@@ -19,6 +19,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
 const supabase = require('../lib/supabase');
+const { verify, NoVerifier, status: verifierStatus } = require('./verify');
 
 const DRY = process.argv.includes('--dry');
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > -1 ? process.argv[i + 1] : dflt; };
@@ -95,7 +96,6 @@ async function zerobounce(email) {
 
   let found = 0, catchAll = 0, miss = 0;
   for (const lead of todo) {
-    if (left('reoon') < 6) { console.log('  cap  reoon nearly out for the month, stopping'); break; }
     const parts = lead.contact_name.trim().split(/\s+/);
     const first = parts[0], last = parts.slice(1).join(' ');
     const hint = masked.get(lead.contact_name.toLowerCase());
@@ -103,12 +103,16 @@ async function zerobounce(email) {
     const tag = String(lead.business_name).slice(0, 30).padEnd(32);
     let cands = candidates(first, last, domain);
     if (hint) cands = cands.filter((c) => c[0] === hint.letter).concat(cands.filter((c) => c[0] !== hint.letter));
-    let hit = null, isCatchAll = false;
+    let hit = null, isCatchAll = false, verifierOut = false, via = '';
     for (const c of cands.slice(0, RETRY ? 6 : 4)) {
-      let v; try { v = await reoon(c); } catch (e) { console.log(`       reoon error ${e.message}`); break; }
+      let v;
+      try { v = await verify(c); } catch (e) { if (e instanceof NoVerifier) { verifierOut = true; break; } console.log(`       verify error ${e.message}`); break; }
+      if (!v) continue;
       if (v.catchAll) { isCatchAll = true; break; }
-      if (v.ok && await zerobounce(c)) { hit = c; break; }
+      if (v.ok) { hit = c; via = v.via; break; }
     }
+    // The verifier being out is not a verdict on the lead. Leave it untouched for the next run.
+    if (verifierOut) { console.log('  cap  every verifier is out of credit, stopping (nothing written for this lead)'); break; }
     if (isCatchAll) {
       catchAll++; console.log(`  --   ${tag}${domain} is catch-all, cannot verify`);
       if (!DRY) await supabase.from('cadre_leads').update({ notes: `${lead.notes ? lead.notes + '\n' : ''}pattern-guess: ${domain} is catch-all, no guess made` }).eq('id', lead.id);
@@ -122,11 +126,12 @@ async function zerobounce(email) {
     found++;
     console.log(`  ok   ${tag}${hit.padEnd(38)}${lead.contact_name}, ${lead.contact_role || ''}`);
     if (!DRY) {
-      const u = { email: hit, email_quality: 'personal', notes: `${lead.notes ? lead.notes + '\n' : ''}pattern-guess: ${hit} built from name and format, Reoon deliverable, not catch-all` };
+      const u = { email: hit, email_quality: 'personal', notes: `${lead.notes ? lead.notes + '\n' : ''}pattern-guess: ${hit} built from name and format, ${via} deliverable, not catch-all` };
       if (lead.status === 'needs_review' && /guessed|wrong desk|will not route|size unknown/i.test(lead.notes || '')) u.status = 'queued';
       const { error: e } = await supabase.from('cadre_leads').update(u).eq('id', lead.id);
       if (e) console.log(`       write failed: ${e.message}`);
     }
   }
-  console.log(`\nfound ${found} | catch-all ${catchAll} | no format ${miss} | reoon used this month ${state.reoon || 0}, zerobounce ${state.zerobounce || 0}`);
+  const vs = verifierStatus();
+  console.log(`\nfound ${found} | catch-all ${catchAll} | no format ${miss} | verifier calls: reoon ${vs.used.reoon}, zerobounce ${vs.used.zerobounce}, verifalia ${vs.used.verifalia}; out: ${Object.keys(vs.dead).filter((k) => vs.dead[k]).join(', ') || 'none'}`);
 })().catch((e) => { console.error(e.message); process.exit(1); });

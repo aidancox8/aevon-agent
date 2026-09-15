@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const supabase = require('../lib/supabase');
+const { verify, NoVerifier } = require('./verify');
 const { excludedOrgReason } = require('../tempo/dnc');
 
 const DRY = process.argv.includes('--dry');
@@ -48,7 +49,7 @@ for (const [name, val] of Object.entries({ PROSPEO_KEY, GETPROSPECT_KEY, SNOV_CL
 
 const STATE_DIR = path.join(__dirname, 'state');
 const STATE_FILE = path.join(STATE_DIR, 'free-tier.json');
-const CAPS = { prospeo: 80, getprospect: 50, snov: 50, lusha: 40, reoon: 600, tomba: 25, zerobounce: 100 }; // prospeo: 100 a month on the free plan, 80 here so the finder keeps 20 for searches
+const CAPS = { prospeo: 80, getprospect: 50, snov: 300, lusha: 40, reoon: 600, tomba: 25, zerobounce: 100 }; // snov: the account shows 281 credits on 2026-09-15, not the 50 the pricing page says // prospeo: 100 a month on the free plan, 80 here so the finder keeps 20 for searches
 
 function monthNow() { return new Date().toISOString().slice(0, 7); }
 
@@ -366,10 +367,12 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
       const tryVerified = async (addr, src) => {
         if (!addr || tried.includes(addr)) return false;
         tried.push(addr);
-        let ok = false;
-        try { ok = await reoonVerify(addr); } catch (e) { if (e instanceof CreditsExhausted) throw e; console.log(`       reoon error: ${e.message}`); }
-        if (ok) ok = await zeroBounceValid(addr);
-        if (ok) { email = addr; source = src; }
+        // Reoon, then ZeroBounce, then Verifalia, whichever still has credit. When all three are
+        // out the run stops: "no verifier" must never be recorded as "no address".
+        let v = null;
+        try { v = await verify(addr); } catch (e) { if (e instanceof NoVerifier) throw new CreditsExhausted('every verifier is out of credit'); console.log(`       verify error: ${e.message}`); }
+        const ok = !!(v && v.ok && !v.catchAll);
+        if (ok) { email = addr; source = `${src}, ${v.via}`; }
         return ok;
       };
 
