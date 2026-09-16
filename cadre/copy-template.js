@@ -59,11 +59,14 @@ function body(lead) {
   const s = sector(lead);
   const n = lead.staff_estimate;
   const inSector = s.noun === DEFAULT[0] ? '' : ` In ${s.noun}`;
+  // Written from the reader's side (Aidan, 2026-09-16: "make everything about the other person").
+  // Paragraph one is their Tuesday. Paragraph two is the outcome, not the product; the product is
+  // named in one clause because the signature and the ask assume it exists.
   return `Hi ${firstName(lead.contact_name)},
 
-You ${roleVerb(lead.contact_role)} for ${n} people at ${lead.business_name}.${inSector} that is ${s.creds}, each expiring on its own clock, for every one of them.
+At ${n} people, someone at ${lead.business_name} keeps ${s.creds} current for all of them, and hears about the expired one on the morning it matters.
 
-I build HR software for companies your size: onboarding by role, one record per person, training and certifications with the renewal scheduled from the expiry date, policies signed and reviews on time. The records keep themselves, so an expiry is visible weeks out instead of the morning of.
+There is a version of that where completing the course updates the record itself and the renewal is already on the calendar, next to onboarding, signed policies and reviews. That is what I build for companies your size.
 
 {{ASK}}`;
 }

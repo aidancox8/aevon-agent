@@ -173,6 +173,11 @@ async function sendViaGmail({ from, fromName, replyTo, to, subject, text }) {
     `To: ${to}`,
     `Reply-To: ${replyTo}`,
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    // List-Unsubscribe: Gmail and Microsoft both weigh this header for anything that looks like
+    // bulk mail, and mail-tester flagged its absence on 2026-09-16 as the one gap in an otherwise
+    // 10/10 message. A mailto: only, no URL, so the plain-text-no-links shape of the body holds;
+    // cadre/reply-scan.js already files a reply with "unsubscribe" in it as an opt-out.
+    `List-Unsubscribe: <mailto:${replyTo}?subject=unsubscribe>`,
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
