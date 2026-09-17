@@ -55,7 +55,8 @@ check('Cadre builds its footer from the shared signature', /const FOOTER = signa
 
 // The booking link is the one thing in the signature that can still look like a call to action,
 // so email 1 must not carry it while the Aevon copy rule says "no link in email 1".
-check('Aevon withholds the booking link on the first touch', /booking: step > 0/.test(aevon));
+check('Aevon sends no booking link on any cold step (2026-09-17: one URL moved the email to Junk)', /booking: false/.test(aevon) && !/booking: step > 0/.test(aevon));
+check('Cadre sends no booking link on any cold step', /booking: false/.test(cadre));
 // Assert on the OUTPUT, not the source: lib/signature.js quotes the original bad HTML in a
 // comment to explain why it was replaced, and a source-level regex reads that as a violation.
 const withBooking = signature({ optOut: OPT_OUT, booking: true });
