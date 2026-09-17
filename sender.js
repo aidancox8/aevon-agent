@@ -693,8 +693,10 @@ async function run() {
     void landingFor;
     body = body
       // The generated shape is "..., here if it is easier to just watch than reply: {{DEMO}}".
-      .replace(/,?\s*here if it(?:'s| is) easier to (?:just )?watch than reply:\s*\{\{DEMO\}\}/gi,
+      .replace(/,?\s*(?:here |)(?:if|in case) it(?:'s| is) easier to (?:just )?watch than reply:\s*\{\{DEMO\}\}/gi,
         '. If it is easier to watch than reply, send back the word demo and I will send the link.')
+      // Any other sentence that ends in a colon and the token.
+      .replace(/:\s*\{\{DEMO\}\}/g, '. Send back the word demo and I will send the link.')
       // Any other shape: the token alone becomes the ask.
       .replace(/\{\{DEMO\}\}/g, 'the word demo in a reply gets you the link');
 
