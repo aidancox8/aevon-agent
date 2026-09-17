@@ -687,8 +687,11 @@ async function run() {
 
     // Replace the {{DEMO}} token (follow-ups) with a clean, ref-tagged link to
     // the interactive demo page. Done at send time because the ref is the lead id.
-    const demoUrl = landingFor(lead.industry, lead.id, lead.business_name);
-    body = body.replace(/\{\{DEMO\}\}/g, demoUrl);
+    // No URL in cold mail (2026-09-17: one link moved an otherwise clean email from Inbox to Junk at
+    // Outlook.com). The follow-up's demo line now asks for a one-word reply instead; the tracked
+    // link goes out by hand in the reply draft, where a link from a known sender is welcome.
+    void landingFor;
+    body = body.replace(/\{\{DEMO\}\}/g, 'just reply with the word demo and I will send it over');
 
     // The offer is applied here, not baked in at generation time. Stored copy outlives
     // decisions: the offer changed to a free build and days later most of the queue was
