@@ -357,7 +357,9 @@ function withUnsubText(body, step = 0) {
   // No link in email 1. That is the standing Aevon copy rule, and it applies to the signature
   // too: the body deliberately makes no ask, so a booking link underneath it contradicts that.
   // From the follow-up onward the link is welcome, and it is in Aidan's real signature.
-  const sig = signature({ optOut: UNSUB_TEXT, address: MAILING_ADDRESS, booking: step > 0 });
+  // No booking link on any cold step: Outlook.com junked the email with the calendar URL and
+  // inboxed it without (measured 2026-09-17). Warm replies carry the link by hand.
+  const sig = signature({ optOut: UNSUB_TEXT, address: MAILING_ADDRESS, booking: false });
   const trimmed = body.trimEnd();
   // Copy that already carries its own opt-out gets the signature but not a second one.
   if (/reply no\b|unsubscribe/i.test(trimmed)) {

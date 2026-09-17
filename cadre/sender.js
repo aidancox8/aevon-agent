@@ -251,9 +251,13 @@ const MAILING_ADDRESS = (process.env.CADRE_MAILING_ADDRESS || '').trim();
 // Built by lib/signature.js so all three campaigns share one sign-off and cannot drift apart
 // again. They already had: Aevon's went missing entirely on 2026-08-18 and nobody noticed for a
 // week, because the only copy of it lived in a function that had stopped being called.
+// booking: false. Measured 2026-09-17 on a fresh Outlook.com mailbox: the same email landed in
+// Junk with the calendar.app.google line and in the Inbox without it. Cold mail carries no URL;
+// the booking link stays in Aidan's own Gmail signature for warm threads.
 const FOOTER = signature({
   optOut: 'Not relevant? Reply with a no and I will not email again.',
   address: MAILING_ADDRESS,
+  booking: false,
 });
 
 /** Longest run of consecutive words from the quote that appears in the body. */
