@@ -698,7 +698,7 @@ async function run() {
       // Any other sentence that ends in a colon and the token.
       .replace(/:\s*\{\{DEMO\}\}/g, '. Send back the word demo and I will send the link.')
       // Any other shape: the token alone becomes the ask.
-      .replace(/\{\{DEMO\}\}/g, 'the word demo in a reply gets you the link');
+      .replace(/\{\{DEMO\}\}/g, 'If a demo is easier than a reply, send back the word demo and I will send the link.');
 
     // The offer is applied here, not baked in at generation time. Stored copy outlives
     // decisions: the offer changed to a free build and days later most of the queue was
