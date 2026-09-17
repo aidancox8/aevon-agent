@@ -691,7 +691,12 @@ async function run() {
     // Outlook.com). The follow-up's demo line now asks for a one-word reply instead; the tracked
     // link goes out by hand in the reply draft, where a link from a known sender is welcome.
     void landingFor;
-    body = body.replace(/\{\{DEMO\}\}/g, 'just reply with the word demo and I will send it over');
+    body = body
+      // The generated shape is "..., here if it is easier to just watch than reply: {{DEMO}}".
+      .replace(/,?\s*here if it(?:'s| is) easier to (?:just )?watch than reply:\s*\{\{DEMO\}\}/gi,
+        '. If it is easier to watch than reply, send back the word demo and I will send the link.')
+      // Any other shape: the token alone becomes the ask.
+      .replace(/\{\{DEMO\}\}/g, 'the word demo in a reply gets you the link');
 
     // The offer is applied here, not baked in at generation time. Stored copy outlives
     // decisions: the offer changed to a free build and days later most of the queue was
