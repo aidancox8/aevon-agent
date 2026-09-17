@@ -58,7 +58,6 @@ function roleVerb(title) {
 function body(lead) {
   const s = sector(lead);
   const n = lead.staff_estimate;
-  const inSector = s.noun === DEFAULT[0] ? '' : ` In ${s.noun}`;
   // Written from the reader's side (Aidan, 2026-09-16: "make everything about the other person").
   // Paragraph one is their Tuesday. Paragraph two is the outcome, not the product; the product is
   // named in one clause because the signature and the ask assume it exists.
