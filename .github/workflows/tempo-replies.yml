@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '30 16-23 * * 1-5'  # Mon-Fri hourly, offset from the Aevon processor
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   replies:
     runs-on: ubuntu-latest

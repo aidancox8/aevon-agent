@@ -30,6 +30,10 @@ on:
     - cron: '0 19 * * 1-5'  # 12pm PT, retry if the 10am slot never ran
     - cron: '0 21 * * 1-5'  #  2pm PT, last chance before the day is lost
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   send:
     runs-on: ubuntu-latest

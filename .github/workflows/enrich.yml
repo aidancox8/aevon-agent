@@ -17,6 +17,10 @@ on:
     # needing someone to remember to run it.
     - cron: '20 3 * * *'
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   enrich:
     runs-on: ubuntu-latest

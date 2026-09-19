@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 16-23 * * 1-5'  # Mon-Fri 9am-4pm PT
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   send:
     runs-on: ubuntu-latest

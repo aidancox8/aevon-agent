@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '10 0 * * 2-6'  # ~5:10pm PT Mon-Fri (00:10 UTC Tue-Sat) — end-of-day digest
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   repeat-visitors:
     runs-on: ubuntu-latest

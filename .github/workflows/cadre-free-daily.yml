@@ -16,6 +16,10 @@ on:
     # 4:30am PT weekdays, before the enrich job and the sender.
     - cron: '30 11 * * 1-5'
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   supply:
     runs-on: ubuntu-latest

@@ -49,6 +49,10 @@ concurrency:
   group: cadre-send
   cancel-in-progress: false
 
+# dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
 jobs:
   send:
     runs-on: ubuntu-latest
