@@ -36,7 +36,7 @@ const { applyAsk } = require('./lib/offer');
  */
 function isHumanReply(e) {
   const m = e.metadata || {};
-  if (m.intent === 'auto_reply') return false;
+  if (m.intent === 'auto_reply' || m.intent === 'auto-ack' || m.reason === 'auto-acknowledgement') return false;
   return !autoresponderReason(m.subject, m.body || m.snippet || '');
 }
 
@@ -75,10 +75,11 @@ const CAMPAIGNS = [
   // means new sequences only start in the industries that have replied, so the runway has to
   // count those leads and not the whole queue.
   { label: 'AEVON GENERAL OUTREACH', sub: 'custom software, BC SMBs', leads: 'leads', events: 'email_events', perDay: 85, sendDays: 'Mon-Fri', segmented: true, campaign: 'aevon' },
-  // Third campaign, HR and credentials. perDay tracks CADRE_DAILY_CAP (12), and the send days
-  // are Tue-Thu only, which is all the scheduler ever books; this entry once said 5/day Mon-Fri
-  // and the runway estimate lied in both directions at once.
-  { label: 'CADRE', sub: 'HR + credentials',  leads: 'cadre_leads', events: 'cadre_email_events', perDay: 12, sendDays: 'Tue-Thu', campaign: 'cadre' },
+  // Third campaign, HR and credentials. perDay follows the CADRE_DAILY_CAP repo variable (50 since
+  // 2026-09-04; this line said 12 until 2026-09-19 and the runway was four times too long). The
+  // scheduler books Tue-Thu only. Sends go through Gmail, which reports no delivered events, so
+  // gmail: true keeps the delivered figure honest below.
+  { label: 'CADRE', sub: 'HR + credentials',  leads: 'cadre_leads', events: 'cadre_email_events', perDay: parseInt(process.env.CADRE_DAILY_CAP || '50', 10), sendDays: 'Tue-Thu', campaign: 'cadre', gmail: true },
 ];
 
 /**
@@ -219,7 +220,9 @@ async function review(c, warnings) {
     // Distinguish "nothing was delivered" from "delivery is not being recorded". Printing
     // 0.0% for the second case reads as a catastrophic outage that isn't happening.
     const tracked = nDeliv > 0 || nBounce > 0;
-    console.log(`   lifetime    sent ${nSent} · delivered ${tracked ? pct(nDeliv, nSent) : 'not tracked'}` +
+    // Gmail has no delivery webhook: bounces are read back from the mailbox, deliveries never are.
+    const deliveredText = c.gmail ? 'n/a (Gmail, bounces only)' : tracked ? pct(nDeliv, nSent) : 'not tracked';
+    console.log(`   lifetime    sent ${nSent} · delivered ${deliveredText}` +
                 ` · bounced ${tracked ? pct(nBounce, nSent) : 'not tracked'}` +
                 ` · visitors ${confirmed.length} confirmed + ${humanVisitors.length - confirmed.length} single-click of ${Object.keys(visitsByLead).length} (rest are mail scanners)` +
                 ` · replied ${pct(nReply, nSent)} (${nReply} human${nAutoReply ? `, ${nAutoReply} auto` : ''})`);
