@@ -228,6 +228,8 @@ const CA_US_REGION = new RegExp('(^|[ ,])(' + [
   'Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland[a-z ]*','Nova Scotia','Ontario','Prince Edward Island','Quebec','Québec','Saskatchewan','Yukon',
   'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming',
   'Canada','United States','USA',
+  // UK too, since 2026-09-19: the Prospeo finder writes 'City, UK' and the pitch and price fit there.
+  'UK','United Kingdom','England','Scotland','Wales','Northern Ireland',
 ].join('|') + ')([ ,.]|$)');
 
 /**
@@ -299,7 +301,7 @@ function blockReason(lead, stepNo) {
   if (!lead.staff_estimate) return 'size unknown, enrich before sending';
   // Canada and the US only. The UK rows (JLL London, GXO Barnsley, Mitie) arrived through
   // SimplyHired's UK listings and nothing in the copy or the price fits them.
-  if (lead.city && !CA_US_REGION.test(lead.city)) return `city '${lead.city}' is not in Canada or the US`;
+  if (lead.city && !CA_US_REGION.test(lead.city)) return `city '${lead.city}' is not in Canada, the US or the UK`;
   if (WRONG_DESK.test(lead.email)) return `${lead.email.split('@')[0]}@ will not route an HR pitch`;
   if (lead.website && rootDomain(lead.email.split('@')[1]) !== rootDomain(lead.website)) {
     return `address domain does not match ${rootDomain(lead.website)}`;
