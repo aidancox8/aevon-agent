@@ -33,6 +33,8 @@ const LIMIT = (() => { const i = process.argv.indexOf('--limit'); return i > -1 
 // --named-only: skip every lead that would need a Prospeo search (no contact name yet). Prospeo's
 // free plan rate-limits searches hard; the leads that already carry a name cost no search at all.
 const NAMED_ONLY = process.argv.includes('--named-only');
+// --retry-misses: give leads that missed before another pass (see the selection filter below).
+const RETRY_MISSES = process.argv.includes('--retry-misses');
 
 const PROSPEO_KEY = process.env.PROSPEO_KEY;
 const GETPROSPECT_KEY = process.env.GETPROSPECT_KEY;
@@ -296,11 +298,18 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
 
   const seen = new Set();
   const todo = all.filter((l) => {
-    if (/free-contacts:/.test(l.notes || '')) return false;
+    const notes = l.notes || '';
+    // A lead tried before is skipped, unless --retry-misses: sources refill on their own clocks
+    // (Tomba daily, the rest monthly), so "no deliverable address" in week one is not an answer
+    // in week three. Only the two miss outcomes are retried; a found address never is.
+    if (/free-contacts:/.test(notes)) {
+      const missed = /free-contacts: .*(found, no deliverable address|no HR person)/.test(notes);
+      if (!(RETRY_MISSES && missed)) return false;
+    }
     const hasPersonalName = l.email_quality === 'personal' && l.contact_name && l.contact_name.trim() !== '';
     if (hasPersonalName) return false;
     if (excludedOrgReason(l.business_name, l.email)) return false;
-    if (NAMED_ONLY && !(l.contact_name && l.contact_name.trim().split(/s+/).length >= 2)) return false;
+    if (NAMED_ONLY && !(l.contact_name && l.contact_name.trim().split(/\s+/).length >= 2)) return false;
     const apex = apexOf(l.website);
     if (!apex || seen.has(apex)) return false;
     seen.add(apex);

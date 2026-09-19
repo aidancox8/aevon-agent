@@ -52,10 +52,10 @@ jobs:
         run: node cadre/quota.js
 
       - name: Addresses for named leads (Tomba, GetProspect, Snov, Prospeo enrich; Reoon + ZeroBounce verify)
-        run: node cadre/free-contacts.js --named-only --limit 40
+        run: node cadre/free-contacts.js --named-only --retry-misses --limit 40
 
       - name: Formats guessed and verified for the rest
-        run: node cadre/pattern-guess.js --limit 10
+        run: node cadre/pattern-guess.js --limit 10 && node cadre/pattern-guess.js --retry --limit 10
 
       - name: First email for title-found leads
         run: node cadre/copy-template.js
