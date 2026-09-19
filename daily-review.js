@@ -70,7 +70,9 @@ async function readAll(table, cols) {
 const CAMPAIGNS = [
   // PAUSED 2026-08-26 behind TEMPO_ARMED after 346 delivered, 0 replies ever. Kept in the digest
   // so the pause is visible rather than the campaign quietly vanishing from the report.
-  { label: 'TEMPO', sub: 'clinic scheduling (paused)', leads: 'tempo_leads', events: 'tempo_email_events', perDay: 20, sendDays: 'paused' },
+  // Dropped from the digest 2026-09-19: paused since August, and three warnings about a paused
+  // campaign every day is what made the whole email unread. Re-add the line to bring it back.
+  // { label: 'TEMPO', sub: 'clinic scheduling (paused)', leads: 'tempo_leads', events: 'tempo_email_events', perDay: 20, sendDays: 'paused' },
   // perDay must track the DAILY_CAP secret (85) or the runway estimate lies. segmented=true
   // means new sequences only start in the industries that have replied, so the runway has to
   // count those leads and not the whole queue.
@@ -333,7 +335,7 @@ async function review(c, warnings) {
 (async () => {
   const warnings = [];
   console.log(`\n${'='.repeat(66)}`);
-  console.log(`DAILY REVIEW · ${new Date().toLocaleString('en-CA', { timeZone: TZ })} PT · window ${DAYS}d`);
+  console.log(`WEEKLY REVIEW · ${new Date().toLocaleString('en-CA', { timeZone: TZ })} PT · window ${DAYS}d`);
   console.log('='.repeat(66));
 
   for (const c of CAMPAIGNS) {

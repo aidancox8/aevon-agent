@@ -1,6 +1,6 @@
-name: Daily Review
+name: Weekly Review
 
-# End-of-day digest across both campaigns: pipeline, what went out, what came back,
+# Weekly digest across the live campaigns: pipeline, what went out, what came back,
 # and anything that needs a human. Read-only — it never sends outreach or edits a lead.
 #
 # 6:05pm PT is deliberately after the last sender run (4pm PT) and the last reply
@@ -11,9 +11,9 @@ on:
       days:
         description: 'Look-back window in days'
         required: false
-        default: '1'
+        default: '7'
   schedule:
-    - cron: '5 1 * * *'  # 01:05 UTC = 6:05pm PT
+    - cron: '5 1 * * 6'  # Saturday 01:05 UTC = Friday 6:05pm PT. Weekly since 2026-09-19; daily was noise.
 
 # dotenv 18 prints an "injected env" tip on every require; it was filling the digest emails.
 env:
@@ -40,7 +40,7 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           CADRE_DAILY_CAP: ${{ vars.CADRE_DAILY_CAP }}
         run: |
-          node daily-review.js --days "${{ github.event.inputs.days || '1' }}" | tee review.txt
+          node daily-review.js --days "${{ github.event.inputs.days || '7' }}" | tee review.txt
           # Surface it in the Actions run itself, so the digest is readable without email.
           { echo '```'; cat review.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
@@ -52,9 +52,9 @@ jobs:
           # Flag the subject when the review found something, so a clean day is ignorable
           # at a glance and a problem day is not.
           if grep -q 'NEEDS ATTENTION ([1-9]' review.txt; then
-            SUBJECT="[Daily Review] $(grep -oE 'NEEDS ATTENTION \([0-9]+\)' review.txt | grep -oE '[0-9]+') item(s) need attention"
+            SUBJECT="[Weekly Review] $(grep -oE 'NEEDS ATTENTION \([0-9]+\)' review.txt | grep -oE '[0-9]+') item(s) need attention"
           else
-            SUBJECT="[Daily Review] All clear"
+            SUBJECT="[Weekly Review] All clear"
           fi
           jq -n --arg from "$FROM_EMAIL" --arg subj "$SUBJECT" --rawfile body review.txt \
             '{from:$from, to:"aidan@aevon.ca", subject:$subj, text:$body}' > payload.json
