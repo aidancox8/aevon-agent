@@ -90,16 +90,26 @@ function apexOf(website) {
 
 // Title ranking. Records ownership is the pitch, so HR/people leadership beats generalist beats
 // safety/training beats operations, and VERIFIED beats unverified among equal ranks.
+// Reordered 2026-09-19 (Aidan): at 100 to 1,000 staff HR often has no pull or does not exist, and
+// the operations manager is the one who gets the call when a ticket has lapsed. Below 200 staff
+// the GM or president usually signs, so they rank with the HR director there.
 const RANK = [
   [/\b(director|vp|vice president|head of|chief)\b.*\b(human resources|people|hr)\b|\b(human resources|people|hr)\b.*\b(director|vp|vice president|head|chief)\b/i, 1],
+  [/\b(director|vp|vice president|head)\b.*\boperations?\b|\boperations?\b.*\b(director|vp|vice president|head)\b|\bcoo\b/i, 1],
+  [/\boperations? manager\b|\bmanager\b.*\boperations?\b/i, 2],
   [/\bmanager\b.*\b(human resources|people|hr)\b|\b(human resources|people|hr)\b.*\bmanager\b/i, 2],
-  [/generalist|coordinator|administrator/i, 3],
-  [/safety manager|hse|training manager/i, 4],
-  [/director of operations|\bcoo\b/i, 5],
+  [/\b(safety|hse|ehs|compliance|training)\b.*\b(manager|coordinator|officer|lead)\b/i, 3],
+  [/\b(general manager|president|owner|managing director)\b/i, 3],
+  [/generalist|coordinator|administrator/i, 4],
 ];
-function rankOf(title) {
+function rankOf(title, staff) {
   const t = String(title || '');
-  for (const [re, r] of RANK) if (re.test(t)) return r;
+  for (const [re, r] of RANK) {
+    if (!re.test(t)) continue;
+    // A GM or president at a company under 200 is the decision maker, not a fallback.
+    if (r === 3 && /general manager|president|owner|managing director/i.test(t) && staff && staff <= 200) return 1;
+    return r;
+  }
   return 6;
 }
 
@@ -119,7 +129,7 @@ async function prospeoSearch(apex) {
         filters: {
           company: { websites: { include: [apex] } },
           person_job_title: {
-            include: ['human resources', 'people', 'talent', 'hr ', 'safety', 'training', 'operations'],
+            include: ['human resources', 'people', 'talent', 'hr ', 'operations', 'safety', 'hse', 'compliance', 'training', 'general manager', 'president'],
             match_mode: 'CONTAINS',
           },
         },
@@ -354,7 +364,7 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
           emailStatus: p.email && p.email.status,
         };
       }).filter((c) => c.first_name && c.last_name)
-        .map((c) => ({ ...c, rank: rankOf(c.title) }))
+        .map((c) => ({ ...c, rank: rankOf(c.title, lead.staff_estimate) }))
         .sort((a, b) => a.rank - b.rank || (b.emailStatus === 'VERIFIED') - (a.emailStatus === 'VERIFIED'));
 
       const pick = candidates[0];
@@ -395,7 +405,7 @@ const NEEDS_REVIEW_RELEASE = /guessed|wrong desk|will not route/i;
       const tombaSame = tomba.find((t) => t.last_name && t.last_name.toLowerCase() === String(pick.last_name).toLowerCase());
       if (tombaSame) await tryVerified(tombaSame.email, 'tomba');
       if (!email && !knownName && tomba.length) {
-        const t = tomba.map((x) => ({ ...x, rank: rankOf(x.title) })).sort((a, b) => a.rank - b.rank)[0];
+        const t = tomba.map((x) => ({ ...x, rank: rankOf(x.title, lead.staff_estimate) })).sort((a, b) => a.rank - b.rank)[0];
         if (t && t.rank < 99 && await tryVerified(t.email, 'tomba')) {
           pick.first_name = t.first_name || pick.first_name; pick.last_name = t.last_name || pick.last_name; pick.title = t.title || pick.title;
         }
