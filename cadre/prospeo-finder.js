@@ -61,7 +61,10 @@ const COUNTRY_NAME = { ca: 'Canada', us: 'United States', uk: 'United Kingdom' }
 const PAGES = parseInt(arg('pages', '4'), 10);
 const BUDGET = parseInt(arg('budget', '20'), 10);
 const FLOOR = parseInt(arg('floor', '40'), 10);
+// Default title list rebuilt 2026-09-21 from the buyer research: safety leadership owns the records,
+// the owner signs under 200 staff, HR leadership signs above it. Pass --title to run one at a time.
 const TITLE = arg('title', 'human resources');
+const TITLE_PLAN = ['safety', 'hse', 'human resources', 'president', 'operations', 'director of care'];
 const STAMP = new Date().toISOString().slice(0, 10);
 
 if (!COUNTRY_NAME) { console.error('--country must be one of ca, us, uk'); process.exit(1); }

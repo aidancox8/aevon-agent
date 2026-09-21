@@ -88,26 +88,44 @@ function apexOf(website) {
   } catch (e) { return null; }
 }
 
-// Title ranking. Records ownership is the pitch, so HR/people leadership beats generalist beats
-// safety/training beats operations, and VERIFIED beats unverified among equal ranks.
-// Reordered 2026-09-19 (Aidan): at 100 to 1,000 staff HR often has no pull or does not exist, and
-// the operations manager is the one who gets the call when a ticket has lapsed. Below 200 staff
-// the GM or president usually signs, so they rank with the HR director there.
+// Title ranking, rebuilt 2026-09-21 from research (sources in memory: project_cadre_buyer_research):
+//  - Credential and training records are owned by SAFETY, not HR, in construction, manufacturing,
+//    oil and gas and trucking (job descriptions: "keep training matrix up to date", "maintain and
+//    audit driver qualification files" sit under the Safety Manager; SiteDocs reviewers are Safety
+//    Managers and HSE Coordinators at 51 to 500 staff). Trucking: Safety Director owns DQ files.
+//  - Care: the Director of Care / Clinical Manager / Administrator owns competency, HR supports.
+//  - The HR system decision: Owner or President at 100 to 200 (first HR hire is one coordinator;
+//    SHRM: the head of HR reports to the CEO or owner in 62% of firms), HR Manager or Director at
+//    200 to 500, Director or VP HR at 500 to 1,000.
+//  - Reply rates (Belkins 2025, Lavender): owners and founders reply best in SMB, managers and
+//    functional owners out-reply VPs, HR as a function is at or below average.
+// So: safety leadership first everywhere; then the HR decision-maker for the size band; then ops;
+// the safety coordinator is a champion, not a signer, and ranks below all of those.
 const RANK = [
+  // Safety leadership owns the records the email is about.
+  [/\b(director|head|vp|vice president|manager)\b.*\b(safety|hse|ehs|health and safety|health & safety|compliance)\b|\b(safety|hse|ehs|health and safety|health & safety)\b.*\b(director|head|manager|lead)\b/i, 1],
+  // Care sector clinical ownership.
+  [/\bdirector of care\b|\bclinical (manager|director)\b|\bmanager of clinical practice\b|\bdirector of (clinical services|nursing)\b|\badministrator\b.*\b(home|care|health)\b/i, 1],
+  // HR leadership: the signer at 200+, a step below the owner under 200 (handled in rankOf).
   [/\b(director|vp|vice president|head of|chief)\b.*\b(human resources|people|hr)\b|\b(human resources|people|hr)\b.*\b(director|vp|vice president|head|chief)\b/i, 1],
-  [/\b(director|vp|vice president|head)\b.*\boperations?\b|\boperations?\b.*\b(director|vp|vice president|head)\b|\bcoo\b/i, 1],
-  [/\boperations? manager\b|\bmanager\b.*\boperations?\b/i, 2],
+  // Owner, president, GM: the signer at 100 to 200, a fallback above that.
+  [/\b(general manager|president|owner|managing director|chief executive|ceo)\b/i, 2],
+  [/\b(director|vp|vice president|head)\b.*\boperations?\b|\boperations?\b.*\b(director|vp|vice president|head)\b|\bcoo\b/i, 2],
   [/\bmanager\b.*\b(human resources|people|hr)\b|\b(human resources|people|hr)\b.*\bmanager\b/i, 2],
-  [/\b(safety|hse|ehs|compliance|training)\b.*\b(manager|coordinator|officer|lead)\b/i, 3],
-  [/\b(general manager|president|owner|managing director)\b/i, 3],
+  [/\boperations? manager\b|\bmanager\b.*\boperations?\b|\bplant manager\b/i, 3],
+  [/\b(safety|hse|ehs|compliance|training)\b.*\b(coordinator|officer|advisor|specialist)\b/i, 3],
+  [/\bexecutive director\b/i, 2],
   [/generalist|coordinator|administrator/i, 4],
 ];
 function rankOf(title, staff) {
   const t = String(title || '');
   for (const [re, r] of RANK) {
     if (!re.test(t)) continue;
-    // A GM or president at a company under 200 is the decision maker, not a fallback.
-    if (r === 3 && /general manager|president|owner|managing director/i.test(t) && staff && staff <= 200) return 1;
+    const n = Number(staff) || 0;
+    // Under 200 the owner or president is the decision maker and outranks an HR manager.
+    if (/general manager|president|owner|managing director|chief executive|\bceo\b|executive director/i.test(t) && n && n <= 200) return 1;
+    // Over 500 an HR manager is a recommender, not the signer.
+    if (r === 2 && /\bmanager\b.*\b(human resources|people|hr)\b|\b(human resources|people|hr)\b.*\bmanager\b/i.test(t) && n > 500) return 3;
     return r;
   }
   return 6;
@@ -129,7 +147,7 @@ async function prospeoSearch(apex) {
         filters: {
           company: { websites: { include: [apex] } },
           person_job_title: {
-            include: ['human resources', 'people', 'talent', 'hr ', 'operations', 'safety', 'hse', 'compliance', 'training', 'general manager', 'president'],
+            include: ['safety', 'hse', 'health and safety', 'compliance', 'director of care', 'clinical', 'human resources', 'people', 'hr ', 'president', 'owner', 'general manager', 'operations', 'executive director'],
             match_mode: 'CONTAINS',
           },
         },
