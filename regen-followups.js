@@ -53,8 +53,8 @@ async function run() {
     .select('id, business_name, industry, email_subject, email_body, followup_subject')
     .eq('status', 'queued').eq('sequence_step', 1)
     .not('email_subject', 'is', null)
-    // Hand-set campaign copy (aevon-renewal-copy.js) is never rewritten.
-    .not('personalization_basis', 'like', 'renewal-%');
+    // Hand-set campaign copy (aevon-renewal-copy.js, aevon-intake-copy.js) is never rewritten.
+    .not('personalization_basis', 'like', 'campaign:%');
   if (limit) q = q.limit(limit);
   const { data: leads, error } = await q;
   if (error) throw new Error(error.message);

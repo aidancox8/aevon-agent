@@ -12,7 +12,7 @@
  * What it does to each lead in the pool:
  *   - writes the renewal first email + two follow-ups (variant by realtor vs broker)
  *   - restarts the sequence at step 0, status queued
- *   - tags personalization_basis 'renewal-2026-realtor' | 'renewal-2026-broker' so regen-copy
+ *   - tags personalization_basis 'campaign:renewal-2026-realtor' | 'campaign:renewal-2026-broker' so regen-copy
  *     and regen-followups leave the copy alone
  *   - schedules the send no earlier than 30 days after the lead's last old email
  *   - lifts qualification_score to 10 so the test goes out ahead of the 3,000+ other queued
@@ -46,7 +46,7 @@ const NEVER = new Set(['jean@vancouvercommercialbrokers.ca', 'info@restaurantbus
 // The sender appends the signature and the opt-out line.
 const COPY = {
   realtor: {
-    basis: 'renewal-2026-realtor',
+    basis: 'campaign:renewal-2026-realtor',
     email_subject: 'your 2021 buyers',
     email_body:
 `Anyone you sold to in 2021 on a five-year term comes up for renewal this year, and the lender's letter reaches them months before the date. By the time it comes up in conversation with you, most have already decided whether they are staying put or moving.
@@ -62,7 +62,7 @@ Do you know which of your 2021 clients renew this year, or is that not something
 `Last one from me. The 2021 renewals keep landing through the year either way, so if this ever becomes worth a look, reply and I will pick it up. All the best.`,
   },
   broker: {
-    basis: 'renewal-2026-broker',
+    basis: 'campaign:renewal-2026-broker',
     email_subject: 'your 2021 fundings',
     email_body:
 `Your 2021 fundings come up for renewal this year and your software already flags them for you. The realtor who referred each of those files never hears about it, even though it is the moment their client decides whether to move.
@@ -122,8 +122,8 @@ async function snapshot() {
     all = all.concat(data); if (data.length < 1000) break; from += 1000;
   }
   const pool = all.filter(inPool);
-  const already = pool.filter(l => /^renewal-2026/.test(l.personalization_basis || ''));
-  const todo = pool.filter(l => !/^renewal-2026/.test(l.personalization_basis || ''));
+  const already = pool.filter(l => /^campaign:renewal-2026/.test(l.personalization_basis || ''));
+  const todo = pool.filter(l => !/^campaign:/.test(l.personalization_basis || ''));  // never overwrite another hand-set campaign
   const now = new Date();
 
   const by = (arr, k) => arr.reduce((m, l) => (m[k(l)] = (m[k(l)] || 0) + 1, m), {});

@@ -124,8 +124,8 @@ const opensWithUs = b => {
     .eq('status', 'queued')
     .not('email', 'is', null)
     .not('email_subject', 'is', null)
-    // Hand-set campaign copy (aevon-renewal-copy.js) is never rewritten.
-    .not('personalization_basis', 'like', 'renewal-%')
+    // Hand-set campaign copy (aevon-renewal-copy.js, aevon-intake-copy.js) is never rewritten.
+    .not('personalization_basis', 'like', 'campaign:%')
     // Must match the sender's initial-pick order exactly (sender.js: score desc, then
     // scheduled_send_at asc). Only three distinct scores exist across ~3k un-sent leads
     // (9: 126, 8: 1152, 7: 1697), so sorting by score alone leaves the database free to
