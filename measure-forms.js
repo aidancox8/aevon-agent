@@ -139,7 +139,10 @@ async function scanLead(browser, lead) {
 }
 
 (async () => {
-  const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8').split('\n').filter(Boolean).map(l => { try { return JSON.parse(l).id; } catch { return null; } }) : []);
+  // A row that died from the laptop sleeping (browser connection closed, network gone) is not a
+  // result; it gets scanned again on the next run.
+  const LOST = /Connection closed|fetch failed|operation was aborted|Target closed|Session closed|detached/i;
+  const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8').split('\n').filter(Boolean).map(l => { try { const r = JSON.parse(l); return LOST.test(r.err || '') ? null : r.id; } catch { return null; } }) : []);
   let all = [], from = 0;
   while (true) {
     let q = supabase.from('leads').select('id, business_name, industry, city, website, email_quality, status, personalization_basis').not('email', 'is', null).not('website', 'is', null).range(from, from + 999);
@@ -151,12 +154,15 @@ async function scanLead(browser, lead) {
   if (ONLY) leads = leads.filter(l => l.industry === ONLY);
   leads = leads.slice(0, LIMIT);
   console.log(`${leads.length} site(s) to scan (${done.size} already done). Concurrency ${CONC}.`);
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--js-flags=--max-old-space-size=256'] });
+  const launch = () => puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--js-flags=--max-old-space-size=256'] });
+  let browser = await launch();
+  const alive = async () => { if (browser.connected) return browser; console.log('browser gone, relaunching'); try { await browser.close(); } catch {} browser = await launch(); return browser; };
   let i = 0, n = 0; const t0 = Date.now();
   const worker = async () => {
     while (i < leads.length) {
       const lead = leads[i++];
-      const row = await scanLead(browser, lead);
+      const row = await scanLead(await alive(), lead);
+      if (/Connection closed|Target closed|Session closed/i.test(row.err || '')) { i--; await new Promise(r => setTimeout(r, 5000)); continue; }
       fs.appendFileSync(OUT, JSON.stringify(row) + '\n');
       n++;
       const b = row.best;

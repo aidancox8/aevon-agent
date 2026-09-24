@@ -103,7 +103,9 @@ async function scanLead(lead) {
 }
 
 (async () => {
-  const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8').split('\n').filter(Boolean).map(l => { try { return JSON.parse(l).id; } catch { return null; } }) : []);
+  // A row that died from the laptop sleeping (network gone) is not a result; it is scanned again.
+  const LOST = /fetch failed|operation was aborted/i;
+  const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8').split('\n').filter(Boolean).map(l => { try { const r = JSON.parse(l); return LOST.test(r.err || '') ? null : r.id; } catch { return null; } }) : []);
   let all = [], from = 0;
   while (true) {
     const { data, error } = await supabase.from('leads').select('id, business_name, industry, city, website, email_quality, status, personalization_basis').eq('status', 'queued').not('email', 'is', null).not('website', 'is', null).range(from, from + 999);
