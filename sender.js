@@ -495,11 +495,19 @@ async function run() {
   console.log(`Suppression list: ${SUPPRESSED.counted} address(es) across ${SUPPRESSED.tables.join(', ')}.`);
 
   const cols = 'id, business_name, email, email_subject, email_body, followup_subject, followup_body, followup2_subject, followup2_body, sequence_step, qualification_score, scheduled_send_at, industry, email_quality, city';
-  const baseFilter = q => q
-    .eq('status', 'queued')
-    .not('email_subject', 'is', null)
-    .not('email', 'is', null)
-    .lte('scheduled_send_at', now);
+  // One checkable fact per cold email, or no email (Aidan's rule, 2026-09-21). Only hand-set
+  // campaign copy (personalization_basis 'campaign:*', written from a measured fact) goes out.
+  // The old industry-level copy is held, not deleted: ALLOW_OLD_COPY=true brings it back.
+  const oldCopyAllowed = process.env.ALLOW_OLD_COPY === 'true';
+  const baseFilter = q => {
+    let r = q
+      .eq('status', 'queued')
+      .not('email_subject', 'is', null)
+      .not('email', 'is', null)
+      .lte('scheduled_send_at', now);
+    if (!oldCopyAllowed) r = r.like('personalization_basis', 'campaign:%');
+    return r;
+  };
 
   // Follow-ups (sequence_step 1 = 2nd email, 2 = 3rd/final): time-sensitive,
   // sent first, oldest scheduled first.
