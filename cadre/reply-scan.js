@@ -235,6 +235,12 @@ if (require.main !== module) return;
       continue;
     }
 
+    // Machine reports are not replies. A DMARC aggregate report comes FROM the recipient's domain
+    // (dmarc_report@protocase.com), so the domain match below took two of them as human replies
+    // on 2026-09-24/25 and stopped both sequences. Drop them before matching.
+    if (/dmarc|demarc|no-?reply|do-?not-?reply|notifications?@|mailer|postmaster/i.test(from)
+        || /^report domain:|dmarc|aggregate report|tls report|delivery status/i.test(String(subject))) continue;
+
     // Match: exact address, then a domain only one lead owns, then our own subject coming back.
     const lead = byEmail.get(from) || byDomain.get(domainOf(from)) || bySubject.get(normSubject(subject));
     if (!lead) continue;

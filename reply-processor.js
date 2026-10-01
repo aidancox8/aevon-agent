@@ -76,6 +76,9 @@ function buildLeadIndex(leads) {
 
 function matchLead(index, fromEmail, subject) {
   const email = (fromEmail || '').toLowerCase();
+  // DMARC/TLS reports and other machine mail arrive from the lead's own domain; never a reply.
+  if (/dmarc|demarc|no-?reply|do-?not-?reply|mailer|postmaster/i.test(email)
+      || /^report domain:|dmarc|aggregate report|tls report/i.test(String(subject || ''))) return { lead: null, via: null };
   if (index.byEmail.has(email)) return { lead: index.byEmail.get(email), via: 'email' };
 
   const subjKey = normalizeSubject(subject);
