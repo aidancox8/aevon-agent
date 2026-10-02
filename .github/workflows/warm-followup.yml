@@ -1,0 +1,54 @@
+name: Warm Follow-up Drafts
+
+# DRAFTS ONLY. This workflow never sends email. It creates Gmail drafts for Aidan to
+# approve, one per warm prospect whose stage is due. If a run ever drafts something wrong,
+# the blast radius is an unapproved draft, not a sent email.
+#
+# Manual trigger only for now. After a few supervised runs prove the stage logic and the
+# copy, enable the weekday schedule below.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '30 15 * * 1-5'  # weekdays 8:30am PT, after process-replies
+
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Draft due warm follow-ups
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node warm-followup.js
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"from\":\"$FROM_EMAIL\",\"to\":\"aidan@aevon.ca\",\"subject\":\"[Aevon ALERT] Warm follow-up failed\",\"text\":\"The warm follow-up workflow failed. No drafts were created on this run (it fails loud rather than drafting nothing quietly). Check the run: $RUN_URL\"}"

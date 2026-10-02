@@ -17,3 +17,8 @@ rl.html
 demo/phone/server.log
 frontdesk/state/
 demo/video/out/
+
+# Seed test and warm follow-up: real addresses stay local, never committed.
+seeds.json
+seed-test-results.json
+warm-manual.json
