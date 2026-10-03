@@ -115,6 +115,9 @@ function firstName(contactName) {
 //    no fabricated customers, no price, no filler phrases, no em dashes. ──────────
 function stageCopy(stage, w) {
   const first = firstName(w.contact_name);
+  // manualLeads() and warmLeads() both set camelCase signalDetail; read it here, or every
+  // manual draft silently falls back to the generic opener.
+  w = { ...w, signal_detail: w.signal_detail || w.signalDetail };
   const detail = w.detail || '';
   if (stage === 1) {
     const openers = {
