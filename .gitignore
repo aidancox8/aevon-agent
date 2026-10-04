@@ -22,3 +22,4 @@ demo/video/out/
 seeds.json
 seed-test-results.json
 warm-manual.json
+sales/referral-batch-log.json
