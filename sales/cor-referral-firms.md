@@ -1,13 +1,14 @@
 # COR / construction referral firms (BC), researched 2026-10-04
 
 Every email below is published on the firm's own site or in BCCSA's External Auditor list (PDF dated 2026-04-13). None guessed. Contacted so far: Trailblaze Partners (rhys@trailblazepartners.com, 2026-10-04).
+Batch of 12 sent 2026-10-04/05 (sales/send-referral-batch.js); 11 delivered, BLANKSLATE bounced.
 
 ## Fractional / outsourced HR (best fit for "try it with one client")
 | Firm | City | Email |
 |---|---|---|
 | Estrea Solutions (fractional HR for BC industrial employers) | Campbell River | mason@estreasolutions.com |
 | TallSky Consulting Group (lists construction, trades) | Victoria | info@tallsky.ca |
-| BLANKSLATE Partners (construction, natural resources) | BC / Calgary | info@blankslate.partners |
+| BLANKSLATE Partners (construction, natural resources) | BC / Calgary | info@blankslate.partners (BOUNCED 2026-10-04, address not found) |
 | Chase & Co. HR (client: Sasco Contractors) | BC | info@chaseandcohr.com |
 | HR Outsourced, Judy Slutsky CPHR (10-200 staff, construction) | Metro Vancouver | judymslutsky@gmail.com |
 | Aurora HR | Vancouver + BC | Info@AuroraHR.ca |

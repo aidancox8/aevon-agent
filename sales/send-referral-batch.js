@@ -15,7 +15,7 @@ const { google } = require('googleapis');
 const { excludedOrgReason } = require('../tempo/dnc');
 
 const DRY = process.argv.includes('--dry');
-const GAP_MS = 30 * 60 * 1000;
+const GAP_MS = Number(process.env.GAP_MS || 30 * 60 * 1000);
 const LOG = path.join(__dirname, 'referral-batch-log.json');
 
 const HR = 'hr', COR = 'cor';
