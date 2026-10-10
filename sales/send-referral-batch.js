@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const { excludedOrgReason } = require('../tempo/dnc');
+const { waitForWindow } = require('../lib/send-window');
 
 const DRY = process.argv.includes('--dry');
 const GAP_MS = Number(process.env.GAP_MS || 30 * 60 * 1000);
@@ -67,6 +68,7 @@ function readLog() { try { return JSON.parse(fs.readFileSync(LOG, 'utf8')); } ca
     const log = readLog();
     if (log.some(e => e.to.toLowerCase() === f.to.toLowerCase())) { console.log(`skip (already sent) ${f.to}`); continue; }
     if (!first) await new Promise(r => setTimeout(r, GAP_MS + Math.floor(Math.random() * 5 * 60 * 1000)));
+    await waitForWindow();
     first = false;
     const raw = [`From: Aidan Cox <aidan@aevon.ca>`, `To: ${f.to}`, `Subject: ${SUBJECT}`, 'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', body(f)].join('\r\n');

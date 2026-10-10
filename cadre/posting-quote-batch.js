@@ -19,6 +19,7 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const { google } = require('googleapis');
 const { excludedOrgReason } = require('../tempo/dnc');
+const { waitForWindow } = require('../lib/send-window');
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d; };
 const LIMIT = parseInt(arg('--limit', '40'), 10);
@@ -103,6 +104,7 @@ function emailFor(l) {
     const e = emailFor(l);
     if (/—/.test(e.body)) { console.error(`em dash in ${a.firm}, skipped`); continue; }
     if (!first) await new Promise(r => setTimeout(r, GAP_MS + Math.floor(Math.random() * 5 * 60 * 1000)));
+    await waitForWindow();
     first = false;
     const raw = [`From: Aidan Cox <aidan@aevon.ca>`, `To: ${l.email}`, `Subject: ${e.subject}`, 'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', e.body].join('\r\n');
