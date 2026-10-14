@@ -19,7 +19,7 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const { google } = require('googleapis');
 const { excludedOrgReason } = require('../tempo/dnc');
-const { waitForWindow } = require('../lib/send-window');
+const { waitForWindow, withNetRetry, NET_ERR } = require('../lib/send-window');
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d; };
 const LIMIT = parseInt(arg('--limit', '40'), 10);
@@ -99,7 +99,11 @@ function emailFor(l) {
   let first = true;
   for (const a of approved) {
     if (readLog().some(e => e.to.toLowerCase() === a.to.toLowerCase())) continue;
-    const { data: l } = await sb.from('cadre_leads').select('*').eq('id', a.id).single();
+    const l = await withNetRetry(async () => {
+      const { data, error } = await sb.from('cadre_leads').select('*').eq('id', a.id).single();
+      if (error && NET_ERR.test(error.message)) throw new Error(error.message);
+      return error ? null : data;
+    }, a.firm);
     if (!l || l.last_sent_at || excludedOrgReason(l.business_name, l.email)) { console.log(`skip ${a.firm}`); continue; }
     const e = emailFor(l);
     if (/—/.test(e.body)) { console.error(`em dash in ${a.firm}, skipped`); continue; }
@@ -109,7 +113,7 @@ function emailFor(l) {
     const raw = [`From: Aidan Cox <aidan@aevon.ca>`, `To: ${l.email}`, `Subject: ${e.subject}`, 'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', e.body].join('\r\n');
     try {
-      const r = await g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url') } });
+      const r = await withNetRetry(() => g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url') } }), a.firm);
       const now = new Date().toISOString();
       fs.writeFileSync(LOG, JSON.stringify([...readLog(), { at: now, firm: a.firm, to: l.email, id: r.data.id }], null, 1));
       await sb.from('cadre_leads').update({ status: 'sent', last_sent_at: now, sequence_step: 1, personalization_basis: 'campaign:posting-quote-2026-10',

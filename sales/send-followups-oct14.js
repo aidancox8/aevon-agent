@@ -15,7 +15,7 @@ require('dotenv').config({ quiet: true });
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
-const { waitForWindow } = require('../lib/send-window');
+const { waitForWindow, withNetRetry } = require('../lib/send-window');
 
 const SEND = process.argv.includes('--send');
 const GAP_MS = Number(process.env.GAP_MS || 30 * 60 * 1000);
@@ -67,8 +67,8 @@ const hdr = (m, n) => ((m.payload && m.payload.headers) || []).find(h => h.name.
   for (const t of targets()) {
     let orig, thread;
     try {
-      orig = (await g.users.messages.get({ userId: 'me', id: t.messageId, format: 'metadata', metadataHeaders: ['Message-ID', 'Subject', 'To'] })).data;
-      thread = (await g.users.threads.get({ userId: 'me', id: orig.threadId, format: 'metadata', metadataHeaders: ['From'] })).data;
+      orig = (await withNetRetry(() => g.users.messages.get({ userId: 'me', id: t.messageId, format: 'metadata', metadataHeaders: ['Message-ID', 'Subject', 'To'] }), t.label)).data;
+      thread = (await withNetRetry(() => g.users.threads.get({ userId: 'me', id: orig.threadId, format: 'metadata', metadataHeaders: ['From'] }), t.label)).data;
     } catch (e) { console.error(`SKIP ${t.label}: cannot read original (${e.message})`); continue; }
     t.to = hdr(orig, 'to');
     if (!t.to) { console.error(`SKIP ${t.label}: original has no To header`); continue; }
@@ -84,7 +84,7 @@ const hdr = (m, n) => ((m.payload && m.payload.headers) || []).find(h => h.name.
     const raw = [`From: Aidan Cox <${ME}>`, `To: ${t.to}`, `Subject: ${subject}`, `In-Reply-To: ${hdr(orig, 'message-id')}`, `References: ${hdr(orig, 'message-id')}`,
       'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', t.body].join('\r\n');
     try {
-      const r = await g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url'), threadId: orig.threadId } });
+      const r = await withNetRetry(() => g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url'), threadId: orig.threadId } }), t.label);
       fs.writeFileSync(LOG, JSON.stringify([...readLog(), { at: new Date().toISOString(), label: t.label, to: t.to, id: r.data.id }], null, 1));
       console.log(`${new Date().toISOString()} sent follow-up ${t.label}`);
     } catch (e) { console.error(`FAILED ${t.label}: ${e.message}`); }
