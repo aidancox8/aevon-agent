@@ -193,7 +193,9 @@ async function sendViaGmail({ from, fromName, replyTo, to, subject, text }) {
 }
 
 const IS_CI = !!process.env.GITHUB_ACTIONS;
-const LIVE = IS_CI || process.argv.includes('--send');
+// Only --send sends. This used to be `IS_CI || --send`, which made the workflow's unarmed
+// "Dry run" branch send for real: CADRE_ARMED=false stopped nothing from 2026-10-04 to 10-14.
+const LIVE = process.argv.includes('--send');
 const LIMIT = (() => {
   const i = process.argv.indexOf('--limit');
   return i > -1 ? parseInt(process.argv[i + 1], 10) : null;
