@@ -193,17 +193,28 @@ async function prospeoEnrich({ firstName, lastName, apex, personId }) {
 
 async function getProspectFind(name, apex) {
   if (atCap('getprospect')) { console.log('  cap  getprospect at monthly cap'); return null; }
-  const url = `https://api.getprospect.com/public/v1/email/find?name=${encodeURIComponent(name)}&company=${encodeURIComponent(apex)}&apiKey=${GETPROSPECT_KEY}`;
-  const r = await fetch(url);
+  // API v2 (v1 was switched off 2026-10-19). Not found is HTTP 200 with success:false, so branch
+  // on success, not the status code. A first-time search can take over a minute.
+  let r;
+  try {
+    r = await fetch('https://api.getprospect.com/v2/email/find', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': GETPROSPECT_KEY },
+      body: JSON.stringify({ data: { full_name: name, domain: apex } }),
+      signal: AbortSignal.timeout(100_000),
+    });
+  } catch (e) { console.log(`       getprospect failed: ${e.message}`); return null; }
   const text = await r.text();
   checkCreditsResponse('getprospect', r.status, text);
-  if (r.status === 200) {
+  let j = {};
+  try { j = JSON.parse(text); } catch { /* fall through to the failure log */ }
+  if (r.status === 200 && j.success) {
     spend('getprospect');
-    const j = JSON.parse(text);
-    if (j.email && j.status === 'valid') return j.email;
+    const d = j.data || {};
+    if (d.email && /^(valid|verified)$/i.test(String(d.status || ''))) return d.email;
     return null;
   }
-  if (r.status === 404) return null;
+  if (r.status === 200) return null; // not found
   console.log(`       getprospect failed: ${r.status} ${text.slice(0, 160)}`);
   return null;
 }

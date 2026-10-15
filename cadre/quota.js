@@ -47,9 +47,12 @@ const row = (name, text) => console.log(`  ${name.padEnd(12)}${text}`);
     row('reoon', /not enough credits/i.test(t) ? 'OUT of credit' : `answering (HTTP ${r.status})`);
   } catch (e) { row('reoon', `unreachable (${e.message})`); }
   try {
-    const r = await fetch('https://api.getprospect.com/public/v1/email/find?name=Quota%20Probe&company=example.invalid&apiKey=' + E.GETPROSPECT_KEY);
-    const t = await r.text();
-    row('getprospect', /quota|credit|limit/i.test(t) && r.status !== 404 ? 'OUT of credit' : `answering (HTTP ${r.status})`);
+    // v2 rejects the invalid domain before spending a credit and reports the balance either way.
+    const r = await fetch('https://api.getprospect.com/v2/email/find', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': E.GETPROSPECT_KEY },
+      body: JSON.stringify({ data: { full_name: 'Quota Probe', domain: 'example.invalid' } }) });
+    const c = ((await r.json()).metadata || {}).credits || {};
+    row('getprospect', c.email_search != null ? `${c.email_search} email searches left, resets ${String(c.reset_at).slice(0, 10)}` : `answering (HTTP ${r.status})`);
   } catch (e) { row('getprospect', `unreachable (${e.message})`); }
   row('lusha', E.LUSHA_KEY ? 'no balance endpoint; the chain skips it on a 402' : 'no key');
   row('verifalia', E.VERIFALIA_USER && E.VERIFALIA_PASS ? 'configured (25 a day)' : 'not configured: add VERIFALIA_USER and VERIFALIA_PASS');
