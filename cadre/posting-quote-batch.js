@@ -113,7 +113,7 @@ function emailFor(l) {
     const raw = [`From: Aidan Cox <aidan@aevon.ca>`, `To: ${l.email}`, `Subject: ${e.subject}`, 'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', e.body].join('\r\n');
     try {
-      const r = await withNetRetry(() => g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url') } }), a.firm);
+      const r = await withNetRetry(async () => { await waitForWindow(); return g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url') } }); }, a.firm);
       const now = new Date().toISOString();
       fs.writeFileSync(LOG, JSON.stringify([...readLog(), { at: now, firm: a.firm, to: l.email, id: r.data.id }], null, 1));
       await sb.from('cadre_leads').update({ status: 'sent', last_sent_at: now, sequence_step: 1, personalization_basis: 'campaign:posting-quote-2026-10',
