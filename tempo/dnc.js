@@ -31,7 +31,8 @@ const names = require('./do-not-contact.json').names;
 // which sat queued in tempo_leads and received two emails in June 2026 before anyone noticed.
 // 'brendalaumd' is matched with separators stripped, so brendalaumd.com, brenda-lau-md.ca and
 // "Brenda Lau MD" all catch.
-const EXCLUDED_ORGS = ['changepain', 'change pain', 'artus', 'brendalaumd', 'brenda lau'];
+// 'absolutesafety': Allysha Gawletz declined 2026-10-14 (clients already on software); Aidan: remove her.
+const EXCLUDED_ORGS = ['changepain', 'change pain', 'artus', 'brendalaumd', 'brenda lau', 'absolutesafety'];
 
 /**
  * Domains where somebody asked us to stop.

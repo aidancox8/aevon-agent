@@ -21,7 +21,7 @@ Batch of 12 sent 2026-10-04/05 (sales/send-referral-batch.js); 11 delivered, BLA
 |---|---|---|
 | Dverse Safety Consulting (BCCSA COR manuals) | Okanagan | lora@dverse.ca |
 | GG Safety Consulting (COR, ISN, Avetta) | Surrey | gagan@ggsafetyconsulting.com |
-| Absolute Safety Consulting (construction, Okanagan) | Kelowna | allysha@absolutesafetybc.com |
+| ~~Absolute Safety Consulting~~ DECLINED 2026-10-14, do not contact | Kelowna | ~~allysha@absolutesafetybc.com~~ |
 | Construction Safety Services (COR programs) | Vancouver | info@corsafetyservices.com |
 | Xcel Safety Systems | Greater Vancouver | form/phone only, (604) 312-7302 |
 
