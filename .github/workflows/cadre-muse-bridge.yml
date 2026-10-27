@@ -1,0 +1,51 @@
+name: Cadre - Muse Bridge
+
+# Daily hand-off with Meta Muse (cadre/muse-bridge.js). Runs before cadre-free-daily.yml (11:30
+# UTC) so the names Muse found yesterday get an email looked up the same morning:
+#   1. ingest: read "[Muse leads]" emails in aidan@aevon.ca, write the people onto cadre_leads
+#   2. queue: publish today's companies to muse/queue.md, which Muse reads from
+#      https://raw.githubusercontent.com/aidancox8/aevon-agent/master/muse/queue.md
+# Nothing here sends any email.
+
+on:
+  schedule:
+    - cron: '45 10 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Ingest yesterday, queue today
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+        run: node cadre/muse-bridge.js --ingest --queue --size 25
+      - name: Publish the queue
+        run: |
+          git config user.name "aevon-bot"
+          git config user.email "aidan@aevon.ca"
+          git add muse/queue.md
+          git diff --cached --quiet || { git commit -m "muse queue $(date -u +%F)"; git pull --rebase -q; git push -q; }
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+            -d '{"from":"Aevon <aidan@aevon.ca>","to":["aidan@aevon.ca"],"subject":"[Aevon ALERT] Muse bridge failed","text":"cadre-muse-bridge.yml failed. See the run log."}' > /dev/null
