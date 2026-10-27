@@ -57,6 +57,7 @@ async function verify(email) {
     body: JSON.stringify({ entries: [{ inputData: email }] }),
   });
   let j = await r.json();
+  if (r.status === 402) return { classification: 'OutOfCredit', status: 'verifalia out of credit' };
   if (!j.overview) throw new Error(`verifalia ${r.status} ${JSON.stringify(j).slice(0, 160)}`);
   for (let i = 0; i < 12 && j.overview.status !== 'Completed'; i++) {
     await sleep(10000);
@@ -97,7 +98,11 @@ async function verify(email) {
   let sent = 0;
   for (const l of pool) {
     if (sent >= room) break;
-    const v = await verify(l.email);
+    // An address a finder already proved deliverable with Verifalia is not checked again: that
+    // credit (about 25 a day) is shared with the finders and is the tightest limit there is.
+    const recent = l.email_quality === 'personal' && /Verifalia Deliverable/.test(l.notes || '');
+    const v = recent ? { classification: 'Deliverable', status: 'verified by finder' } : await verify(l.email);
+    if (v.classification === 'OutOfCredit') { console.log('Verifalia is out of credit. Stopping, nothing unverified is sent.'); break; }
     if (v.classification === 'Undeliverable' || (v.classification === 'Risky' && v.status !== 'ServerIsCatchAll') || v.classification === 'Unknown') {
       await sb.from('cadre_leads').update({ email_quality: v.classification === 'Undeliverable' ? 'invalid' : l.email_quality,
         notes: `${l.notes ? l.notes + ' | ' : ''}autopilot verify ${new Date().toISOString().slice(0, 10)}: ${v.classification} ${v.status}, not sent` }).eq('id', l.id);
