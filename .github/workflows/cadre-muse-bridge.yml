@@ -34,6 +34,13 @@ jobs:
           GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
           GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
         run: node cadre/muse-bridge.js --ingest --queue --size 25
+      - name: Guess and verify addresses for the new names (8 Verifalia checks, the autopilot keeps the rest)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          VERIFALIA_USER: ${{ secrets.VERIFALIA_USER }}
+          VERIFALIA_PASS: ${{ secrets.VERIFALIA_PASS }}
+        run: node cadre/format-guess.js --checks 8
       - name: Publish the queue
         run: |
           git config user.name "aevon-bot"
