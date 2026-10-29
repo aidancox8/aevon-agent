@@ -1,6 +1,6 @@
-# Muse queue, 2026-10-28
+# Muse queue, 2026-10-29
 
-25 companies (of 193 waiting). For each, find the one person who owns staff certifications and training records.
+25 companies (of 168 waiting). For each, find the one person who owns staff certifications and training records.
 Under 200 staff: owner, president or general manager. 200 to 1000: HR or health & safety manager. Over 1000: contact_name "too large".
 
 Email the result to aidan@aevon.ca with the subject "[Muse leads] YYYY-MM-DD" and ONLY a JSON array in the body:
@@ -10,28 +10,28 @@ Research only. Private mode on. No messages, connection requests, follows or rea
 
 | id | company | city | website | posting says |
 |---|---|---|---|---|
-| 05eb7981-9ecf-451e-8323-05f6ac4f7d2e | LIFEPORT LLC | Woodland, WA |  | Verify certification records for all materials used in production. |
-| 7dc758d8-ee70-4232-99a6-4cc1850e8b93 | Bruin Waste Management, LLC | Clifton, CO |  | Maintain scale service, maintenance, inspection, and certification records as required. |
-| 9760a272-f2c9-4a35-b1fc-7e83dddf2ac1 | Trident Military Systems, LLC | Mesa, AZ |  | Track action items, deadlines, signatures, approvals, training and certification records,  |
-| e8187cf9-0949-4684-b85c-227e0cf42320 | OMNI Flow Computers, Inc | Sugar Land, TX |  | Coordinate calibration of test equipment, maintain certification records,… |
-| a813ac43-843e-4f4e-aff0-1ba87113ccc8 | Cleveland Clinic | Cleveland, OH |  | Maintain study personnel certification records (License, CV, CITI). |
-| c45b9899-bdfd-4dc0-9864-0abf2865b30e | Endeavor Health | Glenview, IL |  | Maintain licensing and certification records for staff. |
-| 099b6d1f-3eea-4ec9-8f34-7a4165e2b07e | Lakeland Industries | Decatur, AL |  | Maintain technical certification records and supporting documentation. |
-| f5242358-8318-4002-bc1f-d1d9b11abf09 | KING AND GEORGE LLC | Jacksonville, FL |  | Maintain documentation, PM schedules, and certification records. |
-| cb1cc051-75f3-473a-bd38-9c808ed5833e | BDA | Plainfield, IN |  | Maintain training documentation, certification tracking, and recertification processes… |
-| 4af38d91-69fd-4926-8e0f-18c900035306 | St Johns Community Health | Los Angeles, CA |  | Coordinate training schedules and certification tracking. |
-| 5695a03d-af39-43a4-acdc-07b25cf6f825 | ABACUS INDUSTRIES, INC. | Naples, FL |  | Assist with IDEA compliance requirements and training certification tracking. |
-| 66213aa9-07e3-49fc-b655-ff1bf7ad3dff | Procoplast | Southfield, MI |  | Manage contract organization, filing, renewal tracking, and obligation follow up. |
-| 3788c8a9-7b67-47e2-983f-ebaa3da513b7 | HackerRank Careers | Santa Clara, CA |  | Maintain accurate customer data, renewal tracking, and activity logging in CRM tools. |
-| 999c59b6-9cae-4201-896f-37fc6952aaf9 | GFS Group LLC | McAllen, TX |  | Manage driver qualification files and vehicle maintenance… |
-| b8f119ae-5677-4d11-8ac7-de864c296bc8 | IMC Companies LLC | Columbus, OH |  | Ensure compliance with applicable DOT, FMCSA, state regulations, hours-of-service requirem |
-| 036d0c2f-abbf-432c-95f1-d78b2dedf676 | Edward Don & Company | Woodridge, IL |  | Create Driver Qualification files as needed and maintain all required documents in Supervi |
-| d29e9d57-19db-45ae-af90-a94a3d9bb60b | M. A. Mortenson Company | Minneapolis, MN |  | Manage and maintain all aspects of driver qualification files, continuous motor vehicle li |
-| b58effcf-17cb-47a5-9571-c68ae41cd56e | ARS-Rescue Rooter | Memphis, TN |  | Maintain DOT driver qualification files, monitor ongoing requirements, and coordinate driv |
-| 81a590f0-a47b-47c2-9771-656aae2cae63 | WTI Transport, LLC | Tuscaloosa, AL |  | Audit and maintain DOT driver qualification files. |
-| da9cc89b-eec9-4923-95c1-897061eed920 | Hawkeye Electric | Hiawatha, IA |  | Maintain accurate driver qualification files, licensing, and training records. |
-| 8d9d4b4b-3efc-4389-9dc3-0ca396fa4047 | Medic | Sacramento, CA |  | Help customers maintain driver qualification files and required compliance records. |
-| c377b046-536c-41cc-afa8-a0a05f3d1fb1 | Comfort Systems of MT | Bozeman, MT |  | Manage office vendors, subscriptions, insurance certificates, and business license renewal |
-| 47ee4029-5624-4326-87b9-a43b70505be3 | Healing Touch Home Care | Las Vegas, NV |  | Prepare the agency's business and operating license renewals and keep them on schedule. |
-| de2e2e3d-7438-4ced-a12c-b212af08fca4 | RevMax Performance LLC | Charlotte, NC |  | Track and coordinate hardware and software license renewals. |
-| cc4412c8-7d9e-4d6e-adfd-815941177068 | Sunny Grove Landscaping & Nursery Inc. | Fort Myers, FL |  | Oversee *business license renewals* and *fuel audits*. |
+| a52d9f38-e5ba-478a-93be-78f2c7ec0eb5 | Ducworks, Inc | Logan, UT |  | Verify welder qualifications and maintain certification records and continuity. |
+| 4115ca44-5a87-4606-baba-cb1d32db0048 | Barber-Nichols LLC | Arvada, CO |  | Maintain supplier certification records in Enterprise… |
+| 5214e8ea-9010-46d7-bb51-4457f9b74841 | Sprout | Garland, TX |  | Support the Facility Manager by maintaining audit, compliance, and certification records t |
+| 4c8c87d4-140b-4d45-86b0-1f8ede93cd38 | Spooky Nook Sports Inc | Manheim, PA |  | Track and update instructor certification records. |
+| aae723fd-baae-4312-9ce4-b97a5bd32781 | Bausch + Lomb | Tampa, FL |  | Maintain certification records and training databases. |
+| caeb73ba-c3c9-4d91-a71e-4aa7500f0fde | Axle | Hamilton, MT |  | Develop custom applications and centralized data tools to manage RML's Biosafety Cabinet ( |
+| c9053477-11c7-40dd-9f61-77fa1c9d2244 | Evolution Research Group | Miami, FL |  | Coordinate OSHA-related compliance activities, certification tracking, incident reporting, |
+| 3697838e-0c6d-446a-95e0-dca8cf1f2b2b | Methode Electronics, Inc. | Southfield, MI |  | Manage contract organization, filing, renewal tracking, and obligation follow up. |
+| 790adb98-bc54-40b9-90db-533f72bfca3c | Cyngn | Mountain View, CA |  | Manage hardware and software inventory, license assignments, and renewal tracking. |
+| 0affb43c-cc36-41b4-9c3a-dee9c97af79e | American Medical Administrators LTC | Independence, MO |  | Maintain accurate training, certification, and competency records. |
+| f25ead55-5798-44b0-91b4-dfaaebe8cd0d | Ducts Unlimited Mechanical Systems Inc. | Arvada, CO |  | Maintain inspection logs and certification records. |
+| 22241627-57c2-4850-8b1b-8f9d4c4489b2 | Total Steel Fabrication LLC | Ennis, TX |  | Verify welder qualifications and maintain certification records. |
+| 8e54aa69-2cf0-4357-9d52-1c9c027e3429 | IPRO | Mount Prospect, IL |  | Review and maintain driver qualification files (DQF). |
+| 453df6f9-8284-458b-a520-3355975f15fb | Logos Logistics Inc | Romulus, MI |  | Monitor driver qualification files, medical certifications, licensing requirements, and co |
+| 2cc14635-790f-4b84-8abb-6029116c56d3 | Maverick Tech | Granite City, IL |  | Maintain precise documentation and certification records for all welding staff and procedu |
+| 41b22581-4411-40e5-9c4d-3fcc771e51a0 | Gertens Family of Businesses | Inver Grove Heights, MN |  | Maintain DOT compliance documentation, including driver qualification files, medical certi |
+| 9f1a1d49-7e20-4ec4-adb3-86a5afaea9d4 | Port City Logistics Inc | Port Wentworth, GA |  | Oversee and maintain Driver Qualification Files for CDL and… |
+| e82fd18e-1a5b-4d2c-816f-c6a2ea6e409f | Hallcon | South San Francisco, CA |  | Ensure driver qualification files, licensing records, medical certifications, and complian |
+| 51782d76-c622-411a-b8ab-ee62ea9554fc | J & D TRANSPORTATION INC | Long Beach, CA |  | Maintain and audit driver qualification files and training records. |
+| 26a572ff-14b3-475d-8f82-5d8c05e57f3c | M S International, Inc | Austell, GA |  | Monitor transportation activities to ensure FMCSA and DOT compliance for drivers and vehic |
+| 1d637db8-4e9e-44fd-abc8-0e247066dd8f | ALBANESE CONFECTIONERY GROUP INC. | Merrillville, IN |  | Assist in tracking and maintaining activities for asset management, license renewals, serv |
+| d14e48c2-52f3-4aa4-badf-df6839542e54 | Catawba Two Kings Casino | Kings Mountain, NC |  | Maintain accurate certification records, exam documentation, and renewal tracking for all  |
+| 8fbd3b23-68c4-4423-9dd6-9bfffd56c401 | VERIDIAM LLC | El Cajon, CA |  | Maintain required training, experience, qualification and certification records. |
+| dc10e950-bdfd-4ca3-9296-fe615f17f0bb | PRAYON INC | Augusta, GA |  | Coordinate state license renewals, regulatory documentation, and compliance-related record |
+| 19a8a456-a736-4721-98f6-4a53d4beb1e0 | Sloomoo Inc | Los Angeles, CA |  | Keep station certification records up to date through our LMS, and use weekly coverage to  |
