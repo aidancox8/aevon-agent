@@ -5,13 +5,14 @@ name: Cadre - Posting Quote Autopilot
 # Pacific in both PDT and PST; the script's own send window (lib/send-window.js) drops any run
 # that lands outside 8am-3pm PT, on a weekend, or on a Canadian/BC holiday.
 #
-# Each run sends at most 3, the day is capped at POSTING_DAILY_CAP (default 20).
+# GitHub delays scheduled runs by hours (seen 2026-10-27..30: one run a day landed in the window),
+# so it fires every 30 minutes and each run sends at most 4. The day is capped at POSTING_DAILY_CAP (default 20).
 # OFF SWITCH: set the repository variable POSTING_ARMED to anything but "true". Unarmed runs are
 # dry runs that print the next picks and send nothing (verified: only --send sends).
 
 on:
   schedule:
-    - cron: '20 15-22 * * 1-5'
+    - cron: '10,40 15-22 * * 1-5'
   workflow_dispatch:
     inputs:
       live:
@@ -46,7 +47,7 @@ jobs:
           POSTING_DAILY_CAP: ${{ vars.POSTING_DAILY_CAP || '20' }}
         run: |
           if [ "${{ github.event.inputs.live }}" = "SEND" ] || { [ "${{ github.event_name }}" = "schedule" ] && [ "${{ vars.POSTING_ARMED }}" = "true" ]; }; then
-            node cadre/posting-autopilot.js --send
+            node cadre/posting-autopilot.js --send --per-run 4
           else
             echo "Not armed (repository variable POSTING_ARMED=true to go live). Dry run:"
             node cadre/posting-autopilot.js
