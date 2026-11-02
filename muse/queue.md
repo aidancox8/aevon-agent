@@ -1,6 +1,6 @@
-# Muse queue, 2026-10-30
+# Muse queue, 2026-11-02
 
-25 companies (of 143 waiting). For each, find the one person who owns staff certifications and training records.
+25 companies (of 118 waiting). For each, find the one person who owns staff certifications and training records.
 Under 200 staff: owner, president or general manager. 200 to 1000: HR or health & safety manager. Over 1000: contact_name "too large".
 
 Email the result to aidan@aevon.ca with the subject "[Muse leads] YYYY-MM-DD" and ONLY a JSON array in the body:
@@ -10,28 +10,28 @@ Research only. Private mode on. No messages, connection requests, follows or rea
 
 | id | company | city | website | posting says |
 |---|---|---|---|---|
-| e212f682-2855-4d2e-99d3-0a938046ad0f | Gardner White Furniture | Bloomfield Hills, MI |  | Oversee learning technologies and systems, including the Learning Management System (LMS), |
-| 53fa7556-e174-427f-97fc-fe2a6a5f727b | Toyota Boshoku Jackson Tennessee | Jackson, TN |  | Maintain certification tracking and ensure readiness across shifts. |
-| f2f5882c-20d3-4d72-891d-852a4b9e42f1 | BIC | Charlotte, NC |  | Support forklift operator training, refresher training, evaluations, and certification tra |
-| af9216af-a09b-4075-8d3b-419b6707d669 | Greater Vision Healthcare Services LLC | Ocoee, FL |  | Track regulatory deadlines, license renewals, required inspections, and other compliance-r |
-| 553ba27a-0dd8-4dd2-8593-b83683100a1a | Muslim Hands Inc | Valley Stream, NY |  | Oversee due diligence, fundraising registrations, license renewals, risk registers, audits |
-| 9f41887b-d7f8-4c7c-ad73-83425277190e | Health Care Center for the Homeless | Orlando, FL |  | Coordinate equipment deployment, collection, reassignment, inventory reconciliation, and l |
-| 9651a9d3-039e-48b3-95c1-aa8bf5f65e70 | Jyoti Foods | Sharon Hill, PA |  | Lead the facility through SQF certification and recertification audits, manage the SQF ass |
-| babcafbe-3580-4273-ab2f-c147e385186f | Bader | Saint Louis Park, MN |  | Track and review recertifications, lease renewals, rent changes, income/rent-related docum |
-| a65d4d4a-aaab-4c19-b8be-a4508792df82 | TFA Logistics | El Paso, TX |  | Maintain driver qualification files and track required documents and… |
-| 3b934a21-4272-42a3-b00a-32ffd61315e9 | Ace Hardware | West Jefferson, OH |  | Maintain driver qualification files and keep all drivers in Department of Transportation c |
-| fd5d8ce4-a4a3-4c54-8766-04c23dc9ec98 | HQ Business Support-GROUP | Minneapolis, MN |  | Manage and maintain all aspects of driver qualification files, continuous motor vehicle li |
-| 9387735f-99ec-43cf-85e4-bd1ffe2cd8e4 | Cargomatic | Savannah, GA |  | Maintain driver qualification files, licenses, medical certifications, and required safety |
-| f94c2f69-285b-41f4-95f3-0038cba87224 | Crane Nuclear | Kennesaw, GA |  | Maintain contractor compliance systems, including ISNetworld and Avetta. |
-| 02850f48-64a4-4ce6-b6d9-fb81e2bc3075 | Fuse3 Solutions | Oklahoma City, OK |  | Maintain producer license renewals, carrier appointments, and contracts. |
-| 19b1cfb9-3854-4dbf-b6f5-deea6351f876 | Zenbooth, Inc. | Berkeley, CA |  | Maintain business registrations, business license renewals, corporate filings, and complia |
-| 7f29667d-9223-4832-9c46-038e19826598 | Ozkar Services LLC | Bohemia, NY |  | Manage warranty/license renewals, product upgrades, and generate renewal quotes with proac |
-| d3bcf1cd-5dad-4f66-9092-d39ca256f064 | MACH ENERGY SERVICES LLC | Oklahoma City, OK |  | Maintain and track state compliance qualification and file appropriate documentation for l |
-| 25884387-9f84-4c28-bb31-c0d28a4c0564 | VETERANS VILLAGE OF SAN DIEGO, INC | San Diego, CA | https://vvsd.net/ | Manage provider credentialing and payer enrollment activities, including credentialing fil |
-| d7623690-e6e7-42c1-97ef-533aa3f8e6a9 | RAMROD | North Las Vegas, NV |  | Track certifications, training records, and document… |
-| 45a16fdf-9f71-4c69-97a7-a7474e3fad5e | PIERCE POWERLINE CO, LLC | Saginaw, MI | https://piercepowerline.com/contact-2/ | Track certifications, licenses, training records, and expiration… |
-| df34857b-f66c-492e-8e42-8d56bc70f8a3 | D&G MEDICAL ASSOCIATES PLLC | Meridian, ID |  | Maintain credentialing documentation and track medical license renewals, continuing educat |
-| 5c2c1b79-9459-4245-b0a4-83269dfd2682 | Tyler Distribution Centers LLC | Richmond Hill, GA | https://www.tylerdistribution.com/ | Maintain accurate employee training and certification records. |
-| e8b7b218-b672-406f-9147-d31edfb48471 | IDR, Inc. | Brentwood, TN |  | Manage third-party licensing administration and oversee business license renewals and repo |
-| 775787dd-d277-4e8b-9baa-87b3f322c839 | Oldcastle APG | Morristown, TN |  | Ensure driver qualification files are maintained including driver road tests. |
-| 8f823e7e-da37-49f4-9c29-436c1dec77a8 | Pregis LLC | Garland, TX | http://www.pregis.com/ | Maintain accurate training records/Checklist and reports to track employee progress. |
+| 79eff294-9a19-4adf-b5a4-7ea0d95bfe2f | RF-Lambda | San Diego, CA |  | Manage, develop, and maintain training records for. |
+| 22e3121d-5bae-44b1-bf8a-6ea423072a81 | Perimeter Rehabilitation Suites by Harborview | Sandy Springs, GA | http://perimeter-health.com/ | Maintain training records and ensure compliance with state and federal regulations. |
+| 4aac93ca-65b2-4d88-aff7-f1d6f91e712a | Arrowhead Pharmaceuticals | Madison, WI | http://arrowheadpharma.com/ | Maintain training records in an organized, accurate, and audit-ready state. |
+| 7ae293f9-cf0c-40c5-8531-34f0742af3d2 | Michels Corporation | Broussard, LA |  | Maintain accurate dive logs and certification records. |
+| 63c26cec-d279-417f-84db-3313a2acfc96 | ZIEHL ABEGG | Winston-Salem, NC | https://www.ziehl-abegg.com/en-us | Maintain accurate training records and document certification/compliance requirements. |
+| c7335cef-18a7-4122-bbde-7b63e97080b0 | Steelpro | Wayne, MI | http://www.steelpro.us/ | Maintain DQ files, driver logs and equipment files. |
+| 730c588a-c9d0-4cdb-b06e-6b09ea70fa46 | Solera | Jacksonville, FL |  | Maintain accurate training records, reporting, attendance logs, and certification document |
+| 1c765bff-fb6c-4241-92b1-11e7e945b849 | Hydro - US Facilities | Houston, TX |  | Administer ISNetworld, Veriforce, and Avetta to keep contractor and… |
+| 40f1dbb3-d4c1-4ebc-8029-088f224ac1e9 | Every Child's Hope | St. Louis, MO | http://www.everychildshope.org/ | Maintain accurate training records and documentation in accordance with state, federal, an |
+| f7688bbe-9a86-493a-a420-f775b6987478 | Michael Foods Inc. | West Jefferson, OH | http://www.michaelfoods.com/ | Facilitate data entry into safety management platforms (Intelex) to track safety observati |
+| 84e26bf3-ddc1-4182-a874-f9f88eac58a3 | Freudenberg-NOK General Partnership | Milan, OH |  | Support the training and maintain the training matrix within their assigned zone and repor |
+| b6e9917a-879f-4172-a472-c65acda789f7 | Octopi Brewing | Madison, WI |  | Develop and/or update SOPs for tasks associated with master training matrix. |
+| cbe1a8aa-6812-41f4-be0e-7d47a37f9c36 | Wonder Years Academy | Ludowici, GA | https://www.wyacademy2.com/ | Keep staff training and certification records updated. |
+| b819c907-0015-4c42-b987-0ea2557aeaf6 | SB Expedite Delivery Inc. | Stillwater, OK |  | Ensure compliance with DOT/FMCSA regulations, including HOS/ELD, driver qualification file |
+| 9c8d9c24-0ce2-4ecc-a586-4977c13f6b54 | Superior Maintenance Co. | Princeton, IN |  | Monitor employee training progress and maintain training records. |
+| 57091049-d9e2-4c23-83db-fa937dcd3aa7 | VMP Healthcare and Community Living | West Allis, WI | http://vmpcares.com/ | Coordinate annual facility license renewals and credentialing requirements, including appl |
+| 33d2a8ad-b375-45af-a9f6-4fc19250bde6 | Delta Airlines | Atlanta, GA |  | Support capability management processes including skills assessments, qualification tracki |
+| 60b304b4-0980-49e6-aa46-ebfca7c5cbc7 | Ambrosia Behavioral Health | West Palm Beach, FL |  | Coordinate employee training and maintain training records. |
+| 4bcc444a-a664-4faf-921e-37eda5288c6f | RITE RUG CO | Whitehall, OH | https://www.riterug.com/pages/locations/columbus-oh-flooring-outlet-store | Track state‑specific requirements such as background checks, certifications, and driver qu |
+| 1dd3eb7b-08c1-4bcb-8a68-b335a6161ecc | Lehigh County Authority | Allentown, PA | https://lehighcountyauthority.org/ | Create and maintain a centralized system for training records, certification tracking, and |
+| 1c69e2e4-c226-489c-8621-f95dfe1a5d33 | OmniSource | Toledo, OH | http://www.omnisource.com/ | Assist with contractor safety management programs, including ISNetworld, Marsh, contractor |
+| 1f24fcfa-aae9-4403-b104-d4101160194a | O2B Early Education | Gainesville, FL |  | Support business and child care license renewals and annual agency profile updates. |
+| 1e291e37-2eef-477c-aa70-9c6ed843b037 | BROC | Castle Rock, CO |  | Track and follow-up on driver’s license renewals and restrictions. |
+| 3f421d01-0081-4039-a1f7-58dc377a8175 | Trane Technologies | Clarksville, TN | http://www.trane.com/ | Oversee onboarding, orientation, training matrices, certification tracking, and compliance |
+| e73c37bb-7ca5-4997-8e97-cbce359e01c4 | Harrison & Burrowes Bridge Constructors, Inc. | Glenmont, NY |  | Maintain driver qualification files and New York State LENS records to ensure regulatory… |
