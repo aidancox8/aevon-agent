@@ -1,4 +1,4 @@
-# Muse queue, 2026-11-10
+# Muse queue, 2026-11-11
 
 0 companies (of 0 waiting). For each, find the one person who owns staff certifications and training records.
 Under 200 staff: owner, president or general manager. 200 to 1000: HR or health & safety manager. Over 1000: contact_name "too large".
