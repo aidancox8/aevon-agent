@@ -60,18 +60,16 @@ function blockReason(l, { maxPostingAgeDays = null, regions = ['CA'] } = {}) {
 
 function emailFor(l) {
   const hi = firstName(l.contact_name) ? `Hi ${firstName(l.contact_name)},` : `Hi ${l.business_name} team,`;
-  const when = l.signal_date ? `Your ${MONTH[new Date(l.signal_date).getUTCMonth()]} job posting` : 'A recent job posting of yours';
-  const tail = BC.test(l.city || '') && l.industry === 'trades'
-    ? 'It also checks the Skilled Trades Certification apprentice ratio and COR training records for BC contractors.'
-    : 'It also keeps the training records an auditor asks for ready to export.';
+  const when = l.signal_date ? `your ${MONTH[new Date(l.signal_date).getUTCMonth()]} job posting` : 'a recent job posting of yours';
   return {
     subject: 'your job posting',
     body: [
       hi, '',
-      `${when} asked the new hire to "${cleanQuote(l.signal_quote)}".`, '',
-      `That is the part of the job Cadre takes off their plate. Every certification sits on the employee record, the worker and their supervisor are warned at 60, 30 and 7 days, and the staff list syncs from the HR or payroll system you already run. ${tail}`, '',
-      'I am looking for a few companies to use it free for a while in exchange for honest feedback. Would a 20-minute look be worth it?', '',
-      'Thanks,', 'Aidan Cox', 'Aevon', 'aevon.ca', '',
+      `I came across ${when}, and one line stuck with me: "${cleanQuote(l.signal_quote)}".`, '',
+      "I know that job. It's usually one person with a spreadsheet, chasing people before their tickets lapse.", '',
+      'I built a tool called Cadre that does the chasing for them. It warns the worker and their supervisor 60, 30 and 7 days before anything expires, and pulls your staff list from the payroll or HR system you already use.', '',
+      "I'm one person and it's new, so I'd rather hear what a few real companies think than sell it. If you'd like to use it free and tell me where it falls short, I'd be glad to set it up for you. No worries if the timing is off.", '',
+      'Thanks,', 'Aidan Cox', 'aevon.ca', '',
     ].join('\r\n'),
   };
 }

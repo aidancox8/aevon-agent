@@ -27,7 +27,7 @@ const PER_RUN = parseInt(arg('--per-run', '3'), 10);
 const DAILY_CAP = parseInt(process.env.POSTING_DAILY_CAP || arg('--cap', '20'), 10);
 const MAX_AGE_DAYS = 75;
 const REGIONS = ['CA', 'US'];
-const BASIS = 'campaign:posting-quote-2026-10';
+const BASIS = 'campaign:posting-quote-warm-2026-11'; // warmer copy from 2026-11-12; the first 38 sends are 'campaign:posting-quote-2026-10'
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -45,7 +45,7 @@ async function sentToday() {
   // Midnight Pacific, close enough: PDT is UTC-7, PST UTC-8; take the earlier bound.
   const since = new Date(`${date}T07:00:00Z`).toISOString();
   const { count, error } = await sb.from('cadre_leads').select('id', { count: 'exact', head: true })
-    .eq('personalization_basis', BASIS).gte('last_sent_at', since);
+    .like('personalization_basis', 'campaign:posting-quote%').gte('last_sent_at', since);
   if (error) throw new Error(error.message);
   return count;
 }
