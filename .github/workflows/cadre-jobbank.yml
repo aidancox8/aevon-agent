@@ -1,0 +1,57 @@
+name: Cadre - Job Bank Finder
+
+# New companies for the posting-quote campaign without the laptop. SimplyHired (cadre-find.yml)
+# refuses GitHub runners, so until 2026-11-16 every new company depended on a sweep run by hand
+# on Aidan's laptop, and when that did not happen the Muse queue and the send pool both ran dry.
+# Job Bank (jobbank.gc.ca) is read through the runner's own Chrome (cadre/jobbank-finder.js).
+# Runs before cadre-muse-bridge.yml (10:45 UTC) so new companies reach Muse the same morning.
+# Nothing here sends any email.
+
+on:
+  schedule:
+    - cron: '15 9 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max postings to open'
+        required: false
+        default: '150'
+
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Sweep Job Bank
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node cadre/jobbank-finder.js --limit ${{ inputs.limit || '150' }}
+
+      - name: Keep the batch file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobbank-batch
+          path: cadre/batches/*-jobbank.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+            -d '{"from":"Aevon <aidan@aevon.ca>","to":["aidan@aevon.ca"],"subject":"[Aevon ALERT] Cadre Job Bank finder failed","text":"cadre-jobbank.yml failed. See the run log."}' > /dev/null

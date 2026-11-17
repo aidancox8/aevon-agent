@@ -197,10 +197,12 @@ async function readPosting(browser, id) {
 }
 
 (async () => {
-  let chromium;
-  try { ({ chromium } = require('C:/Users/Aidan/projects/cadre-app-src/node_modules/playwright')); }
-  catch (e) { console.error('Playwright not found at C:/Users/Aidan/projects/cadre-app-src/node_modules/playwright'); process.exit(1); }
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+  // playwright-core drives the Chrome already on the machine: the laptop's, or the one GitHub's
+  // ubuntu runners ship at /usr/bin/google-chrome. CHROME_PATH overrides either.
+  const { chromium } = require('playwright-core');
+  const executablePath = process.env.CHROME_PATH
+    || (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome');
+  const browser = await chromium.launch({ executablePath, headless: true });
 
   const { data: existing } = await supabase.from('cadre_leads').select('business_name');
   const seenCompanies = new Set((existing || []).map((r) => norm(r.business_name)));
@@ -212,12 +214,13 @@ async function readPosting(browser, id) {
   let withEmail = 0;
   let freemailCount = 0;
   const debugExamples = [];
+  let searchErrors = 0;
 
   outer:
   for (const phrase of PHRASES) {
     let listings;
     try { listings = await search(browser, phrase); }
-    catch (e) { console.log(`  ! ${phrase}: ${e.message}`); continue; }
+    catch (e) { console.log(`  ! ${phrase}: ${e.message}`); searchErrors++; continue; }
     await sleep(GAP_MS);
     if (!listings.length) { console.log(`  0 hits  "${phrase}"`); continue; }
     console.log(`  ${String(listings.length).padStart(3)} hits  "${phrase}"`);
@@ -302,6 +305,9 @@ async function readPosting(browser, id) {
   await browser.close();
 
   console.log(`\n${found.length} kept of ${examined} posting(s) examined.`);
+  // Every search failing means this machine cannot reach Job Bank. That must not look like a quiet day.
+  if (searchErrors >= PHRASES.length) { console.error(`ALL ${searchErrors} searches failed. This environment cannot reach Job Bank.`); await browser.close().catch(() => {}); process.exit(1); }
+
   if (!found.length) {
     console.log('\nZero kept. Diagnostic on the first postings actually opened, so a filter bug is visible rather than a clean zero:');
     for (const d of debugExamples) {

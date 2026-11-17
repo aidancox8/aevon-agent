@@ -40,7 +40,8 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           VERIFALIA_USER: ${{ secrets.VERIFALIA_USER }}
           VERIFALIA_PASS: ${{ secrets.VERIFALIA_PASS }}
-        run: node cadre/format-guess.js --checks 20
+          ZEROBOUNCE_KEY: ${{ secrets.ZEROBOUNCE_KEY }}
+        run: node cadre/format-guess.js --checks 20 --zb 35
       - name: Publish the queue
         run: |
           git config user.name "aevon-bot"

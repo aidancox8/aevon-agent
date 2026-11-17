@@ -22,7 +22,11 @@
     "nodemailer": "^7.0.13",
     "pdf-parse": "^1.1.1",
     "pg": "^8.20.0",
+    "playwright-core": "^1.65.1",
     "puppeteer": "^25.11.0",
     "resend": "^6.12.2"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
   }
 }

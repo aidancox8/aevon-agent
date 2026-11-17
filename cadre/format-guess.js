@@ -14,7 +14,7 @@
  * Verifalia credit (about 25 a day) is shared with posting-autopilot.js, so this is capped with
  * --checks (default 8) and stops on a 402.
  *
- *   node cadre/format-guess.js [--checks 8] [--dry]
+ *   node cadre/format-guess.js [--checks 8] [--zb 0] [--dry]   (--zb: ZeroBounce checks once Verifalia is spent)
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), quiet: true });
 const { createClient } = require('@supabase/supabase-js');
@@ -27,13 +27,29 @@ const auth = 'Basic ' + Buffer.from(`${process.env.VERIFALIA_USER}:${process.env
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 class OutOfCredit extends Error {}
 
+let zbBudget = parseInt(arg('--zb', '0'), 10);
+const ZB_KEY = process.env.ZEROBOUNCE_KEY;
+const ZB_MAP = { valid: 'Deliverable', invalid: 'Undeliverable', 'catch-all': 'Risky' };
+let via = 'Verifalia';
+
+/** ZeroBounce, the second free verifier, used once Verifalia's day is spent. */
+async function checkZb(email) {
+  if (!ZB_KEY || zbBudget <= 0) throw new OutOfCredit('daily check budget used');
+  zbBudget--;
+  const r = await fetch(`https://api.zerobounce.net/v2/validate?api_key=${ZB_KEY}&email=${encodeURIComponent(email)}&ip_address=`);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.status) { zbBudget = 0; throw new OutOfCredit(`ZeroBounce unavailable (${r.status} ${String(j.error || '').slice(0, 80)})`); }
+  via = 'ZeroBounce';
+  return ZB_MAP[j.status] || 'Unknown';
+}
+
 async function check(email) {
-  if (budget <= 0) throw new OutOfCredit('daily check budget used');
+  if (budget <= 0) return checkZb(email);
   budget--;
   const r = await fetch('https://api.verifalia.com/v2.6/email-validations?waitTime=30000', {
     method: 'POST', headers: { Authorization: auth, 'Content-Type': 'application/json' },
     body: JSON.stringify({ entries: [{ inputData: email }] }) });
-  if (r.status === 402) throw new OutOfCredit('Verifalia out of credit');
+  if (r.status === 402) { budget = 0; return checkZb(email); }
   let j = await r.json();
   if (!j.overview) throw new Error(`verifalia ${r.status}`);
   for (let i = 0; i < 12 && j.overview.status !== 'Completed'; i++) {
@@ -41,6 +57,7 @@ async function check(email) {
     j = await (await fetch(`https://api.verifalia.com/v2.6/email-validations/${j.overview.id}`, { headers: { Authorization: auth } })).json();
   }
   const e = (j.entries.data || j.entries)[0];
+  via = 'Verifalia';
   return e.classification;
 }
 
@@ -61,7 +78,7 @@ function fromEvidence(evidence, f, l) {
   if (error) throw new Error(error.message);
   const todo = data.filter(l => l.email_quality !== 'personal' && !/format-guess/.test(l.notes || '') && apex(l.website)
     && l.contact_name.trim().split(/\s+/).length >= 2 && !/\b[A-Z]\.?$/.test(l.contact_name.trim()));
-  console.log(`${todo.length} named lead(s) without a verified address, ${budget} check(s) to spend.`);
+  console.log(`${todo.length} named lead(s) without a verified address, ${budget} Verifalia + ${zbBudget} ZeroBounce check(s) to spend.`);
   let found = 0;
   try {
     for (const l of todo) {
@@ -78,7 +95,7 @@ function fromEvidence(evidence, f, l) {
         for (const c of cands) { const v = await check(c); tried.push(`${c} ${v}`); if (v === 'Deliverable') { hit = c; break; } }
       }
       const u = hit
-        ? { email: hit, email_quality: 'personal', notes: `${l.notes} | format-guess ${new Date().toISOString().slice(0, 10)}: ${hit} Verifalia Deliverable` }
+        ? { email: hit, email_quality: 'personal', notes: `${l.notes} | format-guess ${new Date().toISOString().slice(0, 10)}: ${hit} ${via} Deliverable` }
         : { notes: `${l.notes} | format-guess ${new Date().toISOString().slice(0, 10)}: ${probe !== 'Undeliverable' ? 'domain accepts anything, not guessed' : 'no pattern verified'}` };
       await sb.from('cadre_leads').update(u).eq('id', l.id);
       if (hit) found++;

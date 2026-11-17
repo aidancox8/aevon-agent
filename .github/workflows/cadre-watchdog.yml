@@ -1,0 +1,49 @@
+name: Cadre - Watchdog
+
+# Emails aidan@aevon.ca when the Cadre pipeline has quietly stopped (cadre/watchdog.js): a broken
+# workflow file, a scheduled job that stopped succeeding, no sends for 2 working days, an empty
+# Muse queue, or an unread message from Muse. Silent when everything is fine.
+# Also runs on any push that touches a workflow file, so a bad YAML edit is caught in minutes.
+
+on:
+  schedule:
+    - cron: '30 16 * * 1-5'
+    - cron: '30 23 * * 1-5'
+  push:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DOTENV_CONFIG_QUIET: "true"
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node cadre/watchdog.js --only yaml
+          else
+            node cadre/watchdog.js
+          fi
