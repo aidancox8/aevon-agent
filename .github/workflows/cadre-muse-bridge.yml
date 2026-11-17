@@ -26,6 +26,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - name: New companies Muse found (each quote is checked against its posting page)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GMAIL_OAUTH_CLIENT_ID: ${{ secrets.GMAIL_OAUTH_CLIENT_ID }}
+          GMAIL_OAUTH_CLIENT_SECRET: ${{ secrets.GMAIL_OAUTH_CLIENT_SECRET }}
+          GMAIL_OAUTH_REFRESH_TOKEN: ${{ secrets.GMAIL_OAUTH_REFRESH_TOKEN }}
+        run: node cadre/muse-postings.js
       - name: Ingest yesterday, queue today
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
