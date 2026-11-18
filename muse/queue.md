@@ -1,6 +1,6 @@
-# Muse queue, 2026-11-17
+# Muse queue, 2026-11-18
 
-3 companies (of 3 waiting). For each, find the one person who owns staff certifications and training records.
+1 companies (of 1 waiting). For each, find the one person who owns staff certifications and training records.
 Under 200 staff: owner, president or general manager. 200 to 1000: HR or health & safety manager. Over 1000: contact_name "too large".
 
 Email the result to aidan@aevon.ca with the subject "[Muse leads] YYYY-MM-DD" and ONLY a JSON array in the body:
@@ -10,6 +10,4 @@ Research only. Private mode on. No messages, connection requests, follows or rea
 
 | id | company | city | website | posting says |
 |---|---|---|---|---|
-| 65566908-3612-4a42-b18d-8cc506a6cc9e | Rosenxt Group | Calgary, AB | rosen-nxt.com | Maintain safety training records and schedule renewals, including WHMIS, First Aid, and eq |
-| 80c773a7-cdd5-40fe-a603-a6683793bc14 | Freeman Boatworks | Moncks Corner, SC | freemanboatworks.com | Maintain safety training records, inspection logs, incident reports, and other required sa |
-| d47afe56-8d31-4d06-8548-9b48c4f66e79 | MooreCo, Inc. | Temple, TX | moorecoinc.com | Maintain safety policies, procedures, training records, chemical inventories, and Safety D |
+| 6469931c-5126-4e72-93e0-bc46e7bf9d60 | Legacy Bakehouse | Cudahy, WI | legacybakehouse.com | Maintain complete, accurate, and audit-ready training records and documentation |
