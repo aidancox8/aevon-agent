@@ -100,7 +100,7 @@ async function verify(email) {
     if (sent >= room) break;
     // An address a finder already proved deliverable with Verifalia is not checked again: that
     // credit (about 25 a day) is shared with the finders and is the tightest limit there is.
-    const recent = l.email_quality === 'personal' && /Verifalia Deliverable/.test(l.notes || '');
+    const recent = l.email_quality === 'personal' && /(Verifalia|ZeroBounce) Deliverable/.test(l.notes || '');
     const v = recent ? { classification: 'Deliverable', status: 'verified by finder' } : await verify(l.email);
     if (v.classification === 'OutOfCredit') { console.log('Verifalia is out of credit. Stopping, nothing unverified is sent.'); break; }
     if (v.classification === 'Undeliverable' || (v.classification === 'Risky' && v.status !== 'ServerIsCatchAll') || v.classification === 'Unknown') {
@@ -113,7 +113,7 @@ async function verify(email) {
     if (/—/.test(e.body)) { console.log(`skip ${l.business_name}: em dash in copy`); continue; }
     if (sent > 0) await sleep((4 + Math.random() * 6) * 60 * 1000); // 4 to 10 minutes apart
     if (!inSendWindow()) { console.log('Send window closed mid-run. Stopping.'); break; }
-    const raw = [`From: Aidan Cox <aidan@aevon.ca>`, `To: ${l.email}`, `Subject: ${e.subject}`, 'MIME-Version: 1.0',
+    const raw = [`From: Aidan <aidan@aevon.ca>`, `To: ${l.email}`, `Subject: ${e.subject}`, 'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', e.body].join('\r\n');
     try {
       await g.users.messages.send({ userId: 'me', requestBody: { raw: Buffer.from(raw).toString('base64url') } });

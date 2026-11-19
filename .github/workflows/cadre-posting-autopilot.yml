@@ -47,7 +47,7 @@ jobs:
           POSTING_DAILY_CAP: ${{ vars.POSTING_DAILY_CAP || '20' }}
         run: |
           if [ "${{ github.event.inputs.live }}" = "SEND" ] || { [ "${{ github.event_name }}" = "schedule" ] && [ "${{ vars.POSTING_ARMED }}" = "true" ]; }; then
-            node cadre/posting-autopilot.js --send --per-run 4
+            node cadre/posting-autopilot.js --send --per-run 8
           else
             echo "Not armed (repository variable POSTING_ARMED=true to go live). Dry run:"
             node cadre/posting-autopilot.js

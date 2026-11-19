@@ -14,6 +14,8 @@ const BC = /\bBC\b|British Columbia/i;
 const US = /,\s*(A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY])\b/;
 const MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 // The quote has to read as a task after "asked the new hire to".
+const STAFF_CERT = /(training|qualification|certification|certificate|licen[cs]e|licen[cs]ing|credential|ticket)/i;
+const NOT_STAFF = /(inventory|traceable|material|business licen|business registration|corporate filing|third-party licens|supplier|vendor|product certif|equipment certif|ISNetworld|Avetta|SQF|cross-training)/i;
 const TASK_VERB = /^(maintain|track|manage|monitor|support|keep|update|coordinate|assist|schedule|enter|help|ensure|administer|oversee|organize|record|review|lead|develop|conduct|plan|verify|audit|prepare|input|process|create|build|implement|facilitate|deliver|issue|file|document)\b/i;
 
 function cleanQuote(q) {
@@ -49,6 +51,9 @@ function blockReason(l, { maxPostingAgeDays = null, regions = ['CA'] } = {}) {
   const q = cleanQuote(l.signal_quote);
   if (q.split(' ').length < 6) return 'quote too short';
   if (!TASK_VERB.test(q)) return 'quote does not read as a task';
+  // The email says "chasing people before their tickets lapse", so the quote has to be about the
+  // workforce's training or certifications, not material certs, business licences or supplier portals.
+  if (!STAFF_CERT.test(q) || NOT_STAFF.test(q)) return 'quote is not about staff certifications';
   const r = region(l);
   if (!regions.includes(r)) return `region ${r || 'unknown'}`;
   if (maxPostingAgeDays != null) {
@@ -69,7 +74,7 @@ function emailFor(l) {
       "I know that job. It's usually one person with a spreadsheet, chasing people before their tickets lapse.", '',
       'I built a tool called Cadre that does the chasing for them. It warns the worker and their supervisor 60, 30 and 7 days before anything expires, and pulls your staff list from the payroll or HR system you already use.', '',
       "I'm one person and it's new, so I'd rather hear what a few real companies think than sell it. If you'd like to use it free and tell me where it falls short, I'd be glad to set it up for you. No worries if the timing is off.", '',
-      'Thanks,', 'Aidan Cox', 'aevon.ca', '',
+      'Thanks,', 'Aidan', 'aevon.ca', '',
     ].join('\r\n'),
   };
 }
