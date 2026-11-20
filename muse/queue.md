@@ -1,6 +1,6 @@
-# Muse queue, 2026-11-19
+# Muse queue, 2026-11-20
 
-3 companies (of 3 waiting). For each, find the one person who owns staff certifications and training records.
+2 companies (of 2 waiting). For each, find the one person who owns staff certifications and training records.
 Under 200 staff: owner, president or general manager. 200 to 1000: HR or health & safety manager. Over 1000: contact_name "too large".
 
 Email the result to aidan@aevon.ca with the subject "[Muse leads] YYYY-MM-DD" and ONLY a JSON array in the body:
@@ -10,6 +10,5 @@ Research only. Private mode on. No messages, connection requests, follows or rea
 
 | id | company | city | website | posting says |
 |---|---|---|---|---|
-| 7101c2c8-1c24-4be1-936d-dca78405b84d | Cedar's Mediterranean Foods | Haverhill, MA | cedarsfoods.com | Maintain accurate training records and documentation for SMETA and other audit requirement |
-| a7178dcc-507d-4034-b9db-3afbc0f8d30b | The Faison Center | Richmond, VA | faisoncenter.org | Maintain accurate training attendance, completion, and certification records in the approp |
-| 87642fa1-0734-4774-95dd-a2124cf07ad1 | H-K Contractors, Inc. | Idaho Falls, ID | hkcontractors.com | Oversee training and certification programs for lab personnel. |
+| 9475af47-bc9d-4f76-8b4d-16246a043dd2 | Hawker | Toronto, ON |  | Maintain detailed repair, inspection and certification records and reports. |
+| 2ba5b5f5-8687-4de0-99c0-09f7e4bcdff6 | Valiant Solutions | McLean, VA | valiantsolutions.com | Verify and track employee certifications, including new certifications, expirations, and t |
