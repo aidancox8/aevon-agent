@@ -25,7 +25,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
 const SEND = process.argv.includes('--send');
 const PER_RUN = parseInt(arg('--per-run', '3'), 10);
 const DAILY_CAP = parseInt(process.env.POSTING_DAILY_CAP || arg('--cap', '20'), 10);
-const MAX_AGE_DAYS = 75;
+const MAX_AGE_DAYS = 90; // 75 until 2026-11-21: 9 named, verified leads sat blocked only for being 78 to 88 days old while the pool was at 1
 const REGIONS = ['CA', 'US'];
 const BASIS = 'campaign:posting-quote-warm-2026-11'; // warmer copy from 2026-11-12; the first 38 sends are 'campaign:posting-quote-2026-10'
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);

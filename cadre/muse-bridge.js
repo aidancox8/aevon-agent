@@ -47,7 +47,17 @@ const note = (l, s) => `${l.notes ? l.notes + ' | ' : ''}${s}`;
 async function queue() {
   const leads = await allLeads();
   // Same rules as the autopilot, except an email is not required yet: Muse supplies the person.
-  const pool = leads.filter(l => !l.contact_name && !/muse-(queued|none)/.test(l.notes || '')
+  // A row stamped "muse-queued" used to be out of the queue for good. When Muse missed a day the
+  // 25 companies on that day's list were never asked about again: on 2026-11-21, 80 of the 96
+  // waiting companies had been stamped three weeks earlier and never answered. A stamp older
+  // than 4 days with no answer now goes back in, at most twice more.
+  const stamps = l => [...String(l.notes || '').matchAll(/muse-queued (\d{4}-\d{2}-\d{2})/g)].map(m => m[1]);
+  const waiting = l => {
+    if (/muse-none|muse 20\d\d-/.test(l.notes || '')) return false;
+    const s = stamps(l);
+    return !s.length || (s.length < 3 && Date.now() - new Date(s[s.length - 1]).getTime() > 4 * 864e5);
+  };
+  const pool = leads.filter(l => !l.contact_name && waiting(l)
     && !blockReason({ ...l, email: l.email || 'placeholder@example.com', email_quality: l.email_quality === 'invalid' ? null : l.email_quality },
       { maxPostingAgeDays: 75, regions: ['CA', 'US'] }));
   pool.sort((a, b) => (region(a) === 'CA' ? 0 : 1) - (region(b) === 'CA' ? 0 : 1) || String(b.signal_date).localeCompare(String(a.signal_date)));
