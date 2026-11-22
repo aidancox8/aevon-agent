@@ -56,20 +56,7 @@ a posting_url that opens without logging in (a company career page or a public L
 link). If you find fewer than 15 good ones, send the ones you have. If you find none, send
 nothing.
 
-### M-003 (once): four companies where no address pattern worked
-
-For each company below, look for any email address published at that domain (the company
-website's contact, team or careers pages, a press release, a PDF) so the address format can be
-worked out. Do not guess. Email aidan@aevon.ca with the subject `[Muse reply] M-003` and a JSON
-array: [{"id": "", "format_evidence": "an address you saw published, else null", "where": "URL you saw it on"}]
-
-| id | company | domain |
-|---|---|---|
-| 9651a9d3-039e-48b3-95c1-aa8bf5f65e70 | Jyoti Foods | jyotifoods.com |
-| af9216af-a09b-4075-8d3b-419b6707d669 | Greater Vision Healthcare Services LLC | gvhcs.com |
-| babcafbe-3580-4273-ab2f-c147e385186f | Bader | badercompanies.com |
-| 9f41887b-d7f8-4c7c-ad73-83425277190e | Health Care Center for the Homeless | hcch.org |
-
 ## Done
 
 - M-001: channel test. Muse confirmed on 2026-11-16 that it can load this file.
+- M-003: four companies where no address pattern worked. Answered 2026-11-18, nothing further needed.

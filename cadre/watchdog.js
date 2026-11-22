@@ -32,8 +32,9 @@ const notes = [];
 const DAY = 864e5;
 
 // Scheduled workflows that must keep succeeding, and how many days of silence is too many
-// (4 covers Friday to Monday plus GitHub's schedule delay).
-const WATCHED = { 'cadre-muse-bridge.yml': 4, 'cadre-posting-autopilot.yml': 4, 'daily-review.yml': 3 };
+// (4 covers Friday to Monday plus GitHub's schedule delay). daily-review.yml runs weekly despite
+// its name, so 3 days raised a false alarm on 2026-11-21; 9 covers a week plus delay.
+const WATCHED = { 'cadre-muse-bridge.yml': 4, 'cadre-posting-autopilot.yml': 4, 'daily-review.yml': 9 };
 
 function checkYaml() {
   const dir = path.join(ROOT, '.github', 'workflows');
