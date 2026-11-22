@@ -12,7 +12,10 @@
  * carries on with its own fallback (ask again, then hand to staff).
  */
 const ALLOWED = ['https://aevon.ca', 'https://www.aevon.ca'];
-const MODEL = 'gemini-3.1-flash-lite';
+// Tried in order. Checked 2026-11-22 against the free key: these three answered; the pro models and the other
+// gemini-4 models returned 429 (no free quota), and 3.7/3.8 flash were overloaded. A model that is slow, over quota
+// or down is skipped.
+const MODELS: [string, number][] = [['gemini-4-hydrogen', 4500], ['gemini-3.6-flash', 3500], ['gemini-3.5-flash-lite', 2500]];
 const INTENTS = ['pick', 'other_times', 'confirm', 'keep', 'change', 'handoff', 'optout', 'unknown'];
 
 const cors = (origin: string | null) => ({
@@ -73,21 +76,28 @@ Deno.serve(async (req) => {
 
   const prompt = `Offered times:\n${offers.map((o, i) => `${i + 1}. ${o}`).join('\n') || '(none)'}\n${booked ? `Existing booking: ${booked}\n` : ''}Patient message: """${text.replace(/"""/g, "'''")}"""`;
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(6000),
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 120, responseMimeType: 'application/json', responseSchema: SCHEMA },
-      }),
-    });
-    if (!r.ok) return reply({ intent: 'unknown', why: `model ${r.status}` });
+    let r: Response | null = null;
+    let used = '';
+    for (const [model, ms] of MODELS) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(ms),
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM }] },
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 400, responseMimeType: 'application/json', responseSchema: SCHEMA },
+          }),
+        });
+        if (res.ok) { r = res; used = model; break; }
+      } catch { /* next model */ }
+    }
+    if (!r) return reply({ intent: 'unknown', why: 'model unavailable' });
     const j = await r.json();
     const out = JSON.parse(j?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}');
     // Only known values leave this function, whatever the model wrote.
-    const safe: Record<string, unknown> = { intent: INTENTS.includes(out.intent) ? out.intent : 'unknown' };
+    const safe: Record<string, unknown> = { intent: INTENTS.includes(out.intent) ? out.intent : 'unknown', model: used };
     if (safe.intent === 'pick') {
       if (Number.isInteger(out.pick) && out.pick >= 1 && out.pick <= offers.length) safe.pick = out.pick;
       else safe.intent = 'unknown';
