@@ -12,11 +12,10 @@
  * carries on with its own fallback (ask again, then hand to staff).
  */
 const ALLOWED = ['https://aevon.ca', 'https://www.aevon.ca'];
-// Tried in order. Checked 2026-11-22 against the free key: these three answered quickly (gemini-4-hydrogen also
-// answers but took over 4 seconds and often timed out, so it is left out); the pro models and the other
-// gemini-4 models returned 429 (no free quota), and 3.7/3.8 flash were overloaded. A model that is slow, over quota
-// or down is skipped.
-const MODELS: [string, number][] = [['gemini-3.6-flash', 4000], ['gemini-3.5-flash-lite', 2500], ['gemini-3.1-flash-lite', 2500]];
+// Tried in order. Free-tier limits read from AI Studio on 2026-11-22: the two lite models allow 15 requests a minute
+// and 500 a day each; 3.6 Flash, 3.8 Flash and 4 Hydrogen allow only 20 a day, so the bigger model is the last resort,
+// not the first. A model that is slow, over its limit or down is skipped.
+const MODELS: [string, number][] = [['gemini-3.5-flash-lite', 3000], ['gemini-3.1-flash-lite', 3000], ['gemini-3.6-flash', 4000]];
 const INTENTS = ['pick', 'other_times', 'confirm', 'keep', 'change', 'handoff', 'optout', 'unknown'];
 
 const cors = (origin: string | null) => ({
