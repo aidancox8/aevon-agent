@@ -76,7 +76,9 @@ function fromEvidence(evidence, f, l) {
 (async () => {
   const { data, error } = await sb.from('cadre_leads').select('*').like('notes', '%muse 20%').not('contact_name', 'is', null);
   if (error) throw new Error(error.message);
-  const todo = data.filter(l => l.email_quality !== 'personal' && !/format-guess/.test(l.notes || '') && apex(l.website)
+  // A lead already tried is tried again only when Muse has since sent an address or a format hint for it.
+  const fresh = n => !/format-guess/.test(n) || n.lastIndexOf('muse-address') > n.lastIndexOf('format-guess');
+  const todo = data.filter(l => l.email_quality !== 'personal' && fresh(l.notes || '') && apex(l.website)
     && l.contact_name.trim().split(/\s+/).length >= 2 && !/\b[A-Z]\.?$/.test(l.contact_name.trim()));
   console.log(`${todo.length} named lead(s) without a verified address, ${budget} Verifalia + ${zbBudget} ZeroBounce check(s) to spend.`);
   let found = 0;
@@ -86,16 +88,21 @@ function fromEvidence(evidence, f, l) {
       const parts = l.contact_name.replace(/,.*$/, '').trim().split(/\s+/);
       const f = clean(parts[0]), last = clean(parts[parts.length - 1]);
       if (!f || !last) continue;
-      const ev = (l.notes.match(/format evidence (\S+@\S+)/) || [])[1];
-      const cands = [...new Set([fromEvidence(ev, f, last), `${f}.${last}`, `${f[0]}${last}`, f].filter(Boolean))].map(x => `${x}@${dom}`);
+      const lastOf = re => { const m = [...l.notes.matchAll(re)].pop(); return m ? m[1].replace(/[,;.]+$/, '') : null; };
+      const ev = lastOf(/format evidence (\S+@\S+)/g);
+      // An address Muse saw published for this person, kept only if it is at the company's own
+      // domain and carries the person's name (so a colleague's address is never used).
+      let pub = lastOf(/muse-address \S+ published (\S+@\S+)/g);
+      if (pub && !(pub.endsWith(`@${dom}`) && (clean(pub.split('@')[0]).includes(last) || clean(pub.split('@')[0]).includes(f)))) pub = null;
+      const cands = [...new Set([pub, ...[fromEvidence(ev, f, last), `${f}.${last}`, `${f[0]}${last}`, f].filter(Boolean).map(x => `${x}@${dom}`)].filter(Boolean))];
       if (DRY) { console.log(`${l.business_name}: would try ${cands.join(', ')}`); continue; }
       const probe = await check(`zq${Date.now() % 100000}x@${dom}`);
-      let hit = null, tried = [];
+      let hit = null, tried = [], how = null;
       if (probe === 'Undeliverable') {
-        for (const c of cands) { const v = await check(c); tried.push(`${c} ${v}`); if (v === 'Deliverable') { hit = c; break; } }
-      }
+        for (const c of cands) { const v = await check(c); tried.push(`${c} ${v}`); if (v === 'Deliverable') { hit = c; how = `${via} Deliverable`; break; } }
+      } else if (pub) { hit = pub; how = 'published address seen by Muse, domain accepts anything so it cannot be checked'; }
       const u = hit
-        ? { email: hit, email_quality: 'personal', notes: `${l.notes} | format-guess ${new Date().toISOString().slice(0, 10)}: ${hit} ${via} Deliverable` }
+        ? { email: hit, email_quality: 'personal', notes: `${l.notes} | format-guess ${new Date().toISOString().slice(0, 10)}: ${hit} ${how}` }
         : { notes: `${l.notes} | format-guess ${new Date().toISOString().slice(0, 10)}: ${probe !== 'Undeliverable' ? 'domain accepts anything, not guessed' : 'no pattern verified'}` };
       await sb.from('cadre_leads').update(u).eq('id', l.id);
       if (hit) found++;

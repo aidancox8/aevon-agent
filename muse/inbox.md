@@ -56,6 +56,13 @@ a posting_url that opens without logging in (a company career page or a public L
 link). If you find fewer than 15 good ones, send the ones you have. If you find none, send
 nothing.
 
+### M-004 (STANDING, every run): published addresses for people already named
+
+The queue file now has a second section, "People who need an email address". Do it after the
+company list, on every run where it is present. The instructions and the answer format are in
+that section; the subject is `[Muse addresses] YYYY-MM-DD`. Only an address you can see
+published counts. Never build one from a pattern.
+
 ## Done
 
 - M-001: channel test. Muse confirmed on 2026-11-16 that it can load this file.

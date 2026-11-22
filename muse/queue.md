@@ -35,3 +35,31 @@ Research only. Private mode on. No messages, connection requests, follows or rea
 | 999c59b6-9cae-4201-896f-37fc6952aaf9 | GFS Group LLC | McAllen, TX |  | Manage driver qualification files and vehicle maintenance… |
 | 9f1a1d49-7e20-4ec4-adb3-86a5afaea9d4 | Port City Logistics Inc | Port Wentworth, GA |  | Oversee and maintain Driver Qualification Files for CDL and… |
 | d14e48c2-52f3-4aa4-badf-df6839542e54 | Catawba Two Kings Casino | Kings Mountain, NC |  | Maintain accurate certification records, exam documentation, and renewal tracking for all  |
+
+## People who need an email address
+
+15 people (of 33 waiting). You or an earlier run already named each one. Find the email address PUBLISHED for that person:
+the company website (team, contact, careers, news pages), press releases, PDFs, conference or association listings, public filings.
+Never guess or build an address. If you cannot see that person's address anywhere, send email null, and under format_evidence give any
+OTHER named person's address you saw at the same domain (not info@, hr@, sales@ and the like), else null.
+
+Email aidan@aevon.ca with the subject "[Muse addresses] YYYY-MM-DD" and ONLY a JSON array in the body:
+[{"id": "<id from this list>", "email": "the address you saw published for this person, else null", "where": "URL you saw it on", "format_evidence": "another named person's address at the domain, else null"}]
+
+| id | company | domain | person | role |
+|---|---|---|---|---|
+| 3e48b228-cd6e-496b-a9ad-9c30feb5ea71 | Cedar's Mediterranean Foods, Inc. | cedarsfoods.com | Eneida G. | Director of Human Resources |
+| a7178dcc-507d-4034-b9db-3afbc0f8d30b | The Faison Center | faisoncenter.org | Stephen J. | Human Resources Director |
+| d47afe56-8d31-4d06-8548-9b48c4f66e79 | MooreCo, Inc. | moorecoinc.com | Liz W. | Director of People Operations |
+| af9216af-a09b-4075-8d3b-419b6707d669 | Greater Vision Healthcare Services LLC | gvhcs.com | Chevon N. | Chief Executive Officer |
+| babcafbe-3580-4273-ab2f-c147e385186f | Bader | badercompanies.com | Sue H. | Director of HR |
+| a65d4d4a-aaab-4c19-b8be-a4508792df82 | TFA Logistics | truckingforamerica.com | Rose R. | HR Leader |
+| 45a16fdf-9f71-4c69-97a7-a7474e3fad5e | PIERCE POWERLINE CO, LLC | piercepowerline.com | Michele P. | Chief Executive Officer & Co-Founder |
+| 5c2c1b79-9459-4245-b0a4-83269dfd2682 | Tyler Distribution Centers LLC | tylerdistribution.com | Jeff R. | CEO, Port Jersey Logistics Network |
+| afb8de53-7b5a-480c-a4b4-bffafb97245b | Hilton Scottsdale Resort and Villas | hilton.com | Sarah B. | General Manager |
+| b8f9498b-8a62-4acb-9dc7-4c692e23d9c0 | Dunkin' Donuts - Spice Mill, Inc. | dunkindonuts.com | Courtney B. | General Manager |
+| 1dd3eb7b-08c1-4bcb-8a68-b335a6161ecc | Lehigh County Authority | lehighcountyauthority.org | Liesel G. | CEO |
+| 297b6a88-9fbe-4118-aae3-008b31edeb6b | RXL, Inc. | rxl.com | Evelyn C. | Human Resources Manager |
+| 4bcc444a-a664-4faf-921e-37eda5288c6f | RITE RUG CO | riterug.com | Shonta S. | Director of Human Resources |
+| 3ff36487-de60-4a47-925c-bce49df1a9d4 | Jardine Transport Group | jardinetransport.ca | Caleb W. | Executive Vice President & General Manager |
+| b6e9917a-879f-4172-a472-c65acda789f7 | Octopi Brewing | asahibeerusa.com | Jesica A. | Head of HR at Octopi - part of Asahi Group |

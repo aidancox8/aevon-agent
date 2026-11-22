@@ -73,11 +73,85 @@ async function queue() {
     ...pick.map(l => `| ${l.id} | ${l.business_name} | ${l.city || ''} | ${l.website || ''} | ${String(l.signal_quote).replace(/\|/g, '/').replace(/\s+/g, ' ').slice(0, 90)} |`),
     '',
   ];
+  const addr = addressSection(leads);
+  lines.push(...addr.lines);
   if (DRY) { console.log(lines.join('\n')); return; }
   fs.mkdirSync(path.dirname(QUEUE), { recursive: true });
   fs.writeFileSync(QUEUE, lines.join('\n'));
   for (const l of pick) await sb.from('cadre_leads').update({ notes: note(l, `muse-queued ${today()}`) }).eq('id', l.id);
-  console.log(`Queued ${pick.length} of ${pool.length} for Muse.`);
+  await stampAsked(addr.pick);
+  console.log(`Queued ${pick.length} of ${pool.length} for Muse, plus ${addr.pick.length} people who need an address.`);
+}
+
+/**
+ * The second half of the queue: people Muse already named whose address our verifier could not
+ * work out. The free verifier allows about 25 checks a day and a guessed address costs up to 5,
+ * so on 2026-11-21 the pipeline confirmed about two addresses a day. An address Muse SAW
+ * published costs one check, and is the only way in at a domain that accepts any mailbox.
+ * The file is public, so the person is shown as first name and last initial only.
+ */
+const ADDR_HEAD = '## People who need an email address';
+function addressSection(leads) {
+  const pool = leads.filter(l => l.contact_name && l.email_quality !== 'personal' && l.website && !/muse-addr-asked/.test(l.notes || '')
+    && !blockReason({ ...l, email: 'placeholder@example.com', email_quality: null }, { maxPostingAgeDays: 90, regions: ['CA', 'US'] }));
+  pool.sort((a, b) => String(b.signal_date).localeCompare(String(a.signal_date)));
+  const seen = new Set();
+  const dom = l => String(l.website).replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '').toLowerCase();
+  const pick = pool.filter(l => !seen.has(dom(l)) && seen.add(dom(l))).slice(0, 15);
+  const short = n => { const p = n.replace(/,.*$/, '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0]; };
+  const lines = !pick.length ? [] : [
+    ADDR_HEAD, '',
+    `${pick.length} people (of ${pool.length} waiting). You or an earlier run already named each one. Find the email address PUBLISHED for that person:`,
+    'the company website (team, contact, careers, news pages), press releases, PDFs, conference or association listings, public filings.',
+    'Never guess or build an address. If you cannot see that person\'s address anywhere, send email null, and under format_evidence give any',
+    'OTHER named person\'s address you saw at the same domain (not info@, hr@, sales@ and the like), else null.', '',
+    'Email aidan@aevon.ca with the subject "[Muse addresses] YYYY-MM-DD" and ONLY a JSON array in the body:',
+    '[{"id": "<id from this list>", "email": "the address you saw published for this person, else null", "where": "URL you saw it on", "format_evidence": "another named person\'s address at the domain, else null"}]', '',
+    '| id | company | domain | person | role |', '|---|---|---|---|---|',
+    ...pick.map(l => `| ${l.id} | ${l.business_name} | ${String(l.website).replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '')} | ${short(l.contact_name)} | ${String(l.contact_role || '').replace(/\|/g, '/')} |`),
+    '',
+  ];
+  return { lines, pick };
+}
+async function stampAsked(pick) {
+  for (const l of pick) await sb.from('cadre_leads').update({ notes: note(l, `muse-addr-asked ${today()}`) }).eq('id', l.id);
+}
+/** --addresses: rewrite only the people section, leaving today's company list as it is. */
+async function addressesOnly() {
+  const addr = addressSection(await allLeads());
+  const cur = fs.existsSync(QUEUE) ? fs.readFileSync(QUEUE, 'utf8') : '';
+  const head = cur.includes(ADDR_HEAD) ? cur.slice(0, cur.indexOf(ADDR_HEAD)) : cur.replace(/\n*$/, '\n\n');
+  if (DRY) { console.log(addr.lines.join('\n')); return; }
+  fs.writeFileSync(QUEUE, head + addr.lines.join('\n'));
+  await stampAsked(addr.pick);
+  console.log(`Asked Muse for ${addr.pick.length} addresses.`);
+}
+
+/** Muse's "[Muse addresses]" replies. Nothing is trusted here: format-guess.js verifies before any address is saved. */
+async function ingestAddresses(g, done, body) {
+  const r = await g.users.messages.list({ userId: 'me', q: 'subject:"[Muse addresses]" -label:muse-ingested newer_than:14d', maxResults: 20 });
+  let got = 0, hints = 0, skipped = 0;
+  for (const m of r.data.messages || []) {
+    const d = (await g.users.messages.get({ userId: 'me', id: m.id, format: 'full' })).data;
+    const text = body(d.payload) || d.snippet || '';
+    let rows = [];
+    try { rows = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); } catch (err) { console.log(`message ${m.id}: no parseable JSON array, left unlabelled for a look`); continue; }
+    for (const row of rows) {
+      if (!row || !UUID.test(String(row.id))) { skipped++; continue; }
+      const { data: l } = await sb.from('cadre_leads').select('*').eq('id', row.id).maybeSingle();
+      if (!l || !/muse-addr-asked/.test(l.notes || '') || !l.contact_name) { skipped++; continue; }
+      const ok = s => /^[^@\s|,]+@[^@\s|,]+\.[a-z]{2,}$/i.test(String(s || '').trim());
+      const email = ok(row.email) ? String(row.email).trim().toLowerCase() : null;
+      const ev = ok(row.format_evidence) ? String(row.format_evidence).trim().toLowerCase() : null;
+      if (!email && !ev) { skipped++; continue; }
+      const where = String(row.where || '').replace(/[\s|]+/g, '').slice(0, 200);
+      if (email) got++; else hints++;
+      console.log(`address ${l.business_name}: ${email || '-'} ${ev ? 'evidence ' + ev : ''}`);
+      if (!DRY) await sb.from('cadre_leads').update({ notes: note(l, `muse-address ${today()}:${email ? ` published ${email} at ${where || '?'}` : ''}${ev ? ` format evidence ${ev}` : ''}`) }).eq('id', l.id);
+    }
+    if (!DRY) await g.users.messages.modify({ userId: 'me', id: m.id, requestBody: { addLabelIds: [done.id], removeLabelIds: ['UNREAD'] } });
+  }
+  console.log(`Addresses from Muse: ${got} published, ${hints} format hints, ${skipped} ignored.`);
 }
 
 async function ingest() {
@@ -114,9 +188,11 @@ async function ingest() {
     if (!DRY) await g.users.messages.modify({ userId: 'me', id: m.id, requestBody: { addLabelIds: [done.id] } });
   }
   console.log(`Ingest: ${named} named, ${none} no match, ${skipped} ignored.${DRY ? ' DRY RUN, nothing written.' : ''}`);
+  if (done) await ingestAddresses(g, done, body);
 }
 
 (async () => {
   if (process.argv.includes('--ingest')) await ingest();
   if (process.argv.includes('--queue')) await queue();
+  else if (process.argv.includes('--addresses')) await addressesOnly();
 })().catch(e => { console.error(e.message); process.exit(1); });
