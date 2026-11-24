@@ -1,6 +1,6 @@
-# Muse queue, 2026-11-23
+# Muse queue, 2026-11-24
 
-25 companies (of 63 waiting). For each, find the one person who owns staff certifications and training records.
+25 companies (of 38 waiting). For each, find the one person who owns staff certifications and training records.
 Under 200 staff: owner, president or general manager. 200 to 1000: HR or health & safety manager. Over 1000: contact_name "too large".
 
 Email the result to aidan@aevon.ca with the subject "[Muse leads] YYYY-MM-DD" and ONLY a JSON array in the body:
@@ -10,35 +10,35 @@ Research only. Private mode on. No messages, connection requests, follows or rea
 
 | id | company | city | website | posting says |
 |---|---|---|---|---|
-| 95f726a4-d6b8-4c36-9787-6842eb5fbc82 | Abacus Technology | Manchester, TN |  | Manage and track organizational staff training and certification records. |
-| 1b3f7816-60ed-4bd9-8f6b-da0652580c92 | Middle Tennessee School of Anesthesia | Madison, TN |  | Maintain VA certification records, respond to VA inquiries, and… |
-| bd52e273-ce1b-4d5a-bcc1-b03ce09f6bab | Montgomery Public Schools | Dothan, AL |  | Maintain certification records for all certified staff. |
-| 8424ea71-3ea5-4ff0-b519-239289e8496b | Ontic | Weston, FL |  | Maintain statutory inspection, maintenance and certification records. |
-| 1fa8277a-ebda-463b-bfda-152d8447f63b | Home Start Hope | Rochester, NY |  | Lead case manager orientations twice a month and maintain training records. |
-| 233ab0f7-91bd-45fa-9ce5-d5bcfc3b2571 | Denver Transit Operators | Denver, CO |  | Monitor all training, certification and re-certification records. |
-| d8e43737-d70e-4194-a2fb-a5e050801d84 | Arion Care | Phoenix, AZ |  | Maintain DSP compliance documentation and certification records. |
-| 77edf6bc-21f0-4785-8f34-236bc6b0dfc9 | Lake County YMCA | Willoughby, OH |  | Maintain staff certification records and implement strategies to promote employee engageme |
-| 83b6190d-31f1-4973-851c-297f3d5ae688 | Solid Ground Solutions | Columbus, OH |  | Ensure all field employees are trained and certified for the equipment they use, and maint |
-| fffee930-729a-4fda-bde7-ccb599cf2f8c | Prime Data Centers | Dallas, TX | primedatacenters.com | Maintain complete, accurate training records for every operations employee, including cert |
-| d29e9d57-19db-45ae-af90-a94a3d9bb60b | M. A. Mortenson Company | Minneapolis, MN |  | Manage and maintain all aspects of driver qualification files, continuous motor vehicle li |
-| 8c212527-5b14-45cb-9b8e-accb5073f590 | McKesson | Clear Lake, IA |  | Maintain accurate training records, certifications, training matrices, and compliance docu |
-| de2e2e3d-7438-4ced-a12c-b212af08fca4 | RevMax Performance LLC | Charlotte, NC |  | Track and coordinate hardware and software license renewals. |
-| da9cc89b-eec9-4923-95c1-897061eed920 | Hawkeye Electric | Hiawatha, IA |  | Maintain accurate driver qualification files, licensing, and training records. |
-| d3094df3-ca1d-4ba5-9031-5ebd4bc9e70e | CLEAR GLOBAL SOLUTIONS, LLC | Bloomington, MN |  | Maintain training records, reports, and tracking tools. |
-| d6fc8268-6564-4845-af4f-f1e719d5399b | Arvato | Pleasant Prairie, WI |  | Maintain the training matrix system and reporting tools for training. |
-| 7dc758d8-ee70-4232-99a6-4cc1850e8b93 | Bruin Waste Management, LLC | Clifton, CO |  | Maintain scale service, maintenance, inspection, and certification records as required. |
-| 036d0c2f-abbf-432c-95f1-d78b2dedf676 | Edward Don & Company | Woodridge, IL |  | Create Driver Qualification files as needed and maintain all required documents in Supervi |
-| 8d9d4b4b-3efc-4389-9dc3-0ca396fa4047 | Medic | Sacramento, CA |  | Help customers maintain driver qualification files and required compliance records. |
-| 4af38d91-69fd-4926-8e0f-18c900035306 | St Johns Community Health | Los Angeles, CA |  | Coordinate training schedules and certification tracking. |
-| 68438439-28f2-4a19-89f6-24c540c531ae | CRISTA Senior Living | Silverdale, WA |  | Maintain accurate training records and monitor certification and renewal requirements. |
-| 7b5c48fd-d949-4d7b-838e-497fced4fd7b | First Coast Security | Tempe, AZ |  | Maintain accurate training records, including attendance, certifications, and… |
-| 5214e8ea-9010-46d7-bb51-4457f9b74841 | Sprout | Garland, TX |  | Support the Facility Manager by maintaining audit, compliance, and certification records t |
-| dc10e950-bdfd-4ca3-9296-fe615f17f0bb | PRAYON INC | Augusta, GA |  | Coordinate state license renewals, regulatory documentation, and compliance-related record |
-| 453df6f9-8284-458b-a520-3355975f15fb | Logos Logistics Inc | Romulus, MI |  | Monitor driver qualification files, medical certifications, licensing requirements, and co |
+| c18838f4-e3fd-4c5f-96ac-6b683b6273db | SkyCare Air Ambulance | Sioux Lookout, ON |  | Maintain detailed repair, inspection and certification records and reports. |
+| aaf3c755-e4a0-4b94-a73a-9b93f6cc4a45 | Fireweed Helicopters Ltd. | Whitehorse, , YT |  | Maintain detailed repair, inspection and certification records and reports. |
+| 9475af47-bc9d-4f76-8b4d-16246a043dd2 | Hawker | Toronto, ON |  | Maintain detailed repair, inspection and certification records and reports. |
+| 3c8b6162-d397-4506-9bdf-7ac017f78736 | Synergy Projects | Calgary, AB | synergybuilds.com | Maintain training records within the online safety management system. |
+| f641fb4a-a9ae-4456-a1d3-1455d9ff76a5 | Perimeter Aviation | Winnipeg, MB | perimeter.ca | Maintain training and qualification records for applicable company departments |
+| 2ba5b5f5-8687-4de0-99c0-09f7e4bcdff6 | Valiant Solutions | McLean, VA | valiantsolutions.com | Verify and track employee certifications, including new certifications, expirations, and t |
+| 46420dc9-01cd-45ab-aeb5-6535ca8bbc2f | GrowthWise Search Partners | Stockton, CA |  | Maintain training records, certifications, and compliance documentation in the LMS. |
+| 2cc14635-790f-4b84-8abb-6029116c56d3 | Maverick Tech | Granite City, IL |  | Maintain precise documentation and certification records for all welding staff and procedu |
+| 8fbd3b23-68c4-4423-9dd6-9bfffd56c401 | VERIDIAM LLC | El Cajon, CA |  | Maintain required training, experience, qualification and certification records. |
+| 9abf8ed6-4aee-438a-af68-ad4768df2893 | Longterm Health Management Services | Chicago, IL |  | Coordinate required employee training and maintain accurate training records. |
+| 0ad52800-c876-4c0b-9ac2-4eb518bf6cc5 | Flex LTD | Memphis, TN |  | Maintain training records, certification matrices, and… |
+| 41b22581-4411-40e5-9c4d-3fcc771e51a0 | Gertens Family of Businesses | Inver Grove Heights, MN |  | Maintain DOT compliance documentation, including driver qualification files, medical certi |
+| 47ee4029-5624-4326-87b9-a43b70505be3 | Healing Touch Home Care | Las Vegas, NV |  | Prepare the agency's business and operating license renewals and keep them on schedule. |
+| 51782d76-c622-411a-b8ab-ee62ea9554fc | J & D TRANSPORTATION INC | Long Beach, CA |  | Maintain and audit driver qualification files and training records. |
+| 7c32770d-78fb-4477-b3bc-a3b430adf637 | Honor Foods | Philadelphia, PA |  | Maintain accurate training records and communicate team member progress… |
+| a4157485-d651-4192-acb5-ae60f0625d81 | Hörmann | Puyallup, WA |  | Maintain accurate training records and ensure all employees meet required certification an |
+| 099b6d1f-3eea-4ec9-8f34-7a4165e2b07e | Lakeland Industries | Decatur, AL |  | Maintain technical certification records and supporting documentation. |
+| aae723fd-baae-4312-9ce4-b97a5bd32781 | Bausch + Lomb | Tampa, FL |  | Maintain certification records and training databases. |
+| 1d6946da-285e-4bb6-a20d-31be42774cfa | DEPENDABLE HEALTH SERVICES | Tucson, AZ |  | Maintain accurate training records, attendance logs, certifications, and… |
+| c681c2ba-3729-4e03-847d-de00e0e631f8 | Diversified Services Network, Inc. | East Peoria, IL |  | Maintain accurate training records and documentation. |
+| 22241627-57c2-4850-8b1b-8f9d4c4489b2 | Total Steel Fabrication LLC | Ennis, TX |  | Verify welder qualifications and maintain certification records. |
+| 7c6cbf8a-51a3-4f11-be3a-532dd8f912b2 | Grocery Outlet Inc | Middletown, PA |  | Maintain accurate training records and track employee progress through training programs. |
+| 93db6ab2-f118-4e3c-be8d-282409c9edf5 | FERRAGAMO USA INC | New York, NY |  | Maintain training records, attendance, and completion data in the LMS; assign courses and  |
+| 1d637db8-4e9e-44fd-abc8-0e247066dd8f | ALBANESE CONFECTIONERY GROUP INC. | Merrillville, IN |  | Assist in tracking and maintaining activities for asset management, license renewals, serv |
+| 0affb43c-cc36-41b4-9c3a-dee9c97af79e | American Medical Administrators LTC | Independence, MO |  | Maintain accurate training, certification, and competency records. |
 
 ## People who need an email address
 
-13 people (of 13 waiting). You or an earlier run already named each one. Find the email address PUBLISHED for that person:
+6 people (of 6 waiting). You or an earlier run already named each one. Find the email address PUBLISHED for that person:
 the company website (team, contact, careers, news pages), press releases, PDFs, conference or association listings, public filings.
 Never guess or build an address. If you cannot see that person's address anywhere, send email null, and under format_evidence give any
 OTHER named person's address you saw at the same domain (not info@, hr@, sales@ and the like), else null.
@@ -48,16 +48,9 @@ Email aidan@aevon.ca with the subject "[Muse addresses] YYYY-MM-DD" and ONLY a J
 
 | id | company | domain | person | role |
 |---|---|---|---|---|
-| 757d17cd-47a5-43ce-ae32-8c620c775a46 | Quality Liquid Feeds | qlf.com | Liz W. | VP of Human Resources |
-| 7101c2c8-1c24-4be1-936d-dca78405b84d | Cedar's Mediterranean Foods | cedarsfoods.com | Eneida G. | Director of Human Resources |
-| b9c18597-9bf1-4c37-9927-2a69fbaa3113 | The Dennis Group | dennisgroup.com | Jane M. | Sr. Human Resources Manager |
-| 8e54aa69-2cf0-4357-9d52-1c9c027e3429 | IPRO | ipro.org | Donna R. | Sr. Director - Human Resources |
-| d7768eac-1fa5-4d14-ad8d-1ef49bfa3cc4 | HyTech Spring & Machine | hytechspring.com | Richard G. | President/COO |
-| 999c59b6-9cae-4201-896f-37fc6952aaf9 | GFS Group LLC | gfs-groupllc.com | Firuza D. | CEO of GFS Group LLC |
-| 9f1a1d49-7e20-4ec4-adb3-86a5afaea9d4 | Port City Logistics Inc | portcitylogistics.com | Patrick O. | Director, Human Resources |
-| 660e3c6a-e0a4-4471-93d7-b16aadd09dcb | WhiteWater West- | whitewaterwest.com | Heather B. | Director, Global People & Culture |
-| f2d2b740-00ac-4112-85ef-829c9d47ffbd | Sonbuilt Custom Homes Ltd. | sonbuilthomes.com | Jonathan Z. | President |
-| b2f8a186-1376-4c0e-b64e-1d0163fcad96 | ServiceMaster Restore of Niagara | svmrestore-niagara.ca | Ryan B. | Partner at ServiceMaster Restore of Niagara |
-| 1e291e37-2eef-477c-aa70-9c6ed843b037 | BROC | brocllc.com | Rick B. | Founder, President & CEO |
-| e73c37bb-7ca5-4997-8e97-cbce359e01c4 | Harrison & Burrowes Bridge Constructors, Inc. | harrisonburrowes.com | Lyndsey G. | Safety Director |
-| fb0d0f19-35ff-41b9-9448-a4b763a35ded | Conditioned Air Company of Naples, LLC | conditionedair.com | Blanca B. | Vice President of Human Resources |
+| 83b6190d-31f1-4973-851c-297f3d5ae688 | Solid Ground Solutions | solidgroundsolutions.com | Seth T. | Chief Executive Officer |
+| 507e987b-b5fa-40ce-966c-666f280bc592 | Hydro Tech Inc. | hydrotech-inc.ca | Mike D. | President |
+| 07b8548b-498b-4963-9d0c-9418b79d1530 | Enable Injections | enableinjections.com | Michael H. | Chairman and CEO |
+| da9cc89b-eec9-4923-95c1-897061eed920 | Hawkeye Electric | hawkeye-electric.com | Cliff M. | Owner and Operator |
+| d3094df3-ca1d-4ba5-9031-5ebd4bc9e70e | CLEAR GLOBAL SOLUTIONS, LLC | clrgsol.com | Lori J. | President |
+| 4af38d91-69fd-4926-8e0f-18c900035306 | St Johns Community Health | sjch.org | Candy B. | Sr. Human Resources Director |
